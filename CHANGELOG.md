@@ -49,6 +49,11 @@ Breaking changes carry a migration note in the entry.
   level arithmetic) and column-oriented analytical (scan cost, sort-key pruning, batched-insert
   requirements), sharing a common LSM/merge-tree storage-mechanism section. Cassandra/ScyllaDB
   and ClickHouse promoted from `generic` to `conceptual`.
+- `databases/search.md` — filter context vs. query context as the single highest-value search
+  finding (a non-ranking clause scored instead of cached), why deep offset pagination is worse
+  in a sharded search index than anywhere else in this skill, mapping decisions made at
+  index-creation time, and aggregation cardinality as a memory-exhaustion risk distinct from
+  relational `GROUP BY`. Elasticsearch/OpenSearch/Solr promoted from `generic` to `conceptual`.
 
 ### Fixed
 
@@ -92,7 +97,7 @@ real public repositories:
 
 ### Planned
 
-- Category files for search, time-series, and vector datastores.
+- Category files for time-series and vector datastores.
 - Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.

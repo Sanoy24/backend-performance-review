@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 3 deep · 28 conceptual · 7 generic (38 detection signals).
+**Current coverage:** 3 deep · 29 conceptual · 6 generic (38 detection signals).
 
 ---
 
@@ -42,7 +42,7 @@ more careful section — not a guessed one.
 | Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
 | Cassandra / ScyllaDB | wide-column | conceptual | Partition-oriented wide-column reasoning applies in full; compaction/tombstone tuning and driver defaults not yet written |
 | ClickHouse | wide-column | conceptual | Column-oriented analytical reasoning applies (a different sub-model within the same category file); merge-tree tuning specifics not yet written |
-| Elasticsearch / OpenSearch / Solr | search | generic | No search category file in v0.1.0 |
+| Elasticsearch / OpenSearch / Solr | search | conceptual | Search category reasoning (filter vs. query context, deep-pagination cost, mapping decisions) applies in full; engine-specific settings not yet written |
 | InfluxDB | time-series | generic | No time-series category file in v0.1.0 |
 | Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | generic | Index type, dimensionality, search parameters, and the recall/latency trade are reported as explicit unknowns rather than inferred |
 
@@ -131,10 +131,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Category files for search, time-series, and vector — these move the remaining seven
-   `generic` signals to `conceptual`. Graph (`databases/graph.md`, covering Neo4j and Amazon
-   Neptune) and wide-column (`databases/wide-column.md`, covering Cassandra/ScyllaDB and
-   ClickHouse) are done.
+1. Category files for time-series and vector — these move the remaining six `generic` signals
+   to `conceptual`. Graph (`databases/graph.md`), wide-column (`databases/wide-column.md`), and
+   search (`databases/search.md`, covering Elasticsearch/OpenSearch/Solr) are done.
 2. Per-runtime references: Node.js, Python, JVM, Go.
 3. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 4. Kafka and RabbitMQ references.
