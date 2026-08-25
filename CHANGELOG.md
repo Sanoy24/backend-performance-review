@@ -84,8 +84,8 @@ real public repositories:
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
-- Behavioral evaluation cases 2 (no-problem repo), 4 (committed runtime evidence), and 5
-  (change-scoped PR review) — see `docs/evaluation.md` §3.4.
+- Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
+  repositories; currently covers one of four.
 - Automated regression tests for the fixture cases identified in `docs/evaluation.md` §4.
 
 ---
