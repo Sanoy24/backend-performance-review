@@ -1,0 +1,343 @@
+# Reference registry
+#
+# Maps detection signals to the reference files that should be loaded, and declares the
+# support tier for each technology. This is the single source of truth for both reference
+# routing and the support table published in README.md and docs/supported-technologies.md.
+#
+# Adding a technology = one new file under technology/ + one entry here.
+# Neither SKILL.md nor the methodology changes.
+#
+# Entry schema
+#   signal:    stable identifier, kebab-case
+#   kind:      datastore | cache | broker | runtime | framework | infrastructure
+#   category:  for datastores — relational | document | graph | key-value | wide-column |
+#              search | time-series | vector | object-store
+#   match:     substrings matched case-insensitively against dependency names, image
+#              names, connection scheme prefixes, and config keys
+#   load:      reference files, in load order. Category file always precedes technology file.
+#   tier:      deep | conceptual | generic
+#              deep       — dedicated technology reference exists
+#              conceptual — category principles apply; no engine-specific file yet
+#              generic    — universal methodology only; graceful degradation applies
+#   notes:     optional; surfaced in the report's scope section when tier != deep
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Datastores — relational
+# ---------------------------------------------------------------------------
+
+- signal: postgres
+  kind: datastore
+  category: relational
+  match: [psycopg, psycopg2, asyncpg, "pg8000", postgresql, postgres, "pgx", npgsql,
+          "org.postgresql", "postgres://", "postgresql://", pg_dump, timescale]
+  load: [databases/universal.md, databases/relational.md, technology/postgres.md]
+  tier: deep
+
+- signal: mysql
+  kind: datastore
+  category: relational
+  match: [mysqlclient, pymysql, aiomysql, mysql2, "mysql-connector", "go-sql-driver/mysql",
+          "mysql://", mariadb, "com.mysql"]
+  load: [databases/universal.md, databases/relational.md]
+  tier: conceptual
+  notes: >
+    Relational principles apply fully. MySQL/InnoDB-specific guidance (clustered primary
+    key layout, gap locking, optimizer differences) is not yet written; state this
+    limitation in the report scope.
+
+- signal: sqlserver
+  kind: datastore
+  category: relational
+  match: [pyodbc, pymssql, "System.Data.SqlClient", "Microsoft.Data.SqlClient", mssql,
+          "sqlserver://", tedious]
+  load: [databases/universal.md, databases/relational.md]
+  tier: conceptual
+
+- signal: oracle
+  kind: datastore
+  category: relational
+  match: [cx_Oracle, oracledb, "ojdbc", "oracle.jdbc"]
+  load: [databases/universal.md, databases/relational.md]
+  tier: conceptual
+
+- signal: sqlite
+  kind: datastore
+  category: relational
+  match: [sqlite3, "better-sqlite3", "mattn/go-sqlite3", "sqlite://", libsql]
+  load: [databases/universal.md, databases/relational.md]
+  tier: conceptual
+  notes: >
+    Single-writer semantics and WAL behavior dominate SQLite performance and are not
+    covered by the generic relational file. Flag concurrency questions as unknowns.
+
+- signal: cockroachdb
+  kind: datastore
+  category: relational
+  match: [cockroach, "cockroachdb"]
+  load: [databases/universal.md, databases/relational.md]
+  tier: conceptual
+  notes: >
+    Distributed SQL. Range distribution, transaction retries, and locality-aware placement
+    are not covered by the generic relational file.
+
+# ---------------------------------------------------------------------------
+# Datastores — document
+# ---------------------------------------------------------------------------
+
+- signal: mongodb
+  kind: datastore
+  category: document
+  match: [pymongo, motor, mongoose, mongodb, "mongo-go-driver", "mongodb://",
+          "mongodb+srv://", mongoengine, beanie, "org.mongodb"]
+  load: [databases/universal.md, databases/document.md, technology/mongodb.md]
+  tier: deep
+
+- signal: couchbase
+  kind: datastore
+  category: document
+  match: [couchbase, "couchbase://"]
+  load: [databases/universal.md, databases/document.md]
+  tier: conceptual
+
+- signal: firestore
+  kind: datastore
+  category: document
+  match: [firestore, "google-cloud-firestore", "firebase-admin"]
+  load: [databases/universal.md, databases/document.md]
+  tier: conceptual
+  notes: >
+    Billing is per document read/write, so cost is often the binding constraint rather
+    than latency. Treat cost as a first-class axis for this engine.
+
+- signal: dynamodb
+  kind: datastore
+  category: key-value
+  match: [dynamodb, "aws-sdk/client-dynamodb", boto3_dynamodb, "aws-sdk-go-v2/service/dynamodb"]
+  load: [databases/universal.md, databases/key-value.md]
+  tier: conceptual
+  notes: >
+    Partition key design, hot partitions, and provisioned-vs-on-demand capacity dominate.
+    Key-value principles apply; engine specifics are not yet written.
+
+# ---------------------------------------------------------------------------
+# Datastores — other categories (conceptual in v0.1.0)
+# ---------------------------------------------------------------------------
+
+- signal: neo4j
+  kind: datastore
+  category: graph
+  match: [neo4j, "bolt://", "neo4j://", py2neo, "neo4j-driver", cypher]
+  load: [databases/universal.md]
+  tier: generic
+  notes: >
+    No graph category file in v0.1.0. Apply universal datastore principles, inspect
+    traversal depth and query shape, and mark graph-specific conclusions as unknowns.
+
+- signal: cassandra
+  kind: datastore
+  category: wide-column
+  match: [cassandra, scylla, "cassandra-driver", gocql, datastax]
+  load: [databases/universal.md]
+  tier: generic
+
+- signal: elasticsearch
+  kind: datastore
+  category: search
+  match: [elasticsearch, opensearch, "@elastic/elasticsearch", "elastic/go-elasticsearch", solr]
+  load: [databases/universal.md]
+  tier: generic
+
+- signal: clickhouse
+  kind: datastore
+  category: wide-column
+  match: [clickhouse, "clickhouse-driver", "clickhouse-connect"]
+  load: [databases/universal.md]
+  tier: generic
+
+- signal: influxdb
+  kind: datastore
+  category: time-series
+  match: [influxdb, "influxdb-client", prometheus_remote_write]
+  load: [databases/universal.md]
+  tier: generic
+
+- signal: vector-store
+  kind: datastore
+  category: vector
+  match: [pinecone, weaviate, qdrant, milvus, chromadb, pgvector, faiss, lancedb]
+  load: [databases/universal.md]
+  tier: generic
+  notes: >
+    Vector search performance is governed by index type, dimensionality, search
+    parameters, and the recall/latency trade-off. No category file in v0.1.0 — report
+    these as explicit unknowns rather than inferring.
+
+# ---------------------------------------------------------------------------
+# Caches
+# ---------------------------------------------------------------------------
+
+- signal: redis
+  kind: cache
+  match: [redis, ioredis, "go-redis", redis_py, aioredis, redisson, "redis://", "rediss://",
+          valkey, elasticache]
+  load: [databases/universal.md, databases/key-value.md, distributed/caching.md,
+         technology/redis.md]
+  tier: deep
+
+- signal: memcached
+  kind: cache
+  match: [memcached, pymemcache, "gomemcache", memjs]
+  load: [databases/key-value.md, distributed/caching.md]
+  tier: conceptual
+
+# ---------------------------------------------------------------------------
+# Message brokers and queues
+# ---------------------------------------------------------------------------
+
+- signal: kafka
+  kind: broker
+  match: [kafka, confluent_kafka, kafkajs, "segmentio/kafka-go", "sarama", redpanda]
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
+  tier: generic
+  notes: >
+    Partition count, consumer group rebalancing, and batch/linger settings dominate Kafka
+    throughput. No engine file in v0.1.0.
+
+- signal: rabbitmq
+  kind: broker
+  match: [rabbitmq, pika, amqplib, "amqp://", "streadway/amqp", kombu]
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
+  tier: generic
+
+- signal: sqs
+  kind: broker
+  match: ["aws-sdk/client-sqs", sqs, "aws-sdk-go-v2/service/sqs"]
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
+  tier: generic
+
+- signal: task-queue
+  kind: broker
+  match: [celery, sidekiq, bullmq, bull, rq, dramatiq, "hangfire", temporal, "asynq"]
+  load: [distributed/retries-and-backpressure.md, application/connection-pools.md]
+  tier: generic
+
+# ---------------------------------------------------------------------------
+# Runtimes
+# ---------------------------------------------------------------------------
+
+- signal: node
+  kind: runtime
+  match: ["package.json", "node_modules", nodejs, "\"node\":"]
+  load: [runtimes/universal.md, application/async-and-blocking.md]
+  tier: conceptual
+  notes: >
+    Single-threaded event loop with a bounded libuv threadpool. Universal runtime
+    reasoning applies; a Node-specific file (GC flags, worker_threads, threadpool sizing)
+    is planned for v0.2.0.
+
+- signal: python
+  kind: runtime
+  match: ["requirements.txt", "pyproject.toml", "Pipfile", "setup.py"]
+  load: [runtimes/universal.md, application/async-and-blocking.md]
+  tier: conceptual
+  notes: >
+    Determine the concurrency model first — WSGI threads/processes vs ASGI event loop —
+    because the failure modes differ completely. GIL interaction is a universal-runtime
+    concern covered generically.
+
+- signal: jvm
+  kind: runtime
+  match: ["pom.xml", "build.gradle", "build.gradle.kts", ".java", ".kt"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+- signal: go
+  kind: runtime
+  match: ["go.mod", "go.sum"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+- signal: dotnet
+  kind: runtime
+  match: [".csproj", ".sln", ".fsproj"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+- signal: rust
+  kind: runtime
+  match: ["Cargo.toml", "Cargo.lock"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+- signal: php
+  kind: runtime
+  match: ["composer.json", "artisan"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+- signal: ruby
+  kind: runtime
+  match: ["Gemfile", "config.ru"]
+  load: [runtimes/universal.md]
+  tier: conceptual
+
+# ---------------------------------------------------------------------------
+# API surfaces
+# ---------------------------------------------------------------------------
+
+- signal: graphql
+  kind: framework
+  match: [graphql, apollo, strawberry, graphene, gqlgen, "graphql-java", nexus]
+  load: [application/api.md, application/data-access.md]
+  tier: conceptual
+  notes: >
+    Resolver-level N+1 and unbounded query depth are the dominant GraphQL performance
+    risks. Covered generically in application/api.md.
+
+- signal: grpc
+  kind: framework
+  match: [grpc, "grpc-go", grpcio, "@grpc/grpc-js", protobuf]
+  load: [application/api.md, application/serialization.md,
+         distributed/timeouts-and-deadlines.md]
+  tier: conceptual
+
+- signal: rest
+  kind: framework
+  match: [fastapi, flask, django, express, nestjs, koa, gin, echo, fiber, "spring-boot",
+          actix, axum, laravel, rails, "aspnetcore"]
+  load: [application/api.md]
+  tier: conceptual
+
+# ---------------------------------------------------------------------------
+# Infrastructure
+# ---------------------------------------------------------------------------
+
+- signal: kubernetes
+  kind: infrastructure
+  match: ["kind: Deployment", "kind: StatefulSet", "apiVersion: apps/v1", helm, "Chart.yaml"]
+  load: [infrastructure/resources.md]
+  tier: conceptual
+
+- signal: docker
+  kind: infrastructure
+  match: [Dockerfile, "docker-compose.yml", "compose.yaml"]
+  load: [infrastructure/resources.md]
+  tier: conceptual
+
+- signal: serverless
+  kind: infrastructure
+  match: ["serverless.yml", "template.yaml", "AWS::Serverless", lambda_handler,
+          "func.HttpTrigger", "cloud-functions", vercel, "netlify.toml"]
+  load: [infrastructure/resources.md, application/connection-pools.md]
+  tier: conceptual
+  notes: >
+    Cold starts, per-invocation connection setup, and concurrency limits dominate.
+    Connection pooling advice inverts under serverless — see infrastructure/resources.md.
+
+- signal: terraform
+  kind: infrastructure
+  match: [".tf", "terraform"]
+  load: [infrastructure/resources.md]
+  tier: conceptual
