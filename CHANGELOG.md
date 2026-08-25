@@ -59,6 +59,16 @@ Breaking changes carry a migration note in the entry.
   the tag-vs-field decision that creates or prevents it, retention/downsampling as the default
   answer to unbounded growth, and out-of-order writes as a distinctly more expensive case than
   in-order ingestion. InfluxDB promoted from `generic` to `conceptual`.
+- `databases/vector.md` — the last of the five datastore category files planned for v0.1.0's
+  follow-up. Approximate nearest-neighbor search as the one category in this skill whose index
+  is deliberately inexact (every other category's indexes are exact-match); the
+  recall/latency/memory triangle and the search-breadth parameter as its central, most
+  overlooked tunable; filter-then-search vs. search-then-filter as the most common severe
+  failure mode ("asked for 10 results, got 2"); and memory residency as a sharper cliff here
+  than elsewhere because ANN structures are traversed close to randomly. Distance-metric
+  mismatch is explicitly scoped to the "Adjacent findings" section as a correctness issue, not a
+  performance one. Pinecone/Weaviate/Qdrant/Milvus/Chroma/pgvector/FAISS/LanceDB promoted from
+  `generic` to `conceptual`. Coverage is now 3 deep / 31 conceptual / 4 generic.
 
 ### Fixed
 
@@ -102,7 +112,13 @@ real public repositories:
 
 ### Planned
 
-- A category file for vector datastores.
+- A category file for object storage (S3-compatible/blob stores) — listed as a valid category in
+  `registry.yaml`'s schema comment since v0.1.0 but never given a category file or any registry
+  entries. Found while closing out the other five category files; not otherwise tracked
+  anywhere. This category's performance model differs enough from the other eight (no rich
+  query/index layer; the concerns are request-count minimization, multipart/batch operations,
+  key/prefix design for listing performance, and egress cost) that it deserves its own file
+  rather than a placeholder.
 - Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.

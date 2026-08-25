@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 3 deep · 30 conceptual · 5 generic (38 detection signals).
+**Current coverage:** 3 deep · 31 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -44,7 +44,7 @@ more careful section — not a guessed one.
 | ClickHouse | wide-column | conceptual | Column-oriented analytical reasoning applies (a different sub-model within the same category file); merge-tree tuning specifics not yet written |
 | Elasticsearch / OpenSearch / Solr | search | conceptual | Search category reasoning (filter vs. query context, deep-pagination cost, mapping decisions) applies in full; engine-specific settings not yet written |
 | InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |
-| Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | generic | Index type, dimensionality, search parameters, and the recall/latency trade are reported as explicit unknowns rather than inferred |
+| Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | conceptual | Recall/latency/memory trade-offs, the search-breadth parameter, and filter/search-order interaction apply in full; engine-specific parameter names and defaults not yet written |
 
 ## Caches
 
@@ -131,12 +131,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. A category file for vector — moves the remaining five `generic` signals to `conceptual`.
-   Graph, wide-column, search, and time-series (`databases/time-series.md`, covering InfluxDB)
-   are done.
-2. Per-runtime references: Node.js, Python, JVM, Go.
-3. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
-4. Kafka and RabbitMQ references.
+1. Per-runtime references: Node.js, Python, JVM, Go.
+2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
+3. Kafka and RabbitMQ references.
 
 Contributions in any of these areas are welcome; see [extending.md](extending.md).
 

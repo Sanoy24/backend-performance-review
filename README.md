@@ -177,7 +177,7 @@ methodology still applies, and the report says so in its scope section.
 | ClickHouse | wide-column | conceptual |
 | Elasticsearch / OpenSearch / Solr | search | conceptual |
 | InfluxDB | time-series | conceptual |
-| Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | generic |
+| Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | conceptual |
 
 ### Caches, brokers, runtimes, infrastructure
 

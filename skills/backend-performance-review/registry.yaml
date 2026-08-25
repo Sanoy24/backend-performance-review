@@ -194,12 +194,13 @@ version: 1
   kind: datastore
   category: vector
   match: [pinecone, weaviate, qdrant, milvus, chromadb, pgvector, faiss, lancedb]
-  load: [databases/universal.md]
-  tier: generic
+  load: [databases/universal.md, databases/vector.md]
+  tier: conceptual
   notes: >
-    Vector search performance is governed by index type, dimensionality, search
-    parameters, and the recall/latency trade-off. No category file in v0.1.0 — report
-    these as explicit unknowns rather than inferring.
+    Vector category principles apply in full — recall/latency/memory trade-offs, the
+    search-breadth parameter, and filter/search-order interaction. No engine-specific file
+    yet — actual parameter names, defaults, and memory-overhead figures are not covered;
+    treat those as unknowns.
 
 # ---------------------------------------------------------------------------
 # Caches
