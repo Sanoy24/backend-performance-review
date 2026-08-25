@@ -183,8 +183,12 @@ version: 1
   kind: datastore
   category: time-series
   match: [influxdb, "influxdb-client", prometheus_remote_write]
-  load: [databases/universal.md]
-  tier: generic
+  load: [databases/universal.md, databases/time-series.md]
+  tier: conceptual
+  notes: >
+    Time-series category principles apply in full. No engine-specific file yet — series-index
+    memory behavior, chunk/shard duration defaults, and continuous-query syntax are not
+    covered; treat those as unknowns.
 
 - signal: vector-store
   kind: datastore

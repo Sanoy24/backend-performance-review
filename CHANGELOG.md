@@ -54,6 +54,11 @@ Breaking changes carry a migration note in the entry.
   in a sharded search index than anywhere else in this skill, mapping decisions made at
   index-creation time, and aggregation cardinality as a memory-exhaustion risk distinct from
   relational `GROUP BY`. Elasticsearch/OpenSearch/Solr promoted from `generic` to `conceptual`.
+- `databases/time-series.md` — series cardinality as the category's defining failure mode (the
+  one modeling mistake in this skill that degrades writes, queries, and memory simultaneously),
+  the tag-vs-field decision that creates or prevents it, retention/downsampling as the default
+  answer to unbounded growth, and out-of-order writes as a distinctly more expensive case than
+  in-order ingestion. InfluxDB promoted from `generic` to `conceptual`.
 
 ### Fixed
 
@@ -97,7 +102,7 @@ real public repositories:
 
 ### Planned
 
-- Category files for time-series and vector datastores.
+- A category file for vector datastores.
 - Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.

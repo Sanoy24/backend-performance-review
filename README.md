@@ -176,7 +176,7 @@ methodology still applies, and the report says so in its scope section.
 | Cassandra / ScyllaDB | wide-column | conceptual |
 | ClickHouse | wide-column | conceptual |
 | Elasticsearch / OpenSearch / Solr | search | conceptual |
-| InfluxDB | time-series | generic |
+| InfluxDB | time-series | conceptual |
 | Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | generic |
 
 ### Caches, brokers, runtimes, infrastructure
