@@ -182,6 +182,8 @@ A pull request will be checked against these. Most rejections are one of the fir
 - [ ] Registry entry added, category file ordered before technology file, tier declared.
 - [ ] README support table consistent with `registry.yaml`.
 - [ ] Under the ~400 line soft cap, or a reason given.
+- [ ] A reported false positive or false negative in `detect_stack.py` ships with a new
+      fixture in `tests/` reproducing it.
 
 ---
 
@@ -236,14 +238,22 @@ more. Precision is the scarce resource here.
 
 ```bash
 python scripts/check_repo_invariants.py
+python -m unittest discover -s tests
 ```
 
-Runs automatically on every push and pull request (`.github/workflows/checks.yml`); run it
-locally before opening a PR to catch the same failures sooner. It verifies every gate in §6:
-the registry parses and every entry resolves, category files stay product-neutral, technology
-files have all seven required sections, the priority matrix is identical everywhere it is
-published, the published tier counts match the registry, and `detect_stack.py` imports only
-the standard library.
+Both run automatically on every push and pull request (`.github/workflows/checks.yml`); run
+them locally before opening a PR to catch the same failures sooner.
+
+`check_repo_invariants.py` verifies every gate in §6: the registry parses and every entry
+resolves, category files stay product-neutral, technology files have all seven required
+sections, the priority matrix is identical everywhere it is published, the published tier
+counts match the registry, and `detect_stack.py` imports only the standard library.
+
+`tests/` is the false-positive/false-negative fixture corpus described in `docs/evaluation.md`
+§4 — each test reproduces the actual collision text from a real lockfile, CI workflow, or
+compose file that once produced a wrong detection, and asserts it stays fixed. Adding a fixture
+here is the expected response to any newly reported false positive or false negative in
+`detect_stack.py`.
 
 ## 11. Conduct
 

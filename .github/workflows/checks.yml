@@ -38,3 +38,16 @@ jobs:
       - name: Run with an isolated interpreter as an extra guard
         run: |
           python -I skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null
+
+  detection-regressions:
+    name: Detection regression fixtures (docs/evaluation.md §4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the false-positive/false-negative fixture corpus
+        run: python -m unittest discover -s tests -v

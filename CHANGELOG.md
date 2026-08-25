@@ -124,6 +124,12 @@ Breaking changes carry a migration note in the entry.
   hard-limit workaround, not just a performance tool; and request/egress cost as a first-class
   dimension distinct from latency, unlike every other category this skill covers. Adds an
   `object-storage` signal (S3-compatible, GCS, Azure Blob, MinIO) at `conceptual` tier.
+- `tests/test_detect_stack_regressions.py` and a `detection-regressions` CI job: automates the
+  false-positive/false-negative fixture corpus specified in `docs/evaluation.md` §4 — the
+  `rq`/`koa`-in-lockfile-hash and `gin`/`echo`-bare-word collisions, and the parser's
+  `_strip_quotes` escaped-quote bug. Each fixture reproduces the actual collision text found
+  during behavioral evaluation (not a synthetic worst case) and was verified to fail against the
+  pre-fix code before being accepted as a real regression guard.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -210,7 +216,6 @@ real public repositories:
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
   repositories; currently covers one of four.
-- Automated regression tests for the fixture cases identified in `docs/evaluation.md` §4.
 
 ---
 

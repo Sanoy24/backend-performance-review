@@ -16,6 +16,7 @@ run** from **checks that are specified but not yet executed**.
 | Tooling checks | **Run** — passing as of v0.1.0 |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
 | Independent (non-author) pass | **Run once** — one agent, no memory of this session, one repository; reproduced the core finding, caught one this analysis missed, and corrected this analysis's severity score using evidence it had overlooked; see §3.8 |
+| Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
 repositories, plus one of those four reviewed a second time by an agent with no memory of this
@@ -26,9 +27,9 @@ consistent, not that it matches real files correctly. Round 2 ran committed benc
 (§3.5), change-scope-reviewed a real merged pull request against its actual diff (§3.6),
 reframed what case 2 is actually testing after a fourth repository still produced a real finding
 (§3.7), and closed with an independent pass that found a real gap in — and corrected a real
-scoring error in — the author's own prior analysis of the same repository (§3.8). What remains
-open: the blind pass covers one repository, not all four, and the tooling-only checks in §4
-still lack automated regression tests.
+scoring error in — the author's own prior analysis of the same repository (§3.8). The
+false-positive/false-negative fixtures specified in §4 are now automated
+(`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
 ---
 
@@ -549,20 +550,28 @@ should be wired up as an eval suite so they run on every change to the methodolo
 
 The highest-value guard is a **false-positive corpus**: for every reported false positive, add
 the triggering code shape to a fixture set and confirm the skill no longer reports it. Round 1
-(§3.3) produced the first three entries:
+(§3.3) produced the first entries, now automated in `tests/test_detect_stack_regressions.py`
+(run via `python -m unittest discover -s tests`, and on every push/PR in
+`.github/workflows/checks.yml`'s `detection-regressions` job):
 
 1. A lockfile hash fragment containing the substring `rq` must not trigger the `task-queue`
-   signal (regression test for the `go.sum` base64-collision bug).
+   signal, and one containing `koa` must not trigger the `rest` signal (regression test for the
+   `go.sum` base64-collision bugs — the exact hash shapes found in
+   `gothinkster/golang-gin-realworld-example-app`'s `go.sum`, reproduced verbatim in the fixture).
 2. A CI YAML file using shell `echo` commands, and a compose file containing the word
    "logging", must not trigger the `rest` signal's Go-framework detection (regression test for
-   the `gin`/`echo` bare-word collision).
+   the `gin`/`echo` bare-word collision — the exact shapes found in
+   `fastapi/full-stack-fastapi-template`'s CI workflow and `compose.override.yml`).
 3. A quoted registry match token containing an escaped inner quote (`"\"x\":"`) must parse to
    the literal `"x":`, not to the four characters `\"x\":` (regression test for the parser's
    `_strip_quotes` unescaping bug).
 
-None of these three has an automated test yet — they are recorded here as the specification for
-one. Adding it is a small, well-scoped contribution: three fixture snippets and an assertion
-against `parse_registry()` / `detect()`.
+Each fixture was verified to actually fail against the pre-fix code (`detect_stack.py` and
+`registry.yaml` as they stood before §3.3's fixes) before being accepted as a real regression
+guard, not merely a test that happens to pass against the current code. The corresponding
+narrowing fixes are also covered in the same direction: a fully-qualified `gin-gonic/gin`/
+`labstack/echo` module path, `django-rq`/`python-rq`, and a genuine `"koa":` dependency
+declaration must still match — the fix narrowed detection, it did not remove it.
 
 False positives are the failure mode that erodes trust fastest. A reviewer who reads three
 irrelevant findings stops reading the fourth, and the one that mattered was the fourth. Bug 2 in
@@ -592,7 +601,6 @@ Stated rather than left implicit:
 - No comparison against a human expert baseline.
 - No measurement of context cost per review, which matters for whether the routing design is
   actually paying off.
-- No automated regression test yet for the fixture cases in §4.
 
 Contributions that close any of these are welcome, and are worth more than additional
 reference content.
