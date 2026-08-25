@@ -27,10 +27,29 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
+  invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
+  product-neutrality, technology-file structure, priority-matrix consistency, published tier
+  counts, stdlib-only detection script) are now checked automatically on every push and pull
+  request, and were mutation-tested against four deliberate regressions before being trusted.
+- `SKILL.md` rule 8 and an "Adjacent findings — outside performance scope" report section: a
+  real security, correctness, or maintenance issue noticed while reviewing for performance now
+  gets the same full write-up as a performance finding (Problem, Evidence, Recommendation,
+  Trade-offs, Validation) under a `SEC-`/`COR-`/`MAINT-` ID, classified on `Kind`, the existing
+  evidence-grade `Confidence` scale, and a plain-language `Risk` note — never `Severity` or
+  `Priority`, and never a fabricated CVSS-style score.
+
 ### Fixed
 
-Found during Round 1 of behavioral evaluation against real public repositories (see
-`docs/evaluation.md` §3):
+- `rubrics.md`: `Informational` severity was being used, in practice, as a place to park
+  out-of-scope security/maintenance findings — but `Informational` is defined as "no current or
+  projected impact," a performance claim, and applying it to a real vulnerability reads as "safe
+  to deprioritize." See the "Adjacent findings" addition above.
+
+Found during behavioral evaluation against real public repositories (see `docs/evaluation.md`
+§3):
 
 - `detect_stack.py`: quoted registry match tokens containing an escaped inner quote (e.g.
   `"\"node\":"`) were never unescaped, so they never matched anything.
@@ -39,6 +58,24 @@ Found during Round 1 of behavioral evaluation against real public repositories (
   their fully-qualified module path; the task-queue signal no longer matches bare `rq`.
 - `registry.yaml`: the `node` signal cannot distinguish a Node.js backend from front-end
   tooling in a full-stack repo. Documented in the signal's `notes` rather than removed.
+
+### Evaluation
+
+Behavioral evaluation (`docs/evaluation.md` §3) now covers 5 of 6 required cases, across four
+real public repositories:
+
+- A real, merged pull request reviewed in change-scoped mode against its actual diff (§3.6).
+- Real Go benchmarks executed and cited as `Confirmed`-grade evidence (§3.5).
+- A first independent pass: an agent with no memory of this project reproduced the core finding
+  on its target repository, caught one the author's review had missed, and corrected that
+  review's severity score using evidence it had overlooked (§3.8).
+- No repository reviewed so far has produced zero findings — reframed as a result worth keeping,
+  not a failed search (§3.7).
+
+### Removed
+
+- `CODE_OF_CONDUCT.md` — an unmodified Contributor Covenant for a project with no contributors
+  yet. Its one project-specific line moved into `CONTRIBUTING.md`.
 
 ### Planned
 

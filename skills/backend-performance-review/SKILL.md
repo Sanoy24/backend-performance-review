@@ -51,6 +51,24 @@ that is true in general and useless here.
 7. **Unknown technology degrades, never fails.** Identify its category, apply category
    principles, inspect its config and usage, state what you can and cannot infer, and
    recommend what would determine it. Do not invent technology-specific facts.
+8. **An out-of-scope issue never gets a performance score, but it still gets a full write-up.**
+   You will sometimes notice a real security, correctness, or maintenance issue while reading
+   code for performance — a timing-unsafe comparison, an end-of-life runtime, a SQL injection
+   risk. Two mistakes to avoid, in opposite directions: scoring it on the performance rubric
+   (`Severity`/`Confidence`/`Priority`, `PERF-` IDs) is dishonest — those axes measure
+   performance impact, and `Informational`/P3 reads as "safe to deprioritize," which is wrong
+   for a real vulnerability that was never a performance question. But reducing it to a bare
+   one-line mention is also wrong — you found it with the same evidence discipline as any other
+   finding, and it deserves the same rigor. Report it in full — Problem, Evidence,
+   Recommendation, Trade-offs, Validation, same as a performance finding — under a **`SEC-`**,
+   **`COR-`**, or **`MAINT-`** ID (never `PERF-`) in the separate "Adjacent findings — outside
+   performance scope" section (`templates/review-report.md`). Classify it on `Kind`
+   (security/correctness/maintenance) and `Confidence` (the same evidence-grade scale — how sure
+   you are it's real, not how much it matters) plus a plain-language `Risk` note (Low/Medium/High
+   with one sentence of justification) — never `Severity` or `Priority`, and never a CVSS-style
+   score: this skill has no dedicated security or correctness methodology, and inventing rigor it
+   doesn't have would violate the evidence-first rule as badly as inventing a number would. Name
+   what kind of dedicated review or tool would actually assess it properly.
 
 ## Modes
 

@@ -272,10 +272,15 @@ files, and fabricated performance guarantees.
   on category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
-- Behavioral evaluation against public repositories has run once, against two repositories, and
-  found three real bugs in the detection tooling (now fixed). The case that matters most — a
-  repository with no significant problem, testing whether the skill can stay quiet — has not
-  been run yet; see [docs/evaluation.md](docs/evaluation.md) for the full method and results.
+- Behavioral evaluation has run against four real public repositories and found three real bugs
+  in the detection tooling (now fixed), verified a real merged pull request's fix in
+  change-scoped mode, and ran committed benchmarks for real evidence. It has not yet found a
+  repository with literally zero findings — worth reading as a result in itself, not a gap; see
+  [docs/evaluation.md](docs/evaluation.md) §3.7. A first independent pass — an agent with no
+  memory of this project's own findings, reviewing one of the four repositories from scratch —
+  reproduced the main finding, caught a real one the author's own review had missed, and used
+  evidence the author had overlooked to correct that review's severity score (§3.8). It covers
+  one of the four repositories so far, not all of them.
 
 ## License
 

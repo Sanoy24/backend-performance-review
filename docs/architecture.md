@@ -149,7 +149,34 @@ gives discarded candidates somewhere to go.
 
 ---
 
-## 8. Why examples live outside `skills/`
+## 8. Why an out-of-scope issue gets a full write-up but never a performance score
+
+A review reading code for performance will sometimes turn up something real that isn't a
+performance question at all — a timing-unsafe comparison, an end-of-life runtime, a SQL
+injection risk. Two opposite mistakes are both live here, and behavioral evaluation
+(`docs/evaluation.md` §3.8) hit the first one in practice before this rule existed: a real
+finding was scored `Informational`/P3, which is defined as "no current or projected impact" —
+true of a hygiene note, false of a real vulnerability. Scoring it that way reads as "safe to
+deprioritize," which is worse than not mentioning it, because it looks like the issue was
+considered and dismissed rather than never evaluated on its own terms.
+
+The other mistake is reducing it to a one-line mention once it's out of the performance rubric.
+That under-serves it in the opposite direction: it was found with the same evidence discipline
+as any performance finding, and deserves the same rigor — Problem, Evidence, Recommendation,
+Trade-offs, Validation — not a footnote.
+
+The fix keeps both halves: full write-up, own section ("Adjacent findings — outside performance
+scope"), own IDs (`SEC-`/`COR-`/`MAINT-`, never `PERF-`), classified on `Kind` and the existing
+evidence-grade `Confidence` scale (a domain-neutral "how sure are we," which transfers fine) plus
+a plain-language `Risk` note — deliberately *not* a CVSS-style score, because this skill has no
+dedicated security or correctness methodology, and manufacturing that rigor would be exactly the
+kind of dishonesty the evidence-first rule forbids elsewhere. It always names the dedicated
+review that would actually assess it, because pointing at the right tool is honest; pretending
+to be that tool is not.
+
+---
+
+## 9. Why examples live outside `skills/`
 
 Example content leaks. An example report containing a fabricated `p99 = 340ms` does two kinds
 of damage: it violates the evidence rule in the repository's own artifacts, and it risks that
@@ -164,7 +191,7 @@ things teaches the wrong behavior even when nobody loads it.
 
 ---
 
-## 9. Why the detection script exists
+## 10. Why the detection script exists
 
 Detection is mechanical: read manifests, match substrings, resolve references. Prose
 instructions telling an agent to do that are followed inconsistently and cost tokens each
@@ -186,7 +213,7 @@ anywhere" property, which matters more.
 
 ---
 
-## 10. Constraints on future changes
+## 11. Constraints on future changes
 
 - `SKILL.md` stays tight. Its content persists in context for the whole session, so every line
   is a recurring cost. Detail belongs in reference files that load on demand.

@@ -138,7 +138,12 @@ Blast radius is what separates a slow endpoint from an outage.
   `async` + `system-wide`.
 - **`Medium`** — real waste on the critical path but bounded; or high-frequency off it.
 - **`Low`** — bounded, local, small constant.
-- **`Informational`** — no current or projected impact; recorded for context.
+- **`Informational`** — no current or projected impact; recorded for context. This is a
+  performance verdict, not a parking spot: a real security or maintenance issue you noticed
+  along the way is not "no impact," it's *no performance impact*, and those are different
+  claims. Scoring it `Informational` (→ P3 in the matrix) reads as "safe to deprioritize,"
+  which is wrong for a real vulnerability. It gets its own full write-up under `Kind` /
+  `Confidence` / `Risk` instead — never `Severity` or `Priority` — see `SKILL.md` rule 8.
 
 ---
 

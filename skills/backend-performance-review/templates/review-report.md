@@ -183,6 +183,44 @@ may be asserted; latency improvements may not be quantified without measurement.
 `[One or two lines on candidates that were evaluated and discarded, with the reason. This
 demonstrates the review had a filter, and it pre-empts "why didn't you mention X".]`
 
+### Adjacent findings — outside performance scope
+
+`[Real security, correctness, or maintenance issues noticed while reading code for performance.
+Full write-up, same rigor as a performance finding — this section exists because a one-line
+mention would under-serve something you found with real evidence. But never score it on the
+performance axes: Severity/Confidence/Priority/a PERF- ID all measure performance impact, and
+"Informational/P3" reads as "safe to deprioritize," which is wrong for a real vulnerability.
+Equally, never invent a CVSS-style score or claim comprehensive coverage — this skill has no
+dedicated security or correctness methodology, and manufacturing that rigor is the same kind of
+dishonesty as inventing a number. Omit this section entirely if nothing qualifies — do not
+write "none noticed" as filler.]`
+
+### SEC-001 / COR-001 / MAINT-001 — <short title>
+
+| | |
+|:--|:--|
+| **Kind** | Security / Correctness / Maintenance |
+| **Confidence** | Confirmed / High / Medium / Low `[same evidence-grade meaning as a performance finding — how sure you are it's real]` |
+| **Risk** | Low / Medium / High `[a plain-language judgment call, not a security-specific rating scale — justify it in one sentence in Impact below]` |
+| **Location** | `path/to/file.ext:LINE` |
+
+**Problem** `[What is wrong, in one or two sentences.]`
+
+**Evidence** `[Cite files and lines, same standard as a performance finding.]`
+
+**Impact** `[Plain language, one or two sentences: why this Risk level. Not position/frequency/
+growth/blast-radius — those are the performance-specific factors and don't apply here.]`
+
+**Recommendation** `[What to change.]`
+
+**Trade-offs** `[What the change costs, if anything.]`
+
+**Validation** `[What would confirm the fix. May simply be: run the review this needs.]`
+
+**Would need** `[The dedicated review or tool that would actually assess this properly —
+e.g. a security review, a dependency-update pass, a correctness-focused test suite. This
+section is not a substitute for that review; it is a pointer toward it.]`
+
 ---
 
 ## 8. Prioritized action plan
