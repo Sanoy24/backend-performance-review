@@ -44,6 +44,11 @@ Breaking changes carry a migration note in the entry.
   traversal-depth growth, supernodes as the graph-native form of a hot key, and cartesian
   products from unconnected match patterns. Neo4j promoted from `generic` to `conceptual`;
   Amazon Neptune added at `conceptual`.
+- `databases/wide-column.md` — covers both sub-models the category actually contains:
+  partition-oriented (partition/clustering key design, unbounded-partition risk, consistency-
+  level arithmetic) and column-oriented analytical (scan cost, sort-key pruning, batched-insert
+  requirements), sharing a common LSM/merge-tree storage-mechanism section. Cassandra/ScyllaDB
+  and ClickHouse promoted from `generic` to `conceptual`.
 
 ### Fixed
 
@@ -87,7 +92,7 @@ real public repositories:
 
 ### Planned
 
-- Category files for wide-column, search, time-series, and vector datastores.
+- Category files for search, time-series, and vector datastores.
 - Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.

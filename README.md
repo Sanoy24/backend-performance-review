@@ -173,8 +173,8 @@ methodology still applies, and the report says so in its scope section.
 | DynamoDB | key-value | conceptual |
 | Neo4j | graph | conceptual |
 | Amazon Neptune | graph | conceptual |
-| Cassandra / ScyllaDB | wide-column | generic |
-| ClickHouse | wide-column | generic |
+| Cassandra / ScyllaDB | wide-column | conceptual |
+| ClickHouse | wide-column | conceptual |
 | Elasticsearch / OpenSearch / Solr | search | generic |
 | InfluxDB | time-series | generic |
 | Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | generic |

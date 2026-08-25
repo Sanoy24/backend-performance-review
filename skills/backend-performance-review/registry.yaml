@@ -150,8 +150,12 @@ version: 1
   kind: datastore
   category: wide-column
   match: [cassandra, scylla, "cassandra-driver", gocql, datastax]
-  load: [databases/universal.md]
-  tier: generic
+  load: [databases/universal.md, databases/wide-column.md]
+  tier: conceptual
+  notes: >
+    Partition-oriented wide-column category principles apply in full. No engine-specific file
+    yet — compaction strategy tuning, tombstone thresholds, and driver-level retry/consistency
+    defaults are not covered; treat those as unknowns.
 
 - signal: elasticsearch
   kind: datastore
@@ -164,8 +168,12 @@ version: 1
   kind: datastore
   category: wide-column
   match: [clickhouse, "clickhouse-driver", "clickhouse-connect"]
-  load: [databases/universal.md]
-  tier: generic
+  load: [databases/universal.md, databases/wide-column.md]
+  tier: conceptual
+  notes: >
+    Column-oriented analytical category principles apply (wide-column.md §4), not the
+    partition-key reasoning in §2-3 — this is a column-scan engine, not a partition-oriented
+    one. No engine-specific file yet; treat merge-tree tuning specifics as unknowns.
 
 - signal: influxdb
   kind: datastore
