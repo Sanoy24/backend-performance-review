@@ -47,6 +47,10 @@ Breaking changes carry a migration note in the entry.
   out-of-scope security/maintenance findings — but `Informational` is defined as "no current or
   projected impact," a performance claim, and applying it to a real vulnerability reads as "safe
   to deprioritize." See the "Adjacent findings" addition above.
+- `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` were missing
+  `metadata.description` and `author` respectively — caught by running `claude plugin validate`
+  for real rather than relying on documentation alone. The full marketplace-add/install/list
+  cycle was then run against the live repository and confirmed working end-to-end.
 
 Found during behavioral evaluation against real public repositories (see `docs/evaluation.md`
 §3):

@@ -5,6 +5,10 @@
   "homepage": "https://github.com/Sanoy24/backend-performance-review",
   "repository": "https://github.com/Sanoy24/backend-performance-review",
   "license": "MIT",
+  "author": {
+    "name": "Sanoy24",
+    "url": "https://github.com/Sanoy24"
+  },
   "keywords": [
     "performance",
     "backend",

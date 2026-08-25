@@ -15,6 +15,7 @@ layout has drifted.
 | `SKILL.md` frontmatter fields; portable subset for non-Claude-Code distribution | 2026-08-25 | Claude Code skills documentation, `https://code.claude.com/docs/en/skills` |
 | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` schemas; skill discovery from a `skills/` directory | 2026-08-25 | Claude Code plugin marketplace documentation, `https://code.claude.com/docs/en/plugin-marketplaces` |
 | Community skill-repository layout (`skills/<name>/SKILL.md`, `.claude-plugin/`, `docs/`, `scripts/`) | 2026-08-25 | `https://github.com/mattpocock/skills` |
+| Manifest schemas re-verified against the installed CLI's own validator (`claude plugin validate`, v2.1.39) rather than documentation alone; full install/uninstall cycle run against the live repository | 2026-08-25 | Local `claude` CLI |
 
 **Re-verify before a release.** If the frontmatter schema or marketplace format has changed,
 update this table with the new date and note the change in `CHANGELOG.md`.
@@ -70,6 +71,14 @@ Verify:
 
 The skill is then available in every project, and `/backend-performance-review` appears in
 the slash-command menu.
+
+**Verified end-to-end**, not just checked against documentation: `claude plugin validate .`
+was run against both manifests (catching two real gaps — `marketplace.json` needs
+`metadata.description`, `plugin.json` needs `author` — both now fixed), then
+`claude plugin marketplace add Sanoy24/backend-performance-review` and
+`claude plugin install backend-performance-review` were run for real against the live
+repository, and `claude plugin list` confirmed the plugin installed and enabled at the correct
+version. This is the exact flow above, actually exercised, not inferred from the schema.
 
 ## 3. Claude Code — copy the skill directory
 

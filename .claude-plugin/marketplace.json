@@ -6,6 +6,9 @@
     "name": "backend-performance-review contributors",
     "url": "https://github.com/Sanoy24/backend-performance-review"
   },
+  "metadata": {
+    "description": "A single-skill marketplace providing the backend-performance-review agent skill: an evidence-first, workload-driven methodology for reviewing backend codebases for performance issues."
+  },
   "plugins": [
     {
       "name": "backend-performance-review",
