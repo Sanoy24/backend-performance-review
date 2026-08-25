@@ -197,38 +197,21 @@ more. Precision is the scarce resource here.
 ## 9. Local checks
 
 ```bash
-# registry parses, and every entry has load + tier
-python - <<'PY'
-import sys; sys.path.insert(0, "skills/backend-performance-review/scripts")
-import detect_stack as d
-entries, warnings = d.parse_registry("skills/backend-performance-review/registry.yaml")
-assert not warnings, warnings
-missing = [e["signal"] for e in entries if not e.get("load") or not e.get("tier")]
-assert not missing, missing
-print(f"{len(entries)} registry entries OK")
-PY
-
-# every referenced file exists
-python - <<'PY'
-import os, sys; sys.path.insert(0, "skills/backend-performance-review/scripts")
-import detect_stack as d
-root = "skills/backend-performance-review"
-entries, _ = d.parse_registry(f"{root}/registry.yaml")
-missing = {r for e in entries for r in e.get("load", []) if not os.path.exists(f"{root}/{r}")}
-assert not missing, missing
-print("all registry references resolve")
-PY
-
-# no product names in category files
-! grep -rniE 'postgres|mysql|mongodb|redis|cassandra|dynamodb|neo4j' \
-    skills/backend-performance-review/databases/ \
-    skills/backend-performance-review/principles/ \
-  && echo "category files are product-neutral"
+python scripts/check_repo_invariants.py
 ```
 
-## 10. Code of conduct
+Runs automatically on every push and pull request (`.github/workflows/checks.yml`); run it
+locally before opening a PR to catch the same failures sooner. It verifies every gate in §5:
+the registry parses and every entry resolves, category files stay product-neutral, technology
+files have all seven required sections, the priority matrix is identical everywhere it is
+published, the published tier counts match the registry, and `detect_stack.py` imports only
+the standard library.
 
-By participating you agree to abide by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+## 10. Conduct
+
+Be respectful, and argue with the claim rather than the person. This is a project about
+evidence, so challenging a finding or a design decision is expected and welcome — "this
+assertion has no mechanism behind it" is a good review comment. Keep it there.
 
 ## 11. License
 

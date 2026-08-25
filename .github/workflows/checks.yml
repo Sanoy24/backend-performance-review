@@ -1,0 +1,40 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  invariants:
+    name: Repository invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify structural invariants
+        run: python scripts/check_repo_invariants.py
+
+      - name: Verify the bundled detection script runs stdlib-only
+        run: python skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null
+
+  stdlib-only:
+    name: detect_stack.py runs on a bare Python 3.8 with no packages installed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      # No pip install step exists in this job, so the environment already has nothing
+      # beyond the standard library. -I additionally ignores user site-packages and
+      # PYTHONPATH, so a runner-local leak can't mask a real dependency by accident.
+      - name: Run with an isolated interpreter as an extra guard
+        run: |
+          python -I skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null

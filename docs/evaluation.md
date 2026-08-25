@@ -12,7 +12,7 @@ run** from **checks that are specified but not yet executed**.
 
 | Category | Status |
 |:--|:--|
-| Architecture self-check | **Run** — passing as of v0.1.0 |
+| Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing as of v0.1.0 |
 | Behavioral evaluation against public repositories | **Round 1 run** — 2 of 6 required cases covered; 3 real bugs found and fixed |
 
@@ -30,19 +30,29 @@ invocation end-to-end. The remaining cases, and a truly independent run, are ope
 
 ## 1. Architecture self-check
 
-Cheap, mechanical, run every release.
+Automated: `scripts/check_repo_invariants.py`, run on every push and pull request by
+`.github/workflows/checks.yml`. It replaced a set of manual, ad-hoc commands that lived
+directly in `CONTRIBUTING.md` — consolidating them into one real, mutation-tested script
+closed the gap where those commands could silently drift out of sync with the invariants they
+were meant to check.
 
-| Check | Method | v0.1.0 |
-|:--|:--|:--|
-| Registry parses; every entry has `load` and `tier` | `parse_registry()` over `registry.yaml` | Pass — 37 entries |
-| Every referenced file exists | Path check against each `load` entry | Pass — 0 unresolved |
-| Category and principle files name no products | `grep -riE 'postgres\|mysql\|mongodb\|redis\|cassandra\|dynamodb\|neo4j\|elasticsearch\|kafka'` over `databases/`, `principles/`, `runtimes/` | Pass — 0 matches |
-| Every technology file has all seven sections | Read | Pass — 3 files |
-| Category file ordered before technology file in every `load` | Read registry | Pass |
-| README support table matches the registry | Compare | Pass — 3 deep / 24 conceptual / 10 generic |
-| No reference file grossly exceeds the ~400 line soft cap | `wc -l` | Pass |
-| Examples are outside `skills/` | Path check | Pass |
-| Priority matrix internally consistent across `SKILL.md`, `rubrics.md`, README | Read | Pass |
+| Check | v0.1.0 |
+|:--|:--|
+| Registry parses; every entry has `load` and `tier` | Pass — 37 entries |
+| Every referenced file exists | Pass — 0 unresolved |
+| Database category files name no specific products | Pass — 0 matches, scoped to `databases/*.md` per the non-derivable-content rule |
+| Every technology file has all seven required sections | Pass — 3 files |
+| Category file ordered before technology file in every `load` | Pass |
+| Published tier summary matches the registry's actual counts | Pass — 3 deep / 24 conceptual / 10 generic |
+| No reference file grossly exceeds the ~400 line soft cap | Pass |
+| Examples are outside `skills/` | Pass |
+| Priority matrix identical in `SKILL.md` and `README.md` | Pass |
+| `detect_stack.py` imports only the standard library | Pass — verified by AST inspection, and separately by running it under a bare Python 3.8 with `-I` |
+
+The checker was mutation-tested before being trusted: four deliberate regressions (a leaked
+product name, a mismatched priority matrix, reversed registry load order, a missing technology
+section) were each introduced into a scratch copy of the repository and confirmed to produce
+the expected failure, then reverted.
 
 Commands for the mechanical subset are in `CONTRIBUTING.md` §9.
 
