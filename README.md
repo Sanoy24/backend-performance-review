@@ -171,7 +171,8 @@ methodology still applies, and the report says so in its scope section.
 | Couchbase | document | conceptual |
 | Firestore | document | conceptual |
 | DynamoDB | key-value | conceptual |
-| Neo4j | graph | generic |
+| Neo4j | graph | conceptual |
+| Amazon Neptune | graph | conceptual |
 | Cassandra / ScyllaDB | wide-column | generic |
 | ClickHouse | wide-column | generic |
 | Elasticsearch / OpenSearch / Solr | search | generic |

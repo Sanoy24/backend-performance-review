@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 3 deep · 24 conceptual · 10 generic (37 detection signals).
+**Current coverage:** 3 deep · 26 conceptual · 9 generic (38 detection signals).
 
 ---
 
@@ -38,7 +38,8 @@ more careful section — not a guessed one.
 | Couchbase | document | conceptual | |
 | Firestore | document | conceptual | Billing is per document read/write, so cost is often the binding constraint; the skill treats cost as a first-class axis here |
 | DynamoDB | key-value | conceptual | Partition key design, hot partitions, and capacity modes dominate and are not yet written |
-| Neo4j | graph | generic | No graph category file in v0.1.0 |
+| Neo4j | graph | conceptual | Traversal-depth, index-free-adjacency, and supernode reasoning apply in full; engine-specific diagnostics not yet written |
+| Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
 | Cassandra / ScyllaDB | wide-column | generic | No wide-column category file in v0.1.0 |
 | ClickHouse | wide-column | generic | |
 | Elasticsearch / OpenSearch / Solr | search | generic | No search category file in v0.1.0 |
@@ -130,8 +131,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Category files for graph, wide-column, search, time-series, and vector — these move ten
-   signals from `generic` to `conceptual` at once.
+1. Category files for wide-column, search, time-series, and vector — these move the remaining
+   eight `generic` signals to `conceptual`. Graph is done (`databases/graph.md`), covering
+   Neo4j and Amazon Neptune.
 2. Per-runtime references: Node.js, Python, JVM, Go.
 3. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 4. Kafka and RabbitMQ references.

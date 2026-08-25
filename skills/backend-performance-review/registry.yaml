@@ -129,11 +129,22 @@ version: 1
   kind: datastore
   category: graph
   match: [neo4j, "bolt://", "neo4j://", py2neo, "neo4j-driver", cypher]
-  load: [databases/universal.md]
-  tier: generic
+  load: [databases/universal.md, databases/graph.md]
+  tier: conceptual
   notes: >
-    No graph category file in v0.1.0. Apply universal datastore principles, inspect
-    traversal depth and query shape, and mark graph-specific conclusions as unknowns.
+    Graph category principles apply in full. No engine-specific file yet — diagnostics,
+    profiler output format, and configuration knobs are not covered; treat those as unknowns.
+
+- signal: neptune
+  kind: datastore
+  category: graph
+  match: ["amazonaws.com/neptune", neptune, gremlin, sparql, "opencypher"]
+  load: [databases/universal.md, databases/graph.md]
+  tier: conceptual
+  notes: >
+    Graph category principles apply in full. No engine-specific file yet — Neptune's managed-
+    service specifics (instance sizing, read-replica behavior, engine choice between Gremlin
+    and openCypher) are not covered; treat those as unknowns.
 
 - signal: cassandra
   kind: datastore

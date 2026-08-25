@@ -40,6 +40,10 @@ Breaking changes carry a migration note in the entry.
   Trade-offs, Validation) under a `SEC-`/`COR-`/`MAINT-` ID, classified on `Kind`, the existing
   evidence-grade `Confidence` scale, and a plain-language `Risk` note — never `Severity` or
   `Priority`, and never a fabricated CVSS-style score.
+- `databases/graph.md` — the first new datastore category since v0.1.0: index-free adjacency,
+  traversal-depth growth, supernodes as the graph-native form of a hot key, and cartesian
+  products from unconnected match patterns. Neo4j promoted from `generic` to `conceptual`;
+  Amazon Neptune added at `conceptual`.
 
 ### Fixed
 
@@ -83,7 +87,7 @@ real public repositories:
 
 ### Planned
 
-- Category files for graph, wide-column, search, time-series, and vector datastores.
+- Category files for wide-column, search, time-series, and vector datastores.
 - Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
