@@ -187,7 +187,8 @@ methodology still applies, and the report says so in its scope section.
 | Memcached | conceptual |
 | Kafka · RabbitMQ · SQS · Celery/Sidekiq/BullMQ-style queues | generic |
 | **Node.js** | **deep** |
-| Python · JVM · Go · .NET · Rust · PHP · Ruby | conceptual |
+| **Python (CPython)** | **deep** |
+| JVM · Go · .NET · Rust · PHP · Ruby | conceptual |
 | REST · GraphQL · gRPC | conceptual |
 | Docker · Kubernetes · Serverless · Terraform | conceptual |
 

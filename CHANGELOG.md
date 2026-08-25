@@ -37,6 +37,14 @@ Breaking changes carry a migration note in the entry.
   "parallelism: no, or restricted" dimension, and V8's default heap ceiling as a concrete,
   checkable instance of the container-memory-limit interaction the taxonomy describes
   abstractly.
+- `technology/python.md` — promotes Python (CPython) to `deep`. The WSGI-vs-ASGI concurrency-
+  model split as the single fact to establish before scoring anything (the identical blocking
+  call is a bounded capacity cost under one model and a `Critical`, system-wide-for-that-worker
+  finding under the other); the GIL as the concrete mechanism behind the runtime's parallelism
+  dimension, including why "we added threads to a CPU-bound job and got no speedup" is expected
+  behavior, not a bug to chase; reference counting as the primary (not generational-only)
+  memory-reclamation path; and the monkey-patched-cooperative-concurrency failure mode where one
+  unpatched dependency blocks a whole `gevent`/`eventlet` worker silently.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -127,7 +135,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology references: Python, JVM, Go, .NET, Rust.
+- Per-runtime technology references: JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
