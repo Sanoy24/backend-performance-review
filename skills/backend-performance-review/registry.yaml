@@ -265,16 +265,13 @@ version: 1
 - signal: node
   kind: runtime
   match: ["package.json", "node_modules", nodejs, "\"node\":"]
-  load: [runtimes/universal.md, application/async-and-blocking.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/node.md]
+  tier: deep
   notes: >
     "package.json" and "node_modules" alone cannot distinguish a Node.js backend from
     front-end tooling in a full-stack repository; behavioral evaluation fired this signal
     on a Python-backend repo that happened to contain a frontend, so verify the actual
     backend entry point before applying Node-specific reasoning (see docs/evaluation.md).
-    Single-threaded event loop with a bounded libuv threadpool. Universal runtime
-    reasoning applies; a Node-specific file (GC flags, worker_threads, threadpool sizing)
-    is planned for v0.2.0.
 
 - signal: python
   kind: runtime

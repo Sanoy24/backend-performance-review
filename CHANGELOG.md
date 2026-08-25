@@ -29,6 +29,14 @@ Breaking changes carry a migration note in the entry.
 
 ### Added
 
+- `technology/node.md` — the first per-runtime technology reference, promoting Node.js from
+  `conceptual` to `deep`. Covers what `runtimes/universal.md`'s taxonomy deliberately leaves
+  generic: event-loop phase ordering and microtask-starvation as a distinct failure mode from a
+  single blocking call, the libuv thread pool's small default size and the specific operations
+  that share it, the concrete mechanisms (`cluster`, `worker_threads`) behind the runtime's
+  "parallelism: no, or restricted" dimension, and V8's default heap ceiling as a concrete,
+  checkable instance of the container-memory-limit interaction the taxonomy describes
+  abstractly.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -119,7 +127,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology references: Node.js, Python, JVM, Go, .NET, Rust.
+- Per-runtime technology references: Python, JVM, Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
