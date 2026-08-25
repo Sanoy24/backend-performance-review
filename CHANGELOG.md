@@ -88,6 +88,15 @@ Breaking changes carry a migration note in the entry.
   mental model under-predicts, buffer-pool sizing conventions that are not interchangeable with
   Postgres's `shared_buffers` guidance, and the query-cache-as-write-bottleneck hazard on pre-8.0
   deployments.
+- `technology/dynamodb.md` — promotes DynamoDB to `deep`, completing both roadmap-listed
+  `conceptual`-engine promotions. Partition-key-driven hot partitions as the concrete mechanism
+  behind DynamoDB's throughput distribution (with adaptive capacity's real but bounded
+  mitigation); `Scan`'s per-item-examined billing model as the reason a request-path scan is a
+  severe finding here specifically, not just a slow one; a Global Secondary Index's separate
+  capacity and how its throttling propagates back to the base table's writes; the hard 400 KB
+  item-size ceiling versus the graduated "large values cost more" reasoning generic key-value
+  stores get; the eventual-vs-strong consistency cost trade-off, including that GSIs support
+  eventually consistent reads only; and TTL's best-effort (not precision) deletion timing.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -178,7 +187,6 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- A deep reference for DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated

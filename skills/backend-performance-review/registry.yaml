@@ -116,11 +116,13 @@ version: 1
   kind: datastore
   category: key-value
   match: [dynamodb, "aws-sdk/client-dynamodb", boto3_dynamodb, "aws-sdk-go-v2/service/dynamodb"]
-  load: [databases/universal.md, databases/key-value.md]
-  tier: conceptual
+  load: [databases/universal.md, databases/key-value.md, technology/dynamodb.md]
+  tier: deep
   notes: >
-    Partition key design, hot partitions, and provisioned-vs-on-demand capacity dominate.
-    Key-value principles apply; engine specifics are not yet written.
+    Record the capacity mode (Provisioned + auto-scaling vs On-Demand) and whether a GSI
+    exists and its capacity relative to the base table; technology/dynamodb.md covers
+    partition-key-driven hot partitions, Scan's per-item-examined cost model, and GSI
+    throttling propagating back to the base table as the checkable specifics.
 
 # ---------------------------------------------------------------------------
 # Datastores — other categories (conceptual in v0.1.0)
