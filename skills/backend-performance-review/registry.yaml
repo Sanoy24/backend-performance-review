@@ -308,8 +308,13 @@ version: 1
 - signal: dotnet
   kind: runtime
   match: [".csproj", ".sln", ".fsproj"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/dotnet.md]
+  tier: deep
+  notes: >
+    Determine first whether the code awaits asynchronously throughout or blocks synchronously
+    on async work (.Result/.Wait()/.GetAwaiter().GetResult()) on a hot path; technology/dotnet.md
+    covers thread-pool starvation as the concrete failure mode this produces, sync-over-async
+    deadlock risk, value-type boxing, and Server-vs-Workstation GC as the checkable specifics.
 
 - signal: rust
   kind: runtime
