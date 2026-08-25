@@ -58,7 +58,7 @@ product name, a mismatched priority matrix, reversed registry load order, a miss
 section) were each introduced into a scratch copy of the repository and confirmed to produce
 the expected failure, then reverted.
 
-Commands for the mechanical subset are in `CONTRIBUTING.md` §9.
+Commands for the mechanical subset are in `CONTRIBUTING.md` §10.
 
 ### Questions the self-check is really asking
 
