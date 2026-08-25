@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 5 deep · 29 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 6 deep · 28 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -72,7 +72,7 @@ application layer.
 |:--|:--|
 | **Node.js** | **deep** |
 | **Python (CPython)** | **deep** |
-| JVM (Java / Kotlin) | conceptual |
+| **JVM (Java / Kotlin)** | **deep** |
 | Go | conceptual |
 | .NET | conceptual |
 | Rust | conceptual |
@@ -86,8 +86,11 @@ adds the event-loop-phase, libuv-threadpool, and V8-heap-ceiling specifics the t
 deliberately leaves generic. `technology/python.md` does the same for CPython: the WSGI-vs-ASGI
 concurrency-model split that determines the severity of an identical blocking call, the GIL as
 the concrete mechanism behind the runtime's parallelism dimension, and reference counting as the
-primary (not generational-only) memory-reclamation path. The remaining per-runtime files (JVM,
-Go, .NET, Rust) are the main planned addition.
+primary (not generational-only) memory-reclamation path. `technology/jvm.md` covers the
+thread-per-request/reactive/virtual-thread concurrency split, JIT warm-up as a first-class
+performance dimension, the choice between real GC algorithms (Parallel, G1, ZGC/Shenandoah) and
+their pause/throughput trade-offs, and off-heap/metaspace memory as invisible to heap-only
+monitoring. The remaining per-runtime files (Go, .NET, Rust) are the main planned addition.
 
 ## API surfaces
 
@@ -133,7 +136,7 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Per-runtime references: JVM, Go, .NET, Rust — Node.js and Python are done.
+1. Per-runtime references: Go, .NET, Rust — Node.js, Python, and JVM are done.
 2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 3. Kafka and RabbitMQ references.
 

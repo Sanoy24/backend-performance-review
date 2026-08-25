@@ -45,6 +45,14 @@ Breaking changes carry a migration note in the entry.
   behavior, not a bug to chase; reference counting as the primary (not generational-only)
   memory-reclamation path; and the monkey-patched-cooperative-concurrency failure mode where one
   unpatched dependency blocks a whole `gevent`/`eventlet` worker silently.
+- `technology/jvm.md` — promotes JVM (Java/Kotlin) to `deep`. The thread-per-request vs.
+  reactive-event-loop vs. virtual-thread (JDK 21+) concurrency-model split that determines the
+  severity of an identical blocking call, including carrier-thread pinning as the specific way
+  virtual threads' cheap-blocking property gets silently defeated; JIT warm-up as a first-class,
+  structural performance dimension rather than a footnote; the real trade-off between GC
+  algorithms (Parallel, G1, ZGC/Shenandoah) instead of one fixed collector; and off-heap/metaspace
+  memory as invisible to heap-only monitoring, including the pre-JDK-8u191/JDK-10
+  container-awareness gap as a real, dangerous default on older images.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -135,7 +143,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology references: JVM, Go, .NET, Rust.
+- Per-runtime technology references: Go, .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.

@@ -188,7 +188,8 @@ methodology still applies, and the report says so in its scope section.
 | Kafka · RabbitMQ · SQS · Celery/Sidekiq/BullMQ-style queues | generic |
 | **Node.js** | **deep** |
 | **Python (CPython)** | **deep** |
-| JVM · Go · .NET · Rust · PHP · Ruby | conceptual |
+| **JVM (Java / Kotlin)** | **deep** |
+| Go · .NET · Rust · PHP · Ruby | conceptual |
 | REST · GraphQL · gRPC | conceptual |
 | Docker · Kubernetes · Serverless · Terraform | conceptual |
 
@@ -271,8 +272,8 @@ files, and fabricated performance guarantees.
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow in v0.1.0. Three engines are `deep`; everything else relies
-  on category-level reasoning.
+- Coverage is deliberately narrow. Six engines are `deep`; everything else relies on
+  category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
 - Behavioral evaluation has run against four real public repositories and found three real bugs

@@ -286,8 +286,13 @@ version: 1
 - signal: jvm
   kind: runtime
   match: ["pom.xml", "build.gradle", "build.gradle.kts", ".java", ".kt"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/jvm.md]
+  tier: deep
+  notes: >
+    Determine the concurrency model first — thread-per-request, reactive event-loop, or
+    virtual threads (JDK 21+) — because severity of an identical blocking call differs
+    completely between them; technology/jvm.md covers this plus GC-collector choice,
+    JIT warm-up, and off-heap/metaspace memory as the concrete, checkable specifics.
 
 - signal: go
   kind: runtime
