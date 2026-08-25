@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 6 deep · 28 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 7 deep · 27 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -73,7 +73,7 @@ application layer.
 | **Node.js** | **deep** |
 | **Python (CPython)** | **deep** |
 | **JVM (Java / Kotlin)** | **deep** |
-| Go | conceptual |
+| **Go** | **deep** |
 | .NET | conceptual |
 | Rust | conceptual |
 | PHP | conceptual |
@@ -90,7 +90,11 @@ primary (not generational-only) memory-reclamation path. `technology/jvm.md` cov
 thread-per-request/reactive/virtual-thread concurrency split, JIT warm-up as a first-class
 performance dimension, the choice between real GC algorithms (Parallel, G1, ZGC/Shenandoah) and
 their pause/throughput trade-offs, and off-heap/metaspace memory as invisible to heap-only
-monitoring. The remaining per-runtime files (Go, .NET, Rust) are the main planned addition.
+monitoring. `technology/go.md` covers the M:N goroutine scheduler that makes blocking calls
+mostly (not entirely) cheap, goroutine leaks as this runtime's distinctive resource-growth
+pattern, `GOMAXPROCS`-vs-container-CPU-quota mismatches, and the GC's budget-based
+(`GOGC`/`GOMEMLIMIT`) tuning model rather than a choice between algorithms. The remaining
+per-runtime files (.NET, Rust) are the main planned addition.
 
 ## API surfaces
 
@@ -136,7 +140,7 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Per-runtime references: Go, .NET, Rust — Node.js, Python, and JVM are done.
+1. Per-runtime references: .NET, Rust — Node.js, Python, JVM, and Go are done.
 2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 3. Kafka and RabbitMQ references.
 
