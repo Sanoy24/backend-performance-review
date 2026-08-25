@@ -191,7 +191,8 @@ methodology still applies, and the report says so in its scope section.
 | **JVM (Java / Kotlin)** | **deep** |
 | **Go** | **deep** |
 | **.NET** | **deep** |
-| Rust · PHP · Ruby | conceptual |
+| **Rust** | **deep** |
+| PHP · Ruby | conceptual |
 | REST · GraphQL · gRPC | conceptual |
 | Docker · Kubernetes · Serverless · Terraform | conceptual |
 
@@ -274,7 +275,7 @@ files, and fabricated performance guarantees.
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Eight engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Nine engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.

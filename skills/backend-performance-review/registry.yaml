@@ -319,8 +319,14 @@ version: 1
 - signal: rust
   kind: runtime
   match: ["Cargo.toml", "Cargo.lock"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/rust.md]
+  tier: deep
+  notes: >
+    Identify the async runtime actually in use (Tokio, async-std, smol, or none) before
+    applying any async-specific reasoning, and confirm a --release build before drawing any
+    conclusion from a profile or benchmark; technology/rust.md covers Rc/Arc reference-cycle
+    leaks, spawn_blocking as the fix for a stalled async worker, and static-vs-dynamic
+    dispatch as the checkable specifics.
 
 - signal: php
   kind: runtime

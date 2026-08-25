@@ -71,6 +71,16 @@ Breaking changes carry a migration note in the entry.
   meant to avoid; and Server-vs-Workstation GC as the throughput/footprint trade-off, alongside a
   genuinely positive note that .NET Core 3.0+ already reads container cgroup limits by default
   (unlike the JVM's and Go's historical gaps in this area).
+- `technology/rust.md` — promotes Rust to `deep`, completing the six per-runtime references
+  planned for this coverage push. The absence of a garbage collector entirely (deterministic
+  RAII-based reclamation), with `Rc`/`Arc` reference cycles as the one leak vector that survives
+  it since Rust has no cycle-detecting collector; the fact that the async runtime (almost always
+  Tokio) is a third-party ecosystem choice rather than a language or stdlib feature; the narrower
+  blast radius of a blocked worker thread under Tokio's default multi-threaded scheduler versus a
+  genuinely single-threaded event loop, with `spawn_blocking` as the idiomatic fix; static
+  dispatch via monomorphization as the default, with `dyn Trait` as an explicit, checkable opt-in;
+  and the recurring evaluation mistake of drawing conclusions from a debug build instead of
+  `--release`.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -161,7 +171,6 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology reference: Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
