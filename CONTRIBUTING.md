@@ -17,13 +17,11 @@ In rough order:
    irrelevant, or unactionable. These are the highest-signal bug reports this project can
    receive. Include the code shape that triggered it and why it was wrong.
 2. **Promoting a technology from `conceptual` to `deep`** by writing its reference file — the
-   largest gap remaining now that all five planned datastore categories have a file.
-3. **A category file for a datastore type not yet covered** (object storage is the only one
-   left; see `docs/supported-technologies.md`'s roadmap).
-4. **Sharpening a methodology or principles file** by making a discrimination clearer:
+   largest gap remaining now that every datastore category has a file.
+3. **Sharpening a methodology or principles file** by making a discrimination clearer:
    when does this apply, when does it not.
-5. **A worked example** demonstrating restraint as well as findings.
-6. **Validation techniques** — better diagnostics, safer commands, cheaper regression guards.
+4. **A worked example** demonstrating restraint as well as findings.
+5. **Validation techniques** — better diagnostics, safer commands, cheaper regression guards.
 
 ---
 

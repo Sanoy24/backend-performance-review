@@ -205,6 +205,21 @@ version: 1
     yet — actual parameter names, defaults, and memory-overhead figures are not covered;
     treat those as unknowns.
 
+- signal: object-storage
+  kind: datastore
+  category: object-store
+  match: ["s3://", "aws-sdk/client-s3", boto3_s3, "amazonaws.com/s3", "com.amazonaws.services.s3",
+          "google-cloud-storage", "storage.googleapis.com", "azure-storage-blob",
+          "blob.core.windows.net", minio, "gcs://"]
+  load: [databases/universal.md, databases/object-storage.md]
+  tier: conceptual
+  notes: >
+    Object storage category principles apply in full — request-count-dominated cost,
+    key/prefix-only access, immutable full-object writes, multipart size limits, and
+    egress/request cost as a first-class dimension distinct from latency. No engine-specific
+    file yet — actual size limits, consistency guarantees, and storage-tier pricing differ
+    by provider and are not covered; treat those as unknowns.
+
 # ---------------------------------------------------------------------------
 # Caches
 # ---------------------------------------------------------------------------

@@ -115,6 +115,15 @@ Breaking changes carry a migration note in the entry.
   downstream fan-out cost; prefetch/QoS as the concrete knob behind competing-consumer
   throughput and fairness; and `consumer_timeout` closing the channel outright, rather than
   silently rebalancing the way Kafka's `max.poll.interval.ms` does.
+- `databases/object-storage.md` — the last category file, closing the gap flagged since v0.1.0's
+  follow-up work. Request count (not data volume) as the dominant cost dimension for an API with
+  no query planner; key/prefix design as the only access structure, with unbounded listing
+  followed by client-side filtering as the sharpest instance of "the workload belongs in a
+  different category of store" this skill describes; full-object immutability making every
+  update a complete rewrite, with no field-level operation to fall back on; multipart upload as a
+  hard-limit workaround, not just a performance tool; and request/egress cost as a first-class
+  dimension distinct from latency, unlike every other category this skill covers. Adds an
+  `object-storage` signal (S3-compatible, GCS, Azure Blob, MinIO) at `conceptual` tier.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -198,13 +207,6 @@ real public repositories:
 
 ### Planned
 
-- A category file for object storage (S3-compatible/blob stores) — listed as a valid category in
-  `registry.yaml`'s schema comment since v0.1.0 but never given a category file or any registry
-  entries. Found while closing out the other five category files; not otherwise tracked
-  anywhere. This category's performance model differs enough from the other eight (no rich
-  query/index layer; the concerns are request-count minimization, multipart/batch operations,
-  key/prefix design for listing performance, and egress cost) that it deserves its own file
-  rather than a placeholder.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
   repositories; currently covers one of four.
