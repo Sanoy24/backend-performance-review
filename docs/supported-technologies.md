@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 8 deep · 26 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 9 deep · 25 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -75,7 +75,7 @@ application layer.
 | **JVM (Java / Kotlin)** | **deep** |
 | **Go** | **deep** |
 | **.NET** | **deep** |
-| Rust | conceptual |
+| **Rust** | **deep** |
 | PHP | conceptual |
 | Ruby | conceptual |
 
@@ -97,8 +97,13 @@ pattern, `GOMAXPROCS`-vs-container-CPU-quota mismatches, and the GC's budget-bas
 covers thread-pool starvation from sync-over-async as the CLR's core concurrency failure mode
 (a distinct symptom shape from a stalled event loop: progressive latency degradation, not
 collapse), the narrower sync-over-async deadlock condition, value-type boxing as a checkable
-GC-pressure regression, and the Server-vs-Workstation GC trade-off. The remaining per-runtime
-file (Rust) is the main planned addition.
+GC-pressure regression, and the Server-vs-Workstation GC trade-off. `technology/rust.md` covers
+the absence of a GC entirely (deterministic RAII-based reclamation, with `Rc`/`Arc` reference
+cycles as the one leak vector that survives it), the fact that the async runtime is a third-party
+choice (almost always Tokio) rather than a language feature, the narrower blast radius of a
+blocked worker under Tokio's multi-threaded scheduler versus a genuinely single-threaded event
+loop, and `spawn_blocking` as the idiomatic fix. This completes the per-runtime references
+planned for this coverage push.
 
 ## API surfaces
 
@@ -144,9 +149,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Per-runtime reference: Rust — Node.js, Python, JVM, Go, and .NET are done.
-2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
-3. Kafka and RabbitMQ references.
+1. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines. All
+   planned per-runtime references (Node.js, Python, JVM, Go, .NET, Rust) are now done.
+2. Kafka and RabbitMQ references.
 
 Contributions in any of these areas are welcome; see [extending.md](extending.md).
 
