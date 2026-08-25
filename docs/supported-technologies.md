@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 7 deep · 27 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 8 deep · 26 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -74,7 +74,7 @@ application layer.
 | **Python (CPython)** | **deep** |
 | **JVM (Java / Kotlin)** | **deep** |
 | **Go** | **deep** |
-| .NET | conceptual |
+| **.NET** | **deep** |
 | Rust | conceptual |
 | PHP | conceptual |
 | Ruby | conceptual |
@@ -93,8 +93,12 @@ their pause/throughput trade-offs, and off-heap/metaspace memory as invisible to
 monitoring. `technology/go.md` covers the M:N goroutine scheduler that makes blocking calls
 mostly (not entirely) cheap, goroutine leaks as this runtime's distinctive resource-growth
 pattern, `GOMAXPROCS`-vs-container-CPU-quota mismatches, and the GC's budget-based
-(`GOGC`/`GOMEMLIMIT`) tuning model rather than a choice between algorithms. The remaining
-per-runtime files (.NET, Rust) are the main planned addition.
+(`GOGC`/`GOMEMLIMIT`) tuning model rather than a choice between algorithms. `technology/dotnet.md`
+covers thread-pool starvation from sync-over-async as the CLR's core concurrency failure mode
+(a distinct symptom shape from a stalled event loop: progressive latency degradation, not
+collapse), the narrower sync-over-async deadlock condition, value-type boxing as a checkable
+GC-pressure regression, and the Server-vs-Workstation GC trade-off. The remaining per-runtime
+file (Rust) is the main planned addition.
 
 ## API surfaces
 
@@ -140,7 +144,7 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Per-runtime references: .NET, Rust — Node.js, Python, JVM, and Go are done.
+1. Per-runtime reference: Rust — Node.js, Python, JVM, Go, and .NET are done.
 2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 3. Kafka and RabbitMQ references.
 

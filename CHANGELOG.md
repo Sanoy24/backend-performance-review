@@ -61,6 +61,16 @@ Breaking changes carry a migration note in the entry.
   to host CPU count as a specific, checkable container-CPU-quota mismatch; and the GC's
   budget-based (`GOGC`/`GOMEMLIMIT`) tuning model, a genuinely different trade-off shape from the
   JVM's choice between collector algorithms.
+- `technology/dotnet.md` — promotes .NET (the modern, cross-platform CLR) to `deep`. Thread-pool
+  starvation from sync-over-async (`.Result`/`.Wait()`/`.GetAwaiter().GetResult()`) as the CLR's
+  core concurrency failure mode, with its own distinct symptom shape (progressive latency
+  degradation from the thread pool's slow hill-climbing ramp-up, not an immediate collapse); the
+  narrower sync-over-async deadlock condition, which depends on `SynchronizationContext` capture
+  and is correspondingly less likely under ASP.NET Core's default hosting than under classic
+  ASP.NET; value-type boxing as a checkable, silent reintroduction of GC pressure a struct was
+  meant to avoid; and Server-vs-Workstation GC as the throughput/footprint trade-off, alongside a
+  genuinely positive note that .NET Core 3.0+ already reads container cgroup limits by default
+  (unlike the JVM's and Go's historical gaps in this area).
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -151,7 +161,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology references: .NET, Rust.
+- Per-runtime technology reference: Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
