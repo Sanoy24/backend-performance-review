@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 12 deep · 23 conceptual · 3 generic (38 detection signals).
+**Current coverage:** 13 deep · 23 conceptual · 2 generic (38 detection signals).
 
 ---
 
@@ -58,7 +58,7 @@ more careful section — not a guessed one.
 | Technology | Tier | Notes |
 |:--|:--|:--|
 | **Kafka / Redpanda** | **deep** | Consumer-group rebalancing blast radius, `max.poll.interval.ms` eviction, `acks` durability trade-offs, retention vs. log compaction |
-| RabbitMQ | generic | |
+| **RabbitMQ** | **deep** | The cluster-wide memory-alarm blast radius from one backed-up queue, prefetch/QoS, and exchange routing cost |
 | Amazon SQS | generic | |
 | Celery / Sidekiq / BullMQ / RQ / Dramatiq / Hangfire / Temporal / Asynq | generic | Detected as task queues; retry, backpressure, and pool-sharing reasoning applies |
 
@@ -152,11 +152,16 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. A RabbitMQ reference. Kafka is now done, alongside MySQL/MariaDB and DynamoDB — the two
-   most-requested `conceptual` engines — and all planned per-runtime references (Node.js,
-   Python, JVM, Go, .NET, Rust).
+All engines originally targeted for promotion in this coverage push are now `deep`: Kafka and
+RabbitMQ, MySQL/MariaDB and DynamoDB, and all six planned per-runtime references (Node.js,
+Python, JVM, Go, .NET, Rust).
 
-Contributions in any of these areas are welcome; see [extending.md](extending.md).
+1. A category file for object storage (S3-compatible/blob stores) — a real, tracked gap: listed
+   as a valid category in `registry.yaml`'s schema comment but with zero category file or
+   registry entries. See the CHANGELOG's `Planned` section for why it needs its own file rather
+   than a placeholder.
+
+Contributions in this area are welcome; see [extending.md](extending.md).
 
 **Promoting a technology is a bounded, well-defined contribution:** one reference file, one
 registry line, one README row.

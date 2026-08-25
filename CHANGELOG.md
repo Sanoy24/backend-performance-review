@@ -106,6 +106,15 @@ Breaking changes carry a migration note in the entry.
   changelog topics; `acks` as a named durability/latency spectrum, with `acks=1` as a
   correctness-adjacent finding on data treated as durable; and why increasing partition count on
   an existing topic breaks per-key ordering continuity rather than being a free scaling lever.
+- `technology/rabbitmq.md` — promotes RabbitMQ to `deep`, completing both planned message-broker
+  references. The cluster-wide memory-alarm mechanism, by which one backed-up classic queue can
+  stall publishing on every unrelated queue on the same node — the single most severe,
+  RabbitMQ-specific failure mode in this skill's broker coverage; why a single queue (not
+  partitioned by default, unlike Kafka) becomes its own throughput ceiling once consumers stop
+  being the bottleneck; exchange routing's per-binding publish-time cost, distinct from
+  downstream fan-out cost; prefetch/QoS as the concrete knob behind competing-consumer
+  throughput and fairness; and `consumer_timeout` closing the channel outright, rather than
+  silently rebalancing the way Kafka's `max.poll.interval.ms` does.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -196,7 +205,6 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- A message-broker reference for RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
   repositories; currently covers one of four.
