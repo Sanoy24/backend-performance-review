@@ -53,6 +53,14 @@ Breaking changes carry a migration note in the entry.
   algorithms (Parallel, G1, ZGC/Shenandoah) instead of one fixed collector; and off-heap/metaspace
   memory as invisible to heap-only monitoring, including the pre-JDK-8u191/JDK-10
   container-awareness gap as a real, dangerous default on older images.
+- `technology/go.md` — promotes Go to `deep`. The M:N goroutine scheduler that makes a blocking
+  call mostly (not entirely) cheap — with the two failure modes that survive it: pre-1.14
+  cooperative-preemption starvation from a tight CPU-bound loop, and unbounded goroutine spawning,
+  which nothing in the language bounds on its own; goroutine leaks (a goroutine blocked forever on
+  a channel) as this runtime's most distinctive resource-growth pattern; `GOMAXPROCS` defaulting
+  to host CPU count as a specific, checkable container-CPU-quota mismatch; and the GC's
+  budget-based (`GOGC`/`GOMEMLIMIT`) tuning model, a genuinely different trade-off shape from the
+  JVM's choice between collector algorithms.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -143,7 +151,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Per-runtime technology references: Go, .NET, Rust.
+- Per-runtime technology references: .NET, Rust.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.

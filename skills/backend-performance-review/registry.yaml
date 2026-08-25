@@ -297,8 +297,13 @@ version: 1
 - signal: go
   kind: runtime
   match: ["go.mod", "go.sum"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/go.md]
+  tier: deep
+  notes: >
+    Identify the concurrency pattern actually used (unbounded goroutine spawning, a bounded
+    worker pool, or a channel pipeline) before scoring anything; technology/go.md covers
+    goroutine-leak detection, GOMAXPROCS-vs-container-CPU-quota mismatches, and the GC's
+    budget-based (not algorithm-choice) tuning as the concrete, checkable specifics.
 
 - signal: dotnet
   kind: runtime
