@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 10 deep · 24 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 11 deep · 23 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -37,7 +37,7 @@ more careful section — not a guessed one.
 | CockroachDB | relational | conceptual | Range distribution, transaction retries, and locality-aware placement not covered |
 | Couchbase | document | conceptual | |
 | Firestore | document | conceptual | Billing is per document read/write, so cost is often the binding constraint; the skill treats cost as a first-class axis here |
-| DynamoDB | key-value | conceptual | Partition key design, hot partitions, and capacity modes dominate and are not yet written |
+| **DynamoDB** | key-value | **deep** | Partition-key-driven hot partitions, `Scan`'s per-item-examined cost model, and GSI throttling propagating back to the base table |
 | Neo4j | graph | conceptual | Traversal-depth, index-free-adjacency, and supernode reasoning apply in full; engine-specific diagnostics not yet written |
 | Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
 | Cassandra / ScyllaDB | wide-column | conceptual | Partition-oriented wide-column reasoning applies in full; compaction/tombstone tuning and driver defaults not yet written |
@@ -149,10 +149,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. A deep reference for DynamoDB — the other most-requested `conceptual` engine. MySQL/MariaDB
-   is now done. All planned per-runtime references (Node.js, Python, JVM, Go, .NET, Rust) are
-   also done.
-2. Kafka and RabbitMQ references.
+1. Kafka and RabbitMQ references. MySQL/MariaDB and DynamoDB — the two most-requested
+   `conceptual` engines — and all planned per-runtime references (Node.js, Python, JVM, Go,
+   .NET, Rust) are now done.
 
 Contributions in any of these areas are welcome; see [extending.md](extending.md).
 
