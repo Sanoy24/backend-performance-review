@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 3 deep · 31 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 4 deep · 30 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -70,7 +70,7 @@ application layer.
 
 | Runtime | Tier |
 |:--|:--|
-| Node.js | conceptual |
+| **Node.js** | **deep** |
 | Python | conceptual |
 | JVM (Java / Kotlin) | conceptual |
 | Go | conceptual |
@@ -81,8 +81,9 @@ application layer.
 
 All runtimes get `runtimes/universal.md`, which is a taxonomy rather than a survey: the skill
 places the runtime on five dimensions — execution model, parallelism, concurrency model,
-memory management, startup cost — and the relevant failure modes follow. Per-runtime files are
-the main planned addition for v0.2.0.
+memory management, startup cost — and the relevant failure modes follow. `technology/node.md`
+adds the event-loop-phase, libuv-threadpool, and V8-heap-ceiling specifics the taxonomy
+deliberately leaves generic. The remaining per-runtime files are the main planned addition.
 
 For Python specifically, the skill is directed to establish the concurrency model first —
 threads/processes versus event loop — because the failure modes differ completely.
@@ -131,7 +132,7 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Per-runtime references: Node.js, Python, JVM, Go.
+1. Per-runtime references: Python, JVM, Go — Node.js (`technology/node.md`) is done.
 2. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines.
 3. Kafka and RabbitMQ references.
 
