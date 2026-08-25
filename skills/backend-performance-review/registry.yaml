@@ -242,8 +242,14 @@ version: 1
 - signal: rabbitmq
   kind: broker
   match: [rabbitmq, pika, amqplib, "amqp://", "streadway/amqp", kombu]
-  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
-  tier: generic
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md,
+         technology/rabbitmq.md]
+  tier: deep
+  notes: >
+    Record the queue type (classic, quorum, or stream) and whether classic mirroring is
+    still configured (deprecated, removed in 4.0); technology/rabbitmq.md covers the
+    cluster-wide memory-alarm blast radius, prefetch/QoS, and exchange routing cost as the
+    checkable specifics.
 
 - signal: sqs
   kind: broker
