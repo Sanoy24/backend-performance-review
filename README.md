@@ -185,7 +185,8 @@ methodology still applies, and the report says so in its scope section.
 |:--|:--|
 | Redis / Valkey | **deep** |
 | Memcached | conceptual |
-| Kafka · RabbitMQ · SQS · Celery/Sidekiq/BullMQ-style queues | generic |
+| **Kafka / Redpanda** | **deep** |
+| RabbitMQ · SQS · Celery/Sidekiq/BullMQ-style queues | generic |
 | **Node.js** | **deep** |
 | **Python (CPython)** | **deep** |
 | **JVM (Java / Kotlin)** | **deep** |
@@ -275,7 +276,7 @@ files, and fabricated performance guarantees.
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Eleven engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Twelve engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.

@@ -230,11 +230,14 @@ version: 1
 - signal: kafka
   kind: broker
   match: [kafka, confluent_kafka, kafkajs, "segmentio/kafka-go", "sarama", redpanda]
-  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
-  tier: generic
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md,
+         technology/kafka.md]
+  tier: deep
   notes: >
-    Partition count, consumer group rebalancing, and batch/linger settings dominate Kafka
-    throughput. No engine file in v0.1.0.
+    Determine whether the deployment runs KRaft mode or ZooKeeper, and which consumer-group
+    rebalancing protocol (eager vs cooperative sticky) is configured; technology/kafka.md
+    covers rebalance blast radius, max.poll.interval.ms eviction, acks durability trade-offs,
+    and retention-vs-compaction as the checkable specifics.
 
 - signal: rabbitmq
   kind: broker
