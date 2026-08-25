@@ -86,7 +86,7 @@ python skills/backend-performance-review/scripts/detect_stack.py /a/repo/using/i
 ```
 
 Confirm the signal fires, that `references_to_load` lists the category files before yours, and
-that the tier is reported correctly. Then run the consistency checks in `CONTRIBUTING.md` §9.
+that the tier is reported correctly. Then run the consistency checks in `CONTRIBUTING.md` §10.
 
 ### Step 5 — update the README table
 
@@ -96,8 +96,9 @@ The support table is generated from the registry. Regenerate or edit it so the t
 
 ## 2. Adding a datastore category
 
-Larger, and the highest-value contribution available in v0.1.0 — graph, wide-column, search,
-time-series, and vector categories all currently degrade to universal reasoning.
+Larger than adding a technology reference. All five originally-planned categories (graph,
+wide-column, search, time-series, vector) now have a file; object storage is the one category
+left with none — see `docs/supported-technologies.md`'s roadmap.
 
 A category file answers: **what is true of every engine in this category, and false or
 different in the others?**
@@ -224,7 +225,7 @@ is a real improvement and reviewers should treat it as one.
 - [ ] No specific config values, no performance guarantees, no invented metrics.
 - [ ] Registry entry added, category file ordered first, tier declared.
 - [ ] `detect_stack.py` fires the signal on a real repository.
-- [ ] Consistency checks in `CONTRIBUTING.md` §9 pass.
+- [ ] Consistency checks in `CONTRIBUTING.md` §10 pass.
 - [ ] README support table matches the registry.
 - [ ] Under the ~400 line soft cap, or a stated reason.
 - [ ] `CHANGELOG.md` updated under Unreleased.

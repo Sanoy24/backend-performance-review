@@ -63,7 +63,7 @@ If `databases/relational.md` names an engine, its content belongs in a technolog
 keeps category reasoning transferable: an unfamiliar relational engine still gets the full
 category analysis.
 
-Enforced by a grep in `CONTRIBUTING.md` §9.
+Enforced by a grep in `CONTRIBUTING.md` §10.
 
 ### Technology files contain only non-derivable content
 

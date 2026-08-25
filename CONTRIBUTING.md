@@ -4,8 +4,8 @@ Thank you for considering a contribution. This project has an unusual bar: the v
 skill is entirely in whether an agent following it produces *fewer, better* findings than one
 that does not. Content that adds words without adding discrimination makes the project worse.
 
-Please read the review gates in §5 before opening a pull request — they are what a maintainer
-will check first.
+Please read §2 for how branching and pull requests work here, and the review gates in §6 before
+opening one — they are what a maintainer will check first.
 
 ---
 
@@ -16,9 +16,10 @@ In rough order:
 1. **A reported false positive.** A case where the skill produced a finding that was wrong,
    irrelevant, or unactionable. These are the highest-signal bug reports this project can
    receive. Include the code shape that triggered it and why it was wrong.
-2. **Promoting a technology from `conceptual` to `deep`** by writing its reference file.
-3. **A new datastore category file** (graph, wide-column, search, time-series, vector) — these
-   are the largest gaps in v0.1.0.
+2. **Promoting a technology from `conceptual` to `deep`** by writing its reference file — the
+   largest gap remaining now that all five planned datastore categories have a file.
+3. **A category file for a datastore type not yet covered** (object storage is the only one
+   left; see `docs/supported-technologies.md`'s roadmap).
 4. **Sharpening a methodology or principles file** by making a discrimination clearer:
    when does this apply, when does it not.
 5. **A worked example** demonstrating restraint as well as findings.
@@ -26,7 +27,46 @@ In rough order:
 
 ---
 
-## 2. Adding a technology reference
+## 2. Branching and pull requests
+
+This project uses trunk-based development with short-lived feature branches — not GitFlow.
+There is no `develop` branch and no release branches; `main` is always the current state, and
+every change reaches it through a pull request.
+
+### The model
+
+1. Branch from `main`: `<type>/<short-description>`, matching the commit-prefix convention
+   below — `feat/graph-category`, `fix/registry-collision`, `docs/branching-workflow`.
+2. Commit there. Prefixes follow [Conventional Commits](https://www.conventionalcommits.org/):
+   `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`. Keep the first line under about 70
+   characters; put the "why," not just the "what," in the body.
+3. Open a pull request into `main`. Use the PR template — it mirrors §6's review gates as
+   checkboxes, so filling it in honestly is most of the review.
+4. `main` is a **protected branch**: no direct pushes, including from repository admins.
+   Both CI jobs in `.github/workflows/checks.yml` must pass before a PR can merge, the branch
+   must be up to date with `main` first (GitHub will prompt to update it), and history stays
+   linear — merges are squashed or rebased, not merge-commits.
+5. Delete the branch after merging. A merged feature branch has no further purpose, and letting
+   branches accumulate makes it harder to tell what's actually in flight.
+
+### Why trunk-based, and why not stricter
+
+A content-and-methodology skill repository with no versioned hotfix branches to maintain gets
+little from GitFlow's extra branch types — they exist to solve problems (parallel release
+trains, hotfixes to an older version while `develop` moves on) this project doesn't have yet.
+If that changes — for instance, if this skill starts shipping versioned releases that need
+backporting — revisit this section rather than assuming trunk-based is permanent.
+
+There is currently no required-approval count on `main` (`required_approving_review_count: 0`)
+— every change still goes through a PR and both CI checks, but a solo maintainer isn't blocked
+waiting on a second reviewer who doesn't exist yet. **Add a required-approval count as soon as
+this project has more than one active maintainer** — a repository with real contributors and no
+review requirement is a repository where the review gates in §6 are unenforced in practice, no
+matter how well they're written down.
+
+---
+
+## 3. Adding a technology reference
 
 Two steps. Nothing else changes — not `SKILL.md`, not the methodology.
 
@@ -71,7 +111,7 @@ Detailed walkthrough, including adding a whole category or a runtime:
 
 ---
 
-## 3. The non-derivable content rule
+## 4. The non-derivable content rule
 
 **A technology file may contain only what is not derivable from its category file.**
 
@@ -94,7 +134,7 @@ product, that content belongs in a technology file.
 
 ---
 
-## 4. Writing standards
+## 5. Writing standards
 
 **Every claim must be a mechanism or a citable fact.** Explain *why* something is slow, not
 that it is. Folklore ("everyone knows X is slow") is rejected regardless of whether it happens
@@ -127,7 +167,7 @@ these commands end up in reports that people actually run.
 
 ---
 
-## 5. Review gates
+## 6. Review gates
 
 A pull request will be checked against these. Most rejections are one of the first four.
 
@@ -147,7 +187,7 @@ A pull request will be checked against these. Most rejections are one of the fir
 
 ---
 
-## 6. Contributing an example
+## 7. Contributing an example
 
 Examples are in `docs/examples/` and **never** under `skills/` — they must not be loadable as
 references, because example content leaks into real reviews as few-shot patterns.
@@ -163,7 +203,7 @@ Requirements:
 
 ---
 
-## 7. Reporting a false positive
+## 8. Reporting a false positive
 
 Open an issue with:
 
@@ -177,7 +217,7 @@ Y" — that is exactly the contribution the project wants most.
 
 ---
 
-## 8. Proposing a methodology change
+## 9. Proposing a methodology change
 
 Changes to `SKILL.md`, `rubrics.md`, or `methodology/` affect every review. Open an issue
 first and explain:
@@ -194,26 +234,26 @@ more. Precision is the scarce resource here.
 
 ---
 
-## 9. Local checks
+## 10. Local checks
 
 ```bash
 python scripts/check_repo_invariants.py
 ```
 
 Runs automatically on every push and pull request (`.github/workflows/checks.yml`); run it
-locally before opening a PR to catch the same failures sooner. It verifies every gate in §5:
+locally before opening a PR to catch the same failures sooner. It verifies every gate in §6:
 the registry parses and every entry resolves, category files stay product-neutral, technology
 files have all seven required sections, the priority matrix is identical everywhere it is
 published, the published tier counts match the registry, and `detect_stack.py` imports only
 the standard library.
 
-## 10. Conduct
+## 11. Conduct
 
 Be respectful, and argue with the claim rather than the person. This is a project about
 evidence, so challenging a finding or a design decision is expected and welcome — "this
 assertion has no mechanism behind it" is a good review comment. Keep it there.
 
-## 11. License
+## 12. License
 
 Contributions are accepted under the [MIT License](LICENSE). By submitting a pull request you
 confirm you have the right to license your contribution under those terms, and that it
