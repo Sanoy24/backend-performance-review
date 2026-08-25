@@ -97,6 +97,15 @@ Breaking changes carry a migration note in the entry.
   item-size ceiling versus the graduated "large values cost more" reasoning generic key-value
   stores get; the eventual-vs-strong consistency cost trade-off, including that GSIs support
   eventually consistent reads only; and TTL's best-effort (not precision) deletion timing.
+- `technology/kafka.md` — promotes Kafka/Redpanda to `deep`, the first message-broker reference.
+  Consumer-group rebalancing as the concrete mechanism behind partition-bounded parallelism, with
+  blast radius differing sharply between the eager and cooperative-sticky protocols; exceeding
+  `max.poll.interval.ms` as the specific way a still-alive, still-processing consumer gets evicted
+  and triggers a group-wide rebalance; Kafka's log-not-queue retention model (disk usage driven by
+  retention configuration and write rate, independent of consumer speed) versus log compaction for
+  changelog topics; `acks` as a named durability/latency spectrum, with `acks=1` as a
+  correctness-adjacent finding on data treated as durable; and why increasing partition count on
+  an existing topic breaks per-key ordering continuity rather than being a free scaling lever.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -187,7 +196,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Message-broker references for Kafka and RabbitMQ.
+- A message-broker reference for RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
   repositories; currently covers one of four.

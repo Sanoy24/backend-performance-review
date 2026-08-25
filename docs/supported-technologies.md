@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 11 deep · 23 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 12 deep · 23 conceptual · 3 generic (38 detection signals).
 
 ---
 
@@ -57,14 +57,17 @@ more careful section — not a guessed one.
 
 | Technology | Tier | Notes |
 |:--|:--|:--|
-| Kafka / Redpanda | generic | Partition count, consumer group rebalancing, and batch/linger settings dominate; not yet written |
+| **Kafka / Redpanda** | **deep** | Consumer-group rebalancing blast radius, `max.poll.interval.ms` eviction, `acks` durability trade-offs, retention vs. log compaction |
 | RabbitMQ | generic | |
 | Amazon SQS | generic | |
 | Celery / Sidekiq / BullMQ / RQ / Dramatiq / Hangfire / Temporal / Asynq | generic | Detected as task queues; retry, backpressure, and pool-sharing reasoning applies |
 
 All brokers get the full `distributed/retries-and-backpressure.md` and
 `distributed/timeouts-and-deadlines.md` analysis, which covers most of what matters at the
-application layer.
+application layer. `technology/kafka.md` adds the concrete Kafka-specific mechanisms on top:
+the rebalancing protocol behind partition-bounded parallelism, why exceeding
+`max.poll.interval.ms` evicts a still-alive consumer, the `acks` durability/latency spectrum,
+and why retention is independent of consumption (a log, not a queue).
 
 ## Runtimes
 
@@ -149,9 +152,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Kafka and RabbitMQ references. MySQL/MariaDB and DynamoDB — the two most-requested
-   `conceptual` engines — and all planned per-runtime references (Node.js, Python, JVM, Go,
-   .NET, Rust) are now done.
+1. A RabbitMQ reference. Kafka is now done, alongside MySQL/MariaDB and DynamoDB — the two
+   most-requested `conceptual` engines — and all planned per-runtime references (Node.js,
+   Python, JVM, Go, .NET, Rust).
 
 Contributions in any of these areas are welcome; see [extending.md](extending.md).
 
