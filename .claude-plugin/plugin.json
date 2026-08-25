@@ -2,8 +2,8 @@
   "name": "backend-performance-review",
   "description": "Evidence-first, workload-driven backend performance review methodology for AI coding agents. Technology-agnostic core with pluggable database and runtime references.",
   "version": "0.1.0",
-  "homepage": "https://github.com/OWNER/backend-performance-review",
-  "repository": "https://github.com/OWNER/backend-performance-review",
+  "homepage": "https://github.com/Sanoy24/backend-performance-review",
+  "repository": "https://github.com/Sanoy24/backend-performance-review",
   "license": "MIT",
   "keywords": [
     "performance",

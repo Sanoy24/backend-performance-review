@@ -58,7 +58,7 @@ invocation on a relevant question is the primary way it is meant to be used.
 The repository is a single-plugin marketplace, so it can be added directly:
 
 ```
-/plugin marketplace add OWNER/backend-performance-review
+/plugin marketplace add Sanoy24/backend-performance-review
 /plugin install backend-performance-review
 ```
 

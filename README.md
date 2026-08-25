@@ -62,7 +62,7 @@ or APM, or perform security or correctness review. It reads, reasons, and report
 ### Claude Code — as a plugin
 
 ```bash
-/plugin marketplace add OWNER/backend-performance-review
+/plugin marketplace add Sanoy24/backend-performance-review
 /plugin install backend-performance-review
 ```
 

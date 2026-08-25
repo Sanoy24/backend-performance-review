@@ -111,5 +111,5 @@ coverage, rather than broad shallow coverage.
 - `detect_stack.py` reads a deliberately small YAML subset; extending `registry.yaml` beyond
   that subset requires extending the reader.
 
-[Unreleased]: https://github.com/OWNER/backend-performance-review/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/backend-performance-review/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Sanoy24/backend-performance-review/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Sanoy24/backend-performance-review/releases/tag/v0.1.0
