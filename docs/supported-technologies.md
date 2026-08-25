@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 13 deep · 23 conceptual · 2 generic (38 detection signals).
+**Current coverage:** 13 deep · 24 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -45,6 +45,7 @@ more careful section — not a guessed one.
 | Elasticsearch / OpenSearch / Solr | search | conceptual | Search category reasoning (filter vs. query context, deep-pagination cost, mapping decisions) applies in full; engine-specific settings not yet written |
 | InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |
 | Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | conceptual | Recall/latency/memory trade-offs, the search-breadth parameter, and filter/search-order interaction apply in full; engine-specific parameter names and defaults not yet written |
+| S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual | Request-count-dominated cost, key/prefix-only access, immutable full-object writes, multipart size limits, and egress cost apply in full; provider-specific size limits, consistency guarantees, and tier pricing not yet written |
 
 ## Caches
 
@@ -154,12 +155,12 @@ Ordered by expected value, not by ease:
 
 All engines originally targeted for promotion in this coverage push are now `deep`: Kafka and
 RabbitMQ, MySQL/MariaDB and DynamoDB, and all six planned per-runtime references (Node.js,
-Python, JVM, Go, .NET, Rust).
+Python, JVM, Go, .NET, Rust). Every datastore category, including object storage, now has a
+category file.
 
-1. A category file for object storage (S3-compatible/blob stores) — a real, tracked gap: listed
-   as a valid category in `registry.yaml`'s schema comment but with zero category file or
-   registry entries. See the CHANGELOG's `Planned` section for why it needs its own file rather
-   than a placeholder.
+1. Promote any `conceptual` engine to `deep` by writing its technology reference — the largest
+   remaining gap, and a bounded, well-defined contribution (see below). SQL Server, Oracle, and
+   the object-storage engines (S3-compatible, GCS, Azure Blob) are reasonable starting points.
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 

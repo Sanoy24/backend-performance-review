@@ -178,6 +178,7 @@ methodology still applies, and the report says so in its scope section.
 | Elasticsearch / OpenSearch / Solr | search | conceptual |
 | InfluxDB | time-series | conceptual |
 | Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | conceptual |
+| S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual |
 
 ### Caches, brokers, runtimes, infrastructure
 

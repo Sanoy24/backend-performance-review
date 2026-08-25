@@ -96,9 +96,9 @@ The support table is generated from the registry. Regenerate or edit it so the t
 
 ## 2. Adding a datastore category
 
-Larger than adding a technology reference. All five originally-planned categories (graph,
-wide-column, search, time-series, vector) now have a file; object storage is the one category
-left with none — see `docs/supported-technologies.md`'s roadmap.
+Larger than adding a technology reference. Every planned category (graph, wide-column, search,
+time-series, vector, and object storage) now has a file — a new category file is only needed if
+a genuinely new kind of datastore emerges that doesn't fit the existing nine.
 
 A category file answers: **what is true of every engine in this category, and false or
 different in the others?**
