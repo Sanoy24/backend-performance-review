@@ -219,9 +219,16 @@ version: 1
 
 - signal: task-queue
   kind: broker
-  match: [celery, sidekiq, bullmq, bull, rq, dramatiq, "hangfire", temporal, "asynq"]
+  match: [celery, sidekiq, bullmq, bull, "django-rq", "python-rq", dramatiq, "hangfire",
+          temporal, "asynq"]
   load: [distributed/retries-and-backpressure.md, application/connection-pools.md]
   tier: generic
+  notes: >
+    A bare "rq" token was removed from this match list after behavioral evaluation found
+    it matching inside base64-encoded hashes in lockfiles (e.g. go.sum), producing false
+    positives. See docs/evaluation.md. This narrows detection of the Python `rq` library
+    to its more specific package names; a project using bare `rq` without django-rq or
+    python-rq framing will not be detected by this signal.
 
 # ---------------------------------------------------------------------------
 # Runtimes
@@ -233,6 +240,10 @@ version: 1
   load: [runtimes/universal.md, application/async-and-blocking.md]
   tier: conceptual
   notes: >
+    "package.json" and "node_modules" alone cannot distinguish a Node.js backend from
+    front-end tooling in a full-stack repository; behavioral evaluation fired this signal
+    on a Python-backend repo that happened to contain a frontend, so verify the actual
+    backend entry point before applying Node-specific reasoning (see docs/evaluation.md).
     Single-threaded event loop with a bounded libuv threadpool. Universal runtime
     reasoning applies; a Node-specific file (GC flags, worker_threads, threadpool sizing)
     is planned for v0.2.0.
@@ -305,10 +316,17 @@ version: 1
 
 - signal: rest
   kind: framework
-  match: [fastapi, flask, django, express, nestjs, koa, gin, echo, fiber, "spring-boot",
-          actix, axum, laravel, rails, "aspnetcore"]
+  match: [fastapi, flask, django, express, nestjs, "\"koa\":", "gin-gonic/gin",
+          "labstack/echo", "gofiber/fiber", "spring-boot", actix, axum, laravel, rails,
+          "aspnetcore"]
   load: [application/api.md]
   tier: conceptual
+  notes: >
+    Go framework tokens use their full module path ("gin-gonic/gin", "labstack/echo",
+    "gofiber/fiber") rather than the bare framework name. Behavioral evaluation found bare
+    "gin" matching inside the word "logging" and bare "echo" matching inside ordinary shell
+    `echo` commands in CI YAML — both are extremely common substrings outside their
+    framework meaning. See docs/evaluation.md.
 
 # ---------------------------------------------------------------------------
 # Infrastructure

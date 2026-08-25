@@ -271,8 +271,10 @@ files, and fabricated performance guarantees.
   on category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
-- Behavioral evaluation against public repositories is planned but not yet complete; see
-  [docs/evaluation.md](docs/evaluation.md) for the method and current status.
+- Behavioral evaluation against public repositories has run once, against two repositories, and
+  found three real bugs in the detection tooling (now fixed). The case that matters most — a
+  repository with no significant problem, testing whether the skill can stay quiet — has not
+  been run yet; see [docs/evaluation.md](docs/evaluation.md) for the full method and results.
 
 ## License
 

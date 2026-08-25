@@ -102,7 +102,15 @@ MAX_FILES = 4000
 def _strip_quotes(value):
     value = value.strip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
+        inner = value[1:-1]
+        if value[0] == '"':
+            # A double-quoted token can itself contain an escaped quote, used to make a
+            # match string like a literal `"node":` unambiguous against prose. Without
+            # this unescape, a token written as "\"node\":" parses as the four literal
+            # characters \"node\": and matches nothing, ever. Evaluation caught this: the
+            # pre-existing node signal's quoted token had been dead since v0.1.0.
+            inner = inner.replace('\\"', '"')
+        return inner
     return value
 
 

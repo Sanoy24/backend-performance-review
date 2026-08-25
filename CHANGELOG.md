@@ -27,6 +27,30 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Fixed
+
+Found by Round 1 of the behavioral evaluation (`docs/evaluation.md` §3), run against two real,
+unmodified public repositories — not by the architecture self-check, which only verifies the
+registry is internally consistent, not that it matches real files correctly.
+
+- **`scripts/detect_stack.py`: `_strip_quotes` silently dropped escaped inner quotes.** A
+  registry match token written as `"\"node\":"` — intended to match the literal `"node":` in a
+  `package.json` — parsed to the four literal characters `\"node\":`, which never matches
+  anything. This token had been dead since v0.1.0; nothing exercised it because the `node`
+  signal's other, broader tokens always fired alongside it. This is the more serious of the two
+  fixes: it is a silent false *negative* with no visible symptom, versus the false *positives*
+  below, which at least produce noticeable wrong output.
+- **`registry.yaml`: three match tokens were short or common enough to collide with unrelated
+  content.** `rq` and `koa` matched inside base64-encoded hash fragments in `go.sum`; `gin` and
+  `echo` matched inside the English word "logging" and ordinary shell `echo` commands in CI
+  YAML. Fixed by requiring fully-qualified module paths for the Go frameworks
+  (`gin-gonic/gin`, `labstack/echo`, `gofiber/fiber`), narrowing the task-queue signal to
+  `django-rq`/`python-rq`, and quoting `koa` as `"koa":`.
+- **`registry.yaml`: the `node` signal's `package.json`/`node_modules` tokens cannot distinguish
+  a Node.js backend from front-end tooling in a full-stack repository.** Not removed — doing so
+  loses real detection value — but now flagged in the signal's `notes`, which surfaces in a
+  report's scope section.
+
 ### Planned
 
 - Category files for graph, wide-column, search, time-series, and vector datastores.
@@ -34,7 +58,11 @@ Breaking changes carry a migration note in the entry.
 - Deep references for MySQL and DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
-- Completion of the behavioral evaluation described in `docs/evaluation.md`.
+- Behavioral evaluation cases 2 (no-problem repo), 4 (committed runtime evidence), and 5
+  (change-scoped PR review) — see `docs/evaluation.md` §3.4.
+- An independent (non-author) or blind pass of the behavioral evaluation.
+- Automated regression tests for the three fixture cases identified in
+  `docs/evaluation.md` §4.
 
 ---
 
