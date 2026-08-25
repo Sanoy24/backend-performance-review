@@ -40,12 +40,13 @@ version: 1
   category: relational
   match: [mysqlclient, pymysql, aiomysql, mysql2, "mysql-connector", "go-sql-driver/mysql",
           "mysql://", mariadb, "com.mysql"]
-  load: [databases/universal.md, databases/relational.md]
-  tier: conceptual
+  load: [databases/universal.md, databases/relational.md, technology/mysql.md]
+  tier: deep
   notes: >
-    Relational principles apply fully. MySQL/InnoDB-specific guidance (clustered primary
-    key layout, gap locking, optimizer differences) is not yet written; state this
-    limitation in the report scope.
+    Record the storage engine per table (a MyISAM table on a write-heavy path is a
+    correctness-adjacent finding, not merely a performance one) and whether MySQL or MariaDB
+    is actually deployed; technology/mysql.md covers InnoDB's clustered-index primary-key
+    design, REPEATABLE READ gap locking, and buffer-pool sizing as the checkable specifics.
 
 - signal: sqlserver
   kind: datastore

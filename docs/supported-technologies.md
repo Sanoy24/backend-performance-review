@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 9 deep · 25 conceptual · 4 generic (38 detection signals).
+**Current coverage:** 10 deep · 24 conceptual · 4 generic (38 detection signals).
 
 ---
 
@@ -30,7 +30,7 @@ more careful section — not a guessed one.
 |:--|:--|:--|:--|
 | **PostgreSQL** | relational | **deep** | Includes TimescaleDB and pgvector detection; those extensions are themselves out of scope |
 | **MongoDB** | document | **deep** | Atlas-specific features (Search, Federation, Online Archive) out of scope |
-| MySQL / MariaDB | relational | conceptual | InnoDB specifics — clustered primary key layout, gap locking, optimizer differences — not yet written |
+| **MySQL / MariaDB** | relational | **deep** | InnoDB's clustered-index primary-key design, `REPEATABLE READ` gap/next-key locking, and buffer-pool sizing versus Postgres-style guidance |
 | SQL Server | relational | conceptual | |
 | Oracle | relational | conceptual | |
 | SQLite | relational | conceptual | Single-writer and WAL semantics dominate and are not covered; concurrency questions are flagged as unknowns |
@@ -149,8 +149,9 @@ more hedged section — which is the correct output, not a degraded one.
 
 Ordered by expected value, not by ease:
 
-1. Deep references for MySQL and DynamoDB — the two most-requested `conceptual` engines. All
-   planned per-runtime references (Node.js, Python, JVM, Go, .NET, Rust) are now done.
+1. A deep reference for DynamoDB — the other most-requested `conceptual` engine. MySQL/MariaDB
+   is now done. All planned per-runtime references (Node.js, Python, JVM, Go, .NET, Rust) are
+   also done.
 2. Kafka and RabbitMQ references.
 
 Contributions in any of these areas are welcome; see [extending.md](extending.md).
