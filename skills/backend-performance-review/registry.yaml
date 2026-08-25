@@ -276,12 +276,12 @@ version: 1
 - signal: python
   kind: runtime
   match: ["requirements.txt", "pyproject.toml", "Pipfile", "setup.py"]
-  load: [runtimes/universal.md, application/async-and-blocking.md]
-  tier: conceptual
+  load: [runtimes/universal.md, application/async-and-blocking.md, technology/python.md]
+  tier: deep
   notes: >
     Determine the concurrency model first — WSGI threads/processes vs ASGI event loop —
-    because the failure modes differ completely. GIL interaction is a universal-runtime
-    concern covered generically.
+    because the failure modes differ completely; technology/python.md covers this and the
+    GIL's role as the concrete mechanism behind this runtime's parallelism dimension.
 
 - signal: jvm
   kind: runtime
