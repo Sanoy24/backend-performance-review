@@ -81,6 +81,13 @@ Breaking changes carry a migration note in the entry.
   dispatch via monomorphization as the default, with `dyn Trait` as an explicit, checkable opt-in;
   and the recurring evaluation mistake of drawing conclusions from a debug build instead of
   `--release`.
+- `technology/mysql.md` — promotes MySQL/MariaDB to `deep`. InnoDB's clustered-index primary-key
+  design (the single highest-value InnoDB-specific check: a random/UUID primary key fragments the
+  table on every insert, unlike a heap-organized engine), `REPEATABLE READ` gap/next-key locking
+  as a specific, checkable source of contention and deadlocks that a `READ COMMITTED`-default
+  mental model under-predicts, buffer-pool sizing conventions that are not interchangeable with
+  Postgres's `shared_buffers` guidance, and the query-cache-as-write-bottleneck hazard on pre-8.0
+  deployments.
 - `scripts/check_repo_invariants.py` and `.github/workflows/checks.yml`: the structural
   invariants CONTRIBUTING.md commits this project to (registry integrity, category-file
   product-neutrality, technology-file structure, priority-matrix consistency, published tier
@@ -171,7 +178,7 @@ real public repositories:
   query/index layer; the concerns are request-count minimization, multipart/batch operations,
   key/prefix design for listing performance, and egress cost) that it deserves its own file
   rather than a placeholder.
-- Deep references for MySQL and DynamoDB.
+- A deep reference for DynamoDB.
 - Message-broker references for Kafka and RabbitMQ.
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
 - Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
