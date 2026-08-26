@@ -27,6 +27,8 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-26
+
 ### Added
 
 - `technology/node.md` — the first per-runtime technology reference, promoting Node.js from
@@ -293,5 +295,6 @@ coverage, rather than broad shallow coverage.
 - `detect_stack.py` reads a deliberately small YAML subset; extending `registry.yaml` beyond
   that subset requires extending the reader.
 
-[Unreleased]: https://github.com/Sanoy24/backend-performance-review/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Sanoy24/backend-performance-review/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Sanoy24/backend-performance-review/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Sanoy24/backend-performance-review/releases/tag/v0.1.0
