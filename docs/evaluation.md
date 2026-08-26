@@ -15,21 +15,22 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing as of v0.1.0 |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run once** — one agent, no memory of this session, one repository; reproduced the core finding, caught one this analysis missed, and corrected this analysis's severity score using evidence it had overlooked; see §3.8 |
+| Independent (non-author) pass | **Run four times, one per repository** — agents with no memory of this session; in every run, reproduced or exceeded the manual review's primary finding, and in three of four found real evidence the manual review had missed; see §3.8–3.12 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
-repositories, plus one of those four reviewed a second time by an agent with no memory of this
-session at all. Round 1 found three genuine bugs in the detection tooling — two in
-`registry.yaml`'s match tokens and one in the parser itself — none of which the architecture
-self-check could have caught, because that check only verifies the registry is internally
-consistent, not that it matches real files correctly. Round 2 ran committed benchmarks for real
-(§3.5), change-scope-reviewed a real merged pull request against its actual diff (§3.6),
-reframed what case 2 is actually testing after a fourth repository still produced a real finding
-(§3.7), and closed with an independent pass that found a real gap in — and corrected a real
-scoring error in — the author's own prior analysis of the same repository (§3.8). The
-false-positive/false-negative fixtures specified in §4 are now automated
-(`tests/test_detect_stack_regressions.py`, run on every push/PR).
+repositories, each of which was then reviewed a second time by an independent agent with no
+memory of this project's own findings. Round 1 found three genuine bugs in the detection
+tooling — two in `registry.yaml`'s match tokens and one in the parser itself — none of which the
+architecture self-check could have caught, because that check only verifies the registry is
+internally consistent, not that it matches real files correctly. Round 2 ran committed benchmarks
+for real (§3.5), change-scope-reviewed a real merged pull request against its actual diff (§3.6),
+and reframed what case 2 is actually testing after a fourth repository still produced a real
+finding (§3.7). The independent blind pass, run once per repository (§3.8–3.11) and summarized in
+§3.12, reproduced or exceeded the manual review's primary finding on all four, and found real,
+previously-missed evidence — including one hard `SyntaxError` a careful reading had missed
+entirely — on three of the four. The false-positive/false-negative fixtures specified in §4 are
+now automated (`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
 ---
 
@@ -524,8 +525,10 @@ count) or explicitly marked as a derivation with no baseline to compute it from 
 **What this one comparison does and does not establish.** It is one repository, reviewed once,
 by one agent, and the repository was chosen by the author (though the agent had no visibility
 into that choice or into §3.7's conclusions). It does not establish inter-rater reliability at
-scale, and it does not cover the other three repositories in this evaluation. What it does
-establish: given only the shipped skill and no session-specific context, an independent agent
+scale, and at the time this section was written it did not yet cover the other three
+repositories in this evaluation — extended to all three in §3.9–3.11, summarized in §3.12. What
+it does establish on its own: given only the shipped skill and no session-specific context, an
+independent agent
 reproduced the core finding, caught a real one that was missed, correctly deferred on an
 ambiguous scope question rather than guessing wrong, and applied the security/performance
 boundary identically to a review that had extensively reasoned about that boundary elsewhere.
@@ -533,6 +536,190 @@ That is a meaningfully stronger result than a solo review confirming itself twic
 been, and the corrected severity above is now the record — a blind pass that only ever agreed
 with the author would have been much weaker evidence than one that, on inspection, was partly
 right about something the author got wrong.
+
+### 3.9 The blind pass extended to a second repository — `gin-realworld`
+
+The same protocol as §3.8: a fresh `general-purpose` agent, no memory of this project, given only
+the shipped `SKILL.md`'s path and the repository's path (at the same pinned commit as §3.1), told
+this was a real, unmodified, modest-size Go REST service, and that few or zero findings was an
+acceptable honest outcome. It was not told anything §3.1 found.
+
+**It reproduced the core finding exactly**, at the same location, with the same mechanism: the
+unbatched `isFollowing()` call inside `ProfileSerializer.Response()`, issuing one query per
+rendered article/comment author. §3.1 scored this `High`/`High`/**P1**; the blind pass scored it
+`Critical`/`High`/**P0** — a real disagreement, but not an unmotivated one. It escalated the
+severity using two pieces of evidence §3.1's write-up did not carry: **no server-side HTTP
+timeouts anywhere in the codebase**, and **no enforced maximum on the article-list `limit`
+parameter** — meaning the N+1's `n` is not just "one extra query per article" but "one extra
+query per article, for as many articles as any caller cares to request." Both are real, and both
+are exactly the kind of additional evidence §3.8 already demonstrated a blind pass can surface
+that a manual review missed — this is the same pattern appearing a second time, on a different
+repository, independently.
+
+**It diverged on one point worth stating honestly rather than picking a winner.** §3.1's case-6
+check asked one specific question — does the connection-pool arithmetic in
+`application/connection-pools.md` contradict an external, server-side connection ceiling — and
+correctly answered no, because SQLite has none to exceed. The blind pass asked a related but
+different question about the same code (unset `SetMaxOpenConns`, no WAL mode, no busy-timeout)
+— whether an unbounded local pool risks internal contention (`SQLITE_BUSY` errors) against
+SQLite's own single-writer semantics — and reported it as a finding (`Critical`/`Medium`/P1),
+explicitly flagging that SQLite is `conceptual` tier in this skill's registry and that the claim
+draws on general engine knowledge beyond what the skill provides, not silently asserting it as
+skill-backed fact. Neither review is wrong; they checked different things against the same lines
+of code, and only the blind pass's question happens to be the one with a real answer worth
+acting on. This is recorded here rather than smoothed over, because a false "they agreed" summary
+would be less honest than the actual result.
+
+**It found several things §3.1 never looked for.** An unconditional full-table `COUNT(*)` on
+every unfiltered list request; five foreign-key-shaped columns (`AuthorID`, `FavoriteID`,
+`FavoriteByID`, `FollowingID`, `FollowedByID`) with no supporting index, contrasted explicitly
+against the `Slug`/`Tag`/`Email` columns that *do* carry one; and a complete absence of
+observability (no metrics, tracing, profiling endpoint, or load-test tooling anywhere in the
+repository) — scored as its own finding rather than only used to cap other findings' confidence.
+
+**It produced two real, independent `SEC-` findings** — a hardcoded JWT signing secret committed
+to source (with a `#nosec` suppression and a CI security job run with `-no-fail`), and a bearer
+token accepted via a URL query parameter — using the "Adjacent findings — outside performance
+scope" format exactly as `SKILL.md` rule 8 specifies, on a repository that convention was never
+tested against before it existed. Both are real; both are correctly classified as `Kind:
+Security` with a `Risk` note and no fabricated CVSS-style score.
+
+### 3.10 The blind pass extended to a third repository — `fastapi-template`
+
+Same protocol, same pinned commit as §3.2, with one addition to the prompt: an explicit
+instruction that this repository has both a `backend/` and a `frontend/` directory and the
+review is backend-only — necessary framing for any reviewer of this specific repository, not a
+hint about the node-signal bug §3.2 found.
+
+**It independently reproduced §3.2's third bug.** Without being told the `node` signal is a
+documented false positive here, it traced the signal to `package.json`/`node_modules` existing
+only because of the frontend build tooling, correctly declined to apply `technology/node.md`, and
+said so explicitly in its scope section — the same conclusion §3.2 reached, arrived at
+independently.
+
+**It reproduced the fourth finding (the uncapped `limit` on `GET /items`) and scored it higher,
+again by finding more supporting evidence.** §3.2 scored it `Medium`/`High`/**P2**, reasoning from
+the missing bound alone. The blind pass folded in a fact §3.2 did not report: **the entire
+migration history contains exactly one index beyond primary keys** (`ix_user_email`), and neither
+`item.owner_id` nor either table's `created_at` column — both used as filter/sort keys on this
+same endpoint — has ever been indexed. Missing bound plus missing index together produced
+`High`/`High`/**P1**, and the recommendation (a composite index) addresses a cause §3.2 never
+identified in the same finding.
+
+**It went further than §3.2's case-6 check in a way that matters.** §3.2 found nothing to check
+the connection-pool arithmetic against (no explicit pool size or container memory limit in the
+scanned files) and correctly recorded that as an unknown rather than asserting fine. The blind
+pass took the same absence one step further: `create_engine()` is called with **zero** arguments
+beyond the URL, which means SQLAlchemy's own defaults apply — and it named them (`pool_size=5`,
+`max_overflow=10`, no `pool_pre_ping`, no statement timeout), multiplied across 4 uvicorn worker
+processes with nothing anywhere doing the arithmetic against Postgres's own `max_connections`.
+This is the same absence §3.2 saw, examined one level deeper.
+
+**It found a real, structurally sophisticated finding with no equivalent in §3.2 at all**: four
+endpoints hold an open, idle-in-transaction database connection for the entire duration of a
+synchronous outbound SMTP call, because password-recovery and admin-account-creation email is
+sent inline rather than deferred. It traced this through FastAPI's dependency-injection chain
+(the connection is acquired by the auth dependency, not the handler's own code, on one of the
+four endpoints) — the kind of one-level-removed tracing this project's own N+1 findings have
+praised elsewhere when done well.
+
+**The standout result of this comparison is a correctness bug §3.2 entirely missed**, caught only
+because the blind pass actually ran a parser against every file rather than reading them: `except
+InvalidTokenError, ValidationError:` in `backend/app/api/deps.py` is Python 2 syntax and a hard
+`SyntaxError` in Python 3 — the module, and therefore the application, cannot be imported at all
+in its current committed state. This was confirmed by running `ast.parse()` against every
+backend source file and quoting the exact traceback, not inferred. Filed correctly as `COR-001`,
+`Confidence: Confirmed`, under the adjacent-findings section, with the accurate observation that a
+service that cannot start has no performance profile to review — and that this should be fixed
+before any of the review's own performance recommendations can even be validated. §3.2's original
+review, which did not attempt to import or run the code, had no way to catch this; the difference
+is a direct demonstration of "verify claims by running something" outperforming "verify claims by
+reading carefully" for the one class of defect that reading alone cannot reveal.
+
+### 3.11 The blind pass extended to a fourth repository — `URLshortener`
+
+Same protocol as §3.5, told a working Go toolchain was available and real, executed evidence was
+preferred wherever practical.
+
+**It reproduced §3.5's primary finding exactly** — no `ReadTimeout`/`WriteTimeout`/`IdleTimeout`/
+`ReadHeaderTimeout` on the `http.Server` in `NewHandler` — at the same location, same
+`Critical`/`High`/**P0**.
+
+**It escalated §3.5's secondary finding using evidence the original review didn't report**, the
+same pattern as §3.8, §3.9, and now §3.10: §3.5 scored the missing-timeout on the self-referential
+health-check HTTP calls as `Medium` — real, but "confined to the health-check path rather than
+the main serving path." The blind pass traced the same call one step further and found it is also
+invoked **once at process startup**, as a readiness gate, before the server's signal-wait loop —
+so a hang there does not just degrade the health-check endpoint, it can prevent the process from
+ever reaching a clean startup *or* a clean, documented non-zero exit on failure, contradicting the
+project's own README. Scored `Critical`/`High`/**P0** on that basis — a materially different
+severity, earned by tracing one more call site than the original review did.
+
+**It independently re-derived §3.5's case-6 conclusion using the identical verification
+technique.** §3.5 read the vendored `go-redis/redis/v7@v7.4.1` source directly to confirm the
+client's unset options resolve to sane defaults (5s dial timeout, 3s read/write timeout, a pool
+sized to `10 × NumCPU`) rather than "unbounded." The blind pass did the same thing — extracted and
+read the same dependency version's `options.go` from the local module cache — and reached the
+same conclusion, correctly declining to report it as a finding. Two independent reviews, same
+non-obvious verification step, same answer.
+
+**It found a real, new finding with no equivalent in §3.5**: every request is logged synchronously,
+full headers included, through Go's stdlib `log.Logger`'s internal mutex, before any dispatch —
+scored `Medium`/`High`/**P2** and explicitly tagged `scalability-risk` rather than inflated,
+since its current cost is plausibly negligible at this project's likely (small, demo-scale)
+traffic and the review said so.
+
+**It found a second new, genuinely sophisticated finding**: `readBody()` reads the full POST body
+via `io.ReadAll` with no size cap on two unauthenticated write endpoints — confirmed against the
+handler code's own `// TODO: check some authorization ???` comment as evidence there is no gate
+upstream of the read.
+
+**It produced a real, well-traced adjacent finding with no equivalent in §3.5**: the documented
+"comma-separated list of cluster/sentinel nodes" configuration silently constructs a
+`ClusterClient` (never the Sentinel client the README also promises) whenever two or more
+addresses are configured, verified by reading the pinned dependency's own routing logic
+(`NewUniversalClient`) and its behavior against non-cluster nodes (`ClusterClient.loadState`,
+falling back to a random node when `CLUSTER SLOTS` returns nothing) — a plausible, silent,
+intermittent reliability defect the original review had no reason to look for, since it wasn't
+investigating client-construction routing at all.
+
+**One honest limitation, stated rather than hidden.** §3.5 hit a real Windows/Unix build
+incompatibility in an unrelated test file (`syscall.Kill` undefined on Windows) while trying to
+run this repository's committed benchmarks, and worked around it — neutralizing the one
+offending line for the duration of the run, reverting it immediately after — specifically so it
+could obtain the real, executed benchmark numbers that were the whole point of that case. The
+blind pass, running in the same kind of environment, hit the identical build failure and took a
+different, equally defensible path: it reported the failure itself as a finding (`MAINT-001`,
+`Confirmed`, with the exact failed-build output quoted), rather than patching around it. This
+means the blind pass never obtained executed benchmark evidence for token generation or Redis
+operation cost — a real gap relative to §3.5's result, not a flaw in either approach, and worth
+recording precisely because it shows two reasonable responses to the same obstacle producing
+different evidence. It also separately noticed the pinned `go-redis/redis/v7` client is several
+major versions behind current upstream (`MAINT-002`).
+
+### 3.12 What four independent blind passes now establish
+
+Across §3.8–3.11, the same shape recurs with enough consistency to say it is a real pattern, not a
+coincidence of one lucky run: in **every one of the four** blind passes run so far, the agent
+reproduced the reviewed repository's previously-known primary finding at the same or an escalated
+severity, and in **three of the four** (§3.8, §3.9, §3.11 — and arguably §3.10's pool-arithmetic
+deepening too), the escalation was earned by finding real, additional evidence the original
+review had in the repository but had not surfaced, not by a looser rubric or a more generous read.
+Every one of the four also produced at least one finding — sometimes a `PERF-`, sometimes a
+correctness/maintenance one filed under rule 8 — that the original human-authored review missed
+entirely, including one (§3.10's `SyntaxError`) that a careful reading would not have caught at
+all without actually running a parser. The rule-8 "Adjacent findings" convention, introduced after
+§3.1–§3.7 were originally written, was applied correctly and independently in both §3.9 and §3.11
+on repositories it had never been tested against.
+
+**What this still does not establish.** Four repositories, each reviewed once by one blind agent
+— not a repeated-run consistency measurement, not a comparison against a human expert baseline,
+and not proof that this holds for every stack this skill covers (all four repositories are Go or
+Python; JVM, .NET, and Rust-backed services remain untested by an independent pass). What it does
+establish, now replicated four times rather than asserted once: an agent with no memory of this
+project's own findings, given only the shipped skill, consistently produces a review that is at
+least as rigorous as — and on three of four repositories, materially better evidenced than — the
+manual review it is compared against.
 
 ### Recording results
 
@@ -588,13 +775,17 @@ Stated rather than left implicit:
 - **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Four
   repositories, four legitimate findings; whether a true zero-finding real backend exists at all
   is now an open question rather than an assumed baseline.
-- **The blind pass (§3.8) covers one repository, once.** It is a first step, not a completed
-  independent evaluation — it does not yet cover the other three repositories, does not repeat
-  to check consistency, and was still set up by the author (choosing the repository and writing
-  the prompt), even though the reviewing agent had no access to this session's prior findings.
+- **The blind pass (§3.8–3.11) now covers all four repositories, but each only once.** It does not
+  repeat any of the four to check inter-run consistency, and was still set up by the author
+  (choosing the repositories and writing the prompts), even though the reviewing agents had no
+  access to this session's prior findings or to each other's results.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
-  `SKILL.md` procedure to a fully independent agent across every case. §3.8 is the exception.
+  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 are the
+  exception, and now cover the full set.
+- **All four blind-passed repositories are Go or Python.** JVM, .NET, and Rust-backed services
+  remain untested by an independent pass, despite all three now carrying `deep`-tier technology
+  references.
 - No inter-run consistency measurement. The same repository reviewed twice may produce
   different findings; the rubrics are designed to make rankings reproducible, but that has not
   been measured.

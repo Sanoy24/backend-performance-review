@@ -200,11 +200,14 @@ real public repositories:
 
 - A real, merged pull request reviewed in change-scoped mode against its actual diff (§3.6).
 - Real Go benchmarks executed and cited as `Confirmed`-grade evidence (§3.5).
-- A first independent pass: an agent with no memory of this project reproduced the core finding
-  on its target repository, caught one the author's review had missed, and corrected that
-  review's severity score using evidence it had overlooked (§3.8).
 - No repository reviewed so far has produced zero findings — reframed as a result worth keeping,
   not a failed search (§3.7).
+- The independent blind pass extended from one repository to all four (§3.8–3.11), summarized in
+  §3.12: an agent with no memory of this project's own findings, given only the shipped skill,
+  reproduced or exceeded the manual review's primary finding on every repository, and on three of
+  the four found real evidence the manual review had missed — including a hard `SyntaxError` in
+  `fastapi/full-stack-fastapi-template` that a careful reading alone had not caught, confirmed by
+  actually running a parser against every file rather than only reading them.
 
 ### Removed
 
@@ -214,8 +217,6 @@ real public repositories:
 ### Planned
 
 - Examples for Node.js + MongoDB + Redis, and Go + Neo4j.
-- Extend the independent blind pass (`docs/evaluation.md` §3.8) to the other three evaluated
-  repositories; currently covers one of four.
 
 ---
 

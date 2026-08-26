@@ -286,11 +286,12 @@ files, and fabricated performance guarantees.
   in the detection tooling (now fixed), verified a real merged pull request's fix in
   change-scoped mode, and ran committed benchmarks for real evidence. It has not yet found a
   repository with literally zero findings — worth reading as a result in itself, not a gap; see
-  [docs/evaluation.md](docs/evaluation.md) §3.7. A first independent pass — an agent with no
-  memory of this project's own findings, reviewing one of the four repositories from scratch —
-  reproduced the main finding, caught a real one the author's own review had missed, and used
-  evidence the author had overlooked to correct that review's severity score (§3.8). It covers
-  one of the four repositories so far, not all of them.
+  [docs/evaluation.md](docs/evaluation.md) §3.7. An independent blind pass — agents with no
+  memory of this project's own findings, each reviewing one repository from scratch — has now
+  been run against all four repositories (§3.8–3.11). In every run it reproduced or exceeded the
+  original review's primary finding, and on three of the four it found real evidence — including,
+  on one repository, a hard `SyntaxError` that made the application fail to import entirely —
+  that the original review had missed (§3.12).
 
 ## License
 
