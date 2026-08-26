@@ -6,7 +6,7 @@ license: MIT
 compatibility: Requires read access to the target repository. Optional accelerator script requires Python 3.8+ (standard library only). No network access required.
 allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *)
 metadata:
-  version: 0.1.0
+  version: 0.2.0
   spec: backend-performance-review/2.0
 ---
 
