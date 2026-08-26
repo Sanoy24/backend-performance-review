@@ -80,13 +80,19 @@ cp -r path/to/backend-performance-review/skills/backend-performance-review .clau
 cp -r path/to/backend-performance-review/skills/backend-performance-review ~/.claude/skills/
 ```
 
-### Any other coding agent
+### OpenCode, Antigravity, Codex CLI, and other coding agents
 
-The methodology is vendor-neutral Markdown. Point your agent at
-`skills/backend-performance-review/SKILL.md` and let it follow the reference paths from
-there. Only the YAML frontmatter is Claude-specific, and it is ignored elsewhere.
+The methodology is vendor-neutral Markdown. Only the YAML frontmatter is Claude-specific, and
+it is ignored elsewhere.
 
-Full details, including how skill discovery works: **[docs/installation.md](docs/installation.md)**.
+- **OpenCode** reads the same `.claude/skills/<name>/SKILL.md` path Claude Code uses — the
+  copy step above already covers it.
+- **Google Antigravity** and **OpenAI Codex CLI** both discover skills under
+  `.agents/skills/<name>/SKILL.md` — copy or symlink the directory there.
+- **Any other agent**: point it at `skills/backend-performance-review/SKILL.md` and let it
+  follow the reference paths from there.
+
+Full details, exact paths, and how skill discovery works: **[docs/installation.md](docs/installation.md)**.
 
 ---
 

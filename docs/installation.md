@@ -16,6 +16,15 @@ layout has drifted.
 | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` schemas; skill discovery from a `skills/` directory | 2026-08-25 | Claude Code plugin marketplace documentation, `https://code.claude.com/docs/en/plugin-marketplaces` |
 | Community skill-repository layout (`skills/<name>/SKILL.md`, `.claude-plugin/`, `docs/`, `scripts/`) | 2026-08-25 | `https://github.com/mattpocock/skills` |
 | Manifest schemas re-verified against the installed CLI's own validator (`claude plugin validate`, v2.1.39) rather than documentation alone; full install/uninstall cycle run against the live repository | 2026-08-25 | Local `claude` CLI |
+| OpenCode skill discovery paths, including its Claude-compatible fallback (`.claude/skills/<name>/SKILL.md`) | 2026-08-26 | `https://opencode.ai/docs/rules/` |
+| Google Antigravity skill directory convention (`.agents/skills/<name>/SKILL.md`, project scope) | 2026-08-26 | `https://antigravity.google/docs/skills` |
+| OpenAI Codex CLI skill directory convention (`.agents/skills/<name>/SKILL.md`, same path as Antigravity) | 2026-08-26 | `https://codex.danielvaughan.com/2026/03/26/writing-effective-skillmd-files/` |
+
+The three rows above are **checked against each tool's published documentation only** — unlike
+the Claude Code rows, no local install of OpenCode, Antigravity, or Codex CLI was available to
+run an end-to-end cycle against this repository at the time of writing. Treat §4 below as
+believed-correct, not verified-by-execution, until someone runs it and reports back (that report
+would itself be a valuable contribution — see `CONTRIBUTING.md` §1).
 
 **Re-verify before a release.** If the frontmatter schema or marketplace format has changed,
 update this table with the new date and note the change in `CHANGELOG.md`.
@@ -101,10 +110,49 @@ cp -r backend-performance-review/skills/backend-performance-review ~/.claude/ski
 
 The directory name becomes the command name, so keep it as `backend-performance-review`.
 
-## 4. Any other coding agent
+## 4. Other agents
 
 The methodology is vendor-neutral Markdown with no Claude-specific content below the
-frontmatter. Two options:
+frontmatter, and several other tools have converged on the same `SKILL.md` directory
+convention Claude Code uses. Where that is true, no repackaging is required — copy or
+symlink the same directory.
+
+### OpenCode
+
+OpenCode discovers skills at `.opencode/skills/<name>/SKILL.md` (project) and
+`~/.config/opencode/skills/<name>/SKILL.md` (global), but it also reads the **Claude Code
+paths directly** as a compatibility fallback: `.claude/skills/<name>/SKILL.md` and
+`~/.claude/skills/<name>/SKILL.md`. This means the exact copy step in §3 above — installing
+into `.claude/skills/` — already makes the skill available in OpenCode with no change.
+
+### Google Antigravity
+
+Antigravity looks for project-scoped skills at `.agents/skills/<name>/SKILL.md`, and for a
+global scope shared across projects. Copy the directory there:
+
+```bash
+mkdir -p .agents/skills
+cp -r backend-performance-review/skills/backend-performance-review .agents/skills/
+```
+
+### OpenAI Codex CLI
+
+Codex CLI uses the same `.agents/skills/<name>/SKILL.md` convention as Antigravity —
+repository-scoped under `.agents/skills/`, personal-scoped under `$HOME/.agents/skills/`. The
+command above installs it for Codex CLI at the same time as Antigravity; no separate step is
+needed.
+
+### Supporting more than one tool at once
+
+`.claude/skills/` and `.agents/skills/` are the two conventions seen so far. Rather than
+maintaining two copies that can drift apart, symlink the second at the first:
+
+```bash
+mkdir -p .agents/skills
+ln -s ../../.claude/skills/backend-performance-review .agents/skills/backend-performance-review
+```
+
+### Any other agent
 
 **Point the agent at the entry file.** Most agents accept a file reference:
 
@@ -119,7 +167,8 @@ agent looks for instructions. If your agent has no notion of on-demand file load
 higher context cost — the tree is designed to be loaded selectively, and loading all of it
 at once defeats the design.
 
-Either way, the YAML frontmatter is inert outside Claude Code and can be left in place.
+Either way, the YAML frontmatter is inert outside Claude Code and can be left in place — every
+tool checked so far ignores fields it does not recognize rather than rejecting the file.
 
 ---
 
@@ -177,8 +226,9 @@ would change if you had answered.
 /plugin uninstall backend-performance-review
 ```
 
-Or, for a copied installation, delete the directory from `.claude/skills/` or
-`~/.claude/skills/`. The skill stores no state outside its own directory.
+Or, for a copied installation, delete the directory from `.claude/skills/`, `~/.claude/skills/`,
+`.agents/skills/`, or wherever else it was copied or symlinked per §4. The skill stores no state
+outside its own directory.
 
 ---
 
