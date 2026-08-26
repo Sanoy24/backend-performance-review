@@ -27,6 +27,15 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Added
+
+- Documented installation for OpenCode, Google Antigravity, and OpenAI Codex CLI in
+  `docs/installation.md` §4 and `README.md` — no packaging change was needed, since all three
+  either read the existing `.claude/skills/<name>/SKILL.md` layout directly (OpenCode) or use
+  the same `.agents/skills/<name>/SKILL.md` convention as each other (Antigravity, Codex CLI).
+  Checked against each tool's published documentation, not run end-to-end against a local
+  install of any of the three — see the caveat added to the conventions verification record.
+
 ## [0.2.0] — 2026-08-26
 
 ### Added
