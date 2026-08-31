@@ -295,21 +295,21 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
-- Behavioral evaluation has run against six real public repositories and found four real bugs
+- Behavioral evaluation has run against seven real public repositories and found five real bugs
   in the detection tooling (now fixed), verified a real merged pull request's fix in
   change-scoped mode, and ran committed benchmarks for real evidence. It has not yet found a
   repository with literally zero findings — worth reading as a result in itself, not a gap; see
   [docs/evaluation.md](docs/evaluation.md) §3.7. An independent blind pass — agents with no
   memory of this project's own findings, each reviewing one repository from scratch — has now
-  been run against six repositories across six stacks (§3.8–3.11, §3.13–3.14), including the
-  first two runs with no prior author review of the target repository at all. On the four with a
+  been run against seven repositories across seven stacks (§3.8–3.11, §3.13–3.15), including the
+  first three runs with no prior author review of the target repository at all. On the four with a
   prior review to compare against, it reproduced or exceeded the original review's primary
   finding every time, and on three of those four it found real evidence — including, on one
   repository, a hard `SyntaxError` that made the application fail to import entirely — that the
-  original review had missed (§3.12). The two JVM and Rust runs each found a real, now-fixed bug
-  in the skill's own detection or reference content rather than only in the target repository
-  (§3.15) — a `sqlite-jdbc` detection false negative structurally identical to earlier bugs found
-  this way, and an undocumented runtime default.
+  original review had missed (§3.12). The JVM, Rust, and .NET runs each found a real, now-fixed
+  bug in the skill's own detection or reference content rather than only in the target repository
+  (§3.16) — two structurally identical ORM-provider detection false negatives (`sqlite-jdbc` for
+  JVM, `Microsoft.EntityFrameworkCore.SqlServer` for .NET) and an undocumented runtime default.
 
 ## License
 

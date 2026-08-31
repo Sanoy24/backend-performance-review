@@ -15,7 +15,7 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing in CI on every push/PR |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run six times, across six stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all six, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (two of six — §3.13, §3.14 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.15 |
+| Independent (non-author) pass | **Run seven times, across seven stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all seven, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (three of seven — §3.13, §3.14, §3.15 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.16 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
@@ -29,10 +29,10 @@ and reframed what case 2 is actually testing after a fourth repository still pro
 finding (§3.7). The independent blind pass, run once per repository (§3.8–3.11) and summarized in
 §3.12, reproduced or exceeded the manual review's primary finding on all four, and found real,
 previously-missed evidence — including one hard `SyntaxError` a careful reading had missed
-entirely — on three of the four. Two further blind passes (§3.13, §3.14), run against JVM and
-Rust repositories with no prior author review at all, closed two of the three untested
+entirely — on three of the four. Three further blind passes (§3.13, §3.14, §3.15), run against
+JVM, Rust, and .NET repositories with no prior author review at all, closed all three untested
 `deep`-tier runtime gaps flagged in §3.12 and each found a real, fixed bug in the skill's own
-detection or reference content rather than only in the target repository — see §3.15. The
+detection or reference content rather than only in the target repository — see §3.16. The
 false-positive/false-negative fixtures specified in §4 are now automated
 (`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
@@ -849,28 +849,124 @@ static-vs-dynamic-dispatch, and unsafe-boundary checklist and found the codebase
 on all of them — reported plainly as a negative result rather than manufactured into a finding,
 consistent with rule 4.
 
-### 3.15 What six independent blind passes now establish
+### 3.15 The blind pass extended to a seventh repository, and the last untested stack — `gothinkster/aspnetcore-realworld-example-app` (.NET)
 
-§3.13 and §3.14 close two of the three runtime-coverage gaps named in §3.12 — JVM and Rust are no
-longer untested by an independent pass; only .NET remains. Both new runs reproduced the pattern
+The last of the three `deep`-tier runtime gaps named in §3.12 and narrowed by §3.13–3.14: JVM and
+Rust are covered, and .NET was the one remaining runtime reference (`technology/dotnet.md`) never
+exercised by an independent pass. The agent was given the unmodified skill and a fresh,
+unmodified clone of `gothinkster/aspnetcore-realworld-example-app` (commit `a397d119`, a RealWorld
+implementation on ASP.NET Core 10 / Mediator / EF Core, running SQLite by default with an
+`Microsoft.EntityFrameworkCore.SqlServer` provider also wired in), with no memory of this
+project's own findings and no instruction beyond "review this repository."
+
+**What it found, in brief:**
+
+- **PERF-001 (`Critical`/`P0`)** — every request, read or write, is wrapped by
+  `DBContextTransactionPipelineBehavior<TRequest,TResponse>.Handle`
+  (`src/Conduit/Infrastructure/DBContextTransactionPipelineBehavior.cs:27-35`) in a call to
+  `ConduitContext.BeginTransaction()`/`CommitTransaction()`
+  (`src/Conduit/Infrastructure/ConduitContext.cs:94-133`), which invoke the **synchronous**
+  `Database.BeginTransaction(...)`/`.Commit()`/`.Rollback()` — not their `*Async` equivalents —
+  from inside an `async ValueTask<TResponse> Handle(...)` method. This is the exact
+  synchronous-datastore-call-in-an-async-handler shape `application/async-and-blocking.md` §2
+  names as the most-missed blocking pattern, applied globally: two genuinely blocking DB round
+  trips on literally every endpoint, including plain `GET` reads (`Articles/List.cs`,
+  `Articles/Details.cs`) that need no transaction at all, each occupying a thread-pool thread for
+  the round-trip duration per `technology/dotnet.md` §2's progressive-degradation-under-load
+  pattern, and holding a pooled connection open for the full handler duration on every request.
+- **PERF-002 (`High`/`P1`)** — `ArticleExtensions.GetAllData()`
+  (`src/Conduit/Features/Articles/ArticleExtensions.cs:9-14`) unconditionally
+  `.Include(x => x.ArticleFavorites)`s the full favoriting-user join table for every article
+  returned by the list (`Articles/List.cs:31`) and detail (`Articles/Details.cs`) endpoints, only
+  to discard every row but a count: `Article.FavoritesCount`/`Favorited`
+  (`src/Conduit/Domain/Article.cs:29,32`) read `ArticleFavorites.Count` off the materialized
+  in-memory collection. `application/data-access.md` §3 names this exact pattern — "Counting by
+  materializing. Fetching rows to count them is O(n) transfer for a number" — and the growth axis
+  is the one that matters here: cost scales with how many people ever favorited an article, not
+  with the page size, so it grows without bound as the app is used, on the two most-hit reads in
+  the service.
+- **PERF-003 (`High`/`P1`)** — `Articles/List.cs:133` calls the synchronous `queryable.Count()`
+  (not `CountAsync`) inside the same async handler, on the already-filtered `IQueryable`, to
+  compute `ArticlesCount` for pagination — a second blocking DB round trip re-executing every
+  `WHERE` clause already applied to the page query, on the feed/list endpoint specifically.
+- **PERF-004 (`Medium`/`P2`, `scalability-risk`)** — `Articles/Create.cs:58-70` loops over the
+  caller-supplied `TagList` and, for each unrecognized tag, issues `FindAsync` then an immediate
+  `SaveChangesAsync` — a round trip pair per new tag, per article creation. `TagList` has no
+  length validation in `ArticleDataValidator` (`Create.cs:28-36`), so the round-trip count is
+  attacker-controlled, not merely inefficient.
+- **SEC-001** — the JWT signing key is a hardcoded literal in source
+  (`src/Conduit/ServicesExtensions.cs:47`,
+  `"somethinglongerforthisdumbalgorithmisrequired"u8.ToArray()`), committed in plaintext to a
+  public repository. Filed under rule 8 as `Kind: Security`, `Confidence: Confirmed` (visible
+  directly in the diff), `Risk: High` — anyone who reads the source can forge a valid token for
+  any user — not scored on the performance rubric.
+
+**A real, reproducible false negative, found and fixed.** `registry.yaml`'s `sqlserver` signal
+matched only the raw ADO.NET client library names (`System.Data.SqlClient`,
+`Microsoft.Data.SqlClient`) and the `sqlserver://` connection-string scheme — never
+`Microsoft.EntityFrameworkCore.SqlServer`, the official EF Core provider package and the dominant
+way a .NET project actually declares a SQL Server dependency in its `.csproj`. This repository's
+own `src/Conduit/Conduit.csproj` references only that package; `detect_stack.py` still reported
+`sqlserver` correctly, but only because `Microsoft.Data.SqlClient` happens to appear as a
+transitive entry in the committed `packages.lock.json` — an incidental save, not a real detection
+path. Feeding the `.csproj` content alone (no lock file, the common case for a repo that has not
+opted into `RestorePackagesWithLockFile`) to `detect.detect()` directly confirmed zero datastores
+detected. Same failure shape as the `sqlite-jdbc` false negative in §3.13: an ORM/driver provider
+package name missing from a datastore's match list, invisible until deliberately tested rather
+than merely observed to work once. **Fixed**: `registry.yaml`'s `sqlserver` entry now also matches
+`Microsoft.EntityFrameworkCore.SqlServer`, with a new regression fixture in
+`tests/test_detect_stack_regressions.py`
+(`test_ef_core_sqlserver_provider_matches_sqlserver_signal`) reproducing this repository's actual
+`.csproj` `PackageReference` text, verified to fail against the pre-fix registry before being
+accepted.
+
+**On the reference content itself.** `technology/dotnet.md` §2's naming of thread-pool starvation
+as this runtime's distinct failure shape — "latency degrades progressively under load rather than
+collapsing immediately" — was directly load-bearing for scoring PERF-001 and PERF-003 as `High`
+rather than a vague "consider async" note, and its explicit instruction to check for
+`.Result`/`.Wait()`/`.GetAwaiter().GetResult()` first correctly did **not** fire here — this
+codebase awaits consistently everywhere except the two genuinely-synchronous EF Core/ADO.NET
+calls found, which is a narrower and more specific failure mode than sync-over-async and one the
+file names separately. `application/data-access.md` §3 and §5 mapped onto PERF-002 and PERF-001
+respectively with no adaptation needed. One gap, not fixed here: `technology/dotnet.md` states
+that ASP.NET Core installs no request `SynchronizationContext`, which is correct and ruled out a
+classic sync-over-async deadlock as an explanation for PERF-001/003 — but the file has no
+guidance distinguishing "genuinely synchronous provider call" (this repository's actual pattern)
+from "sync-over-async on a `Task`" as two distinct sub-shapes of the same starvation failure mode;
+the agent had to reason that distinction from `application/async-and-blocking.md` §2's general
+table instead. Worth a future addition, not a defect serious enough to block this write-up.
+
+### 3.16 What seven independent blind passes now establish
+
+§3.13, §3.14, and §3.15 close all three runtime-coverage gaps named in §3.12 — JVM, Rust, and now
+.NET are no longer untested by an independent pass. All three new runs reproduced the pattern
 established across §3.8–3.11: each found a `Critical`/`P0` finding with direct code-level
-evidence, and each found at least one real issue (JVM: `SEC-001`; Rust: `COR-001`, `COR-002`) the
-rule-8 "Adjacent findings" convention was designed for. Both also did something §3.8–3.11 did
-not: each found a real, reproducible bug **in the skill's own detection or reference content**,
-not only missed evidence in the target repository — a `sqlite-jdbc`/`jdbc:sqlite:` detection false
-negative structurally identical in shape to Round 1's (§3.3), and an undocumented Tokio default
-plus a structural gap in what `references_to_load` can ever contain. §3.8–3.11 exercised
-signal-and-reference paths this project's own Round 1–2 testing had already walked (Go and Python,
-the two ecosystems the author tested by hand); §3.13 and §3.14 are the first blind passes against
-reference content that had *never* been run against a real repository by anyone, author included
-— and both found something. That is closer to what an independent pass is actually for than
-reproducing an already-verified finding is.
+evidence, and each found at least one real issue (JVM: `SEC-001`; Rust: `COR-001`, `COR-002`;
+.NET: `SEC-001`) the rule-8 "Adjacent findings" convention was designed for. All three also did
+something §3.8–3.11 did not: each found a real, reproducible bug **in the skill's own detection or
+reference content**, not only missed evidence in the target repository — a
+`sqlite-jdbc`/`jdbc:sqlite:` detection false negative and an `Microsoft.EntityFrameworkCore.SqlServer`
+detection false negative, both structurally identical in shape to Round 1's (§3.3) and to each
+other, plus an undocumented Tokio default and a structural gap in what `references_to_load` can
+ever contain. §3.8–3.11 exercised signal-and-reference paths this project's own Round 1–2 testing
+had already walked (Go and Python, the two ecosystems the author tested by hand); §3.13–3.15 are
+the first blind passes against reference content that had *never* been run against a real
+repository by anyone, author included — and all three found something. That is closer to what an
+independent pass is actually for than reproducing an already-verified finding is.
 
-**What this still does not establish.** .NET remains the one `deep`-tier runtime with no
-independent pass. No repository has been blind-passed twice, so inter-run consistency is still
-unmeasured. No human-expert baseline exists. Six repositories is still six, not a statistically
-powered sample — the value of each additional run continues to be in what specific, checkable bug
-it surfaces, not in moving an aggregate pass rate.
+Two false negatives in two different datastore signals (§3.13's `sqlite`, §3.15's `sqlserver`),
+found by two different agents against two different stacks, share the identical root cause: the
+match list was built from the raw driver/client library, not the ORM provider package that most
+real projects actually declare. That is now a pattern worth naming explicitly rather than treating
+each occurrence as an isolated bug — a plausible next step is auditing every `deep`- and
+`conceptual`-tier datastore signal for the equivalent gap across each supported runtime's dominant
+ORM, rather than waiting for the next blind pass to find the next instance one at a time.
+
+**What this still does not establish.** No `deep`-tier runtime remains untested by an independent
+pass, but no repository has been blind-passed twice, so inter-run consistency is still unmeasured.
+No human-expert baseline exists. Seven repositories is still seven, not a statistically powered
+sample — the value of each additional run continues to be in what specific, checkable bug it
+surfaces, not in moving an aggregate pass rate.
 
 ### Recording results
 
@@ -923,23 +1019,23 @@ detection capability actually detects something.
 
 Stated rather than left implicit:
 
-- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Six
-  repositories now, six legitimate findings; whether a true zero-finding real backend exists at
+- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Seven
+  repositories now, seven legitimate findings; whether a true zero-finding real backend exists at
   all is now an open question rather than an assumed baseline.
-- **The blind pass (§3.8–3.11, §3.13–3.14) now covers six repositories, but each only once.** It
-  does not repeat any of the six to check inter-run consistency. §3.8–3.11 were still set up by
-  the author (choosing the repositories and writing the prompts) even though the reviewing agents
-  had no access to this session's prior findings; §3.13–3.14 went one step further and had no
-  prior author review of the target repository to compare against at all, only the choice of
+- **The blind pass (§3.8–3.11, §3.13–3.15) now covers seven repositories, but each only once.**
+  It does not repeat any of the seven to check inter-run consistency. §3.8–3.11 were still set up
+  by the author (choosing the repositories and writing the prompts) even though the reviewing
+  agents had no access to this session's prior findings; §3.13–3.15 went one step further and had
+  no prior author review of the target repository to compare against at all, only the choice of
   repository and the prompt.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
-  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.14
+  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.15
   are the exception.
-- **Five of six blind-passed repositories are Go, Python, or JVM/Rust; .NET is the one remaining
-  `deep`-tier runtime untested by an independent pass.** §3.13 (JVM) and §3.14 (Rust) closed two
-  of the three gaps flagged after §3.12; a Node.js repository has also never been blind-passed
-  despite `deep`-tier coverage since v0.2.0.
+- **All six `deep`-tier runtimes tested at v0.2.0 (Node.js, Python, JVM, Go, .NET, Rust) have now
+  had at least one blind pass except Node.js**, which has never been independently blind-passed
+  despite `deep`-tier coverage since v0.2.0 — the one remaining gap of this shape. §3.13 (JVM),
+  §3.14 (Rust), and §3.15 (.NET) closed the three runtime gaps flagged after §3.12.
 - No inter-run consistency measurement. The same repository reviewed twice may produce
   different findings; the rubrics are designed to make rankings reproducible, but that has not
   been measured.

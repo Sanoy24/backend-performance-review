@@ -121,6 +121,30 @@ class LockfileHashCollisionTests(unittest.TestCase):
         corpus = "spring.datasource.url=jdbc:sqlite:dev.db\n"
         self.assertIn("sqlite", matched_signals(corpus, self.entries))
 
+    def test_ef_core_sqlserver_provider_matches_sqlserver_signal(self):
+        # Regression for a false negative found during the independent blind pass against
+        # gothinkster/aspnetcore-realworld-example-app (docs/evaluation.md, .NET blind
+        # pass): the sqlserver signal's match list covered the raw ADO.NET client library
+        # names (System.Data.SqlClient, Microsoft.Data.SqlClient) and the
+        # "sqlserver://" connection-string scheme, but not
+        # Microsoft.EntityFrameworkCore.SqlServer — the official EF Core provider package,
+        # and the dominant way a .NET project actually declares a SQL Server dependency in
+        # its .csproj. This repo's own .csproj (src/Conduit/Conduit.csproj) references only
+        # that package; detection only succeeded incidentally, via
+        # Microsoft.Data.SqlClient appearing as a transitive entry in packages.lock.json. A
+        # .NET repo that references the EF Core provider without committing a lock file —
+        # common, since restore-with-lock-file is opt-in — was invisible to this signal
+        # entirely. Same shape of gap as the sqlite-jdbc false negative above: an ORM
+        # provider package name missing from a datastore's match list.
+        corpus = (
+            '<Project Sdk="Microsoft.NET.Sdk.Web">\n'
+            "  <ItemGroup>\n"
+            '    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />\n'
+            "  </ItemGroup>\n"
+            "</Project>\n"
+        )
+        self.assertIn("sqlserver", matched_signals(corpus, self.entries))
+
 
 class WeakEvidenceProvenanceTests(unittest.TestCase):
     """Regression for: scan()/detect() flattened every file into one corpus string, so a
