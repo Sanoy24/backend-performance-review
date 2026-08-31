@@ -15,7 +15,7 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing in CI on every push/PR |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run seven times, across seven stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all seven, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (three of seven — §3.13, §3.14, §3.15 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.16 |
+| Independent (non-author) pass | **Run eight times, across seven repositories** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all seven repositories, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (three of seven — §3.13, §3.14, §3.15 — had no prior author review at all, the first fully author-uninvolved runs); one repository (`gin-realworld`) has now been blind-passed twice, giving a first, single-repository measurement of inter-run consistency: the primary finding's location and mechanism reproduced exactly across all three reviews, and its severity/priority reproduced exactly between the two blind passes; see §3.8–3.17 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
@@ -968,6 +968,128 @@ No human-expert baseline exists. Seven repositories is still seven, not a statis
 sample — the value of each additional run continues to be in what specific, checkable bug it
 surfaces, not in moving an aggregate pass rate.
 
+### 3.17 A second blind pass on the same repository — inter-run consistency, measured once
+
+Every prior comparison in this section reviewed a repository once. The README's claim —
+priority is "derived from the matrix, never chosen," and rankings are meant to be reproducible —
+has never actually been tested against the same code twice. This section is that test: `gin-realworld`
+is blind-passed a second time, giving three independent reviews of the same commit to compare —
+§3.1 (the original manual review), §3.9 (blind pass 1), and this one (blind pass 2).
+
+**Setup.** A fresh clone of `gothinkster/golang-gin-realworld-example-app` resolved to
+`626c372d259472148d93303f74aa9b9a1cdcef24` — the identical commit §3.1 and §3.9 were run against,
+confirmed by `git rev-parse HEAD` before anything else ran, not merely "the same repository" but
+the literal same source text, removing repo drift as a possible explanation for any difference
+found below. A fresh `general-purpose` agent, spawned with no memory of this session, was given
+only the path to the unmodified `SKILL.md` and the path to this clone, told it was a full review
+of a real, unmodified Go backend, and told nothing about §3.1's or §3.9's existence, contents, or
+scores — the same blindness protocol as §3.8–3.14. `detect_stack.py` was also re-run directly
+(outside the blind agent, for this write-up) against the fresh clone and produced identical
+detections to §3.1's, modulo one accretion from the skill's own evolution since §3.1 was written:
+`go` is now `deep` tier (the Go runtime reference was added and promoted after Round 1), where
+§3.1 explicitly describes this repository as having "no `deep`-tier engine." That is a fact about
+the skill's coverage growing, not about this repository or this comparison, and is noted here
+rather than silently absorbed.
+
+**The primary finding: location and mechanism reproduced exactly, three for three.** All three
+reviews independently trace the identical call chain — `ArticlesSerializer.Response()`
+(`articles/serializers.go:116-141`) batches favorite counts and status before its loop but calls
+`ArticleUserSerializer.Response()` → `ProfileSerializer.Response()` (`users/serializers.go:24-38`)
+→ `isFollowing()` (`users/models.go:121-129`) per rendered article and comment author, one query
+each, unbatched. No review disagreed about where the bug is or what it does.
+
+**Severity: two of three converge exactly, and the two that converge are the two blind passes.**
+§3.1 scored `High`/`High`/**P1**. §3.9 scored `Critical`/`High`/**P0**, escalating on evidence
+§3.1's write-up didn't carry: no server-side HTTP timeouts anywhere in the codebase, and no
+enforced maximum on the article-list `limit` parameter, meaning the blast radius is shared-pool
+saturation, not a bounded per-request cost. This run's blind pass reached the identical score —
+`Critical`/`High`/**P0** — independently, citing the same two facts: it filed the missing
+timeout as a considered-but-not-promoted note (§6.2 of its report) and the missing `limit` cap as
+its own finding (`PERF-003`, `High`/`High`/**P1**), then used exactly that evidence — "each extra
+row is also an extra `isFollowing` round trip against the shared pool" — to justify `Critical`
+under the rubric's own definition ("critical path **and** ... saturation of a shared resource").
+Two agents, spawned separately, with no access to each other's output, independently found the
+same escalating evidence and reached the same score. §3.1's `High`/`High`/P1 is not wrong by its
+own lights — it scored the N+1 in isolation, before the unbounded-`limit` evidence was in the
+write-up at all — but on the question actually asked here (does the primary finding's *severity*
+reproduce run to run), the answer is: not with the original manual review, but yes, exactly,
+between the two independent blind passes.
+
+**The case-6 pool-arithmetic question reproduces exactly, including its score.** §3.1 checked
+one specific question — does `SetMaxIdleConns(10)`/no `SetMaxOpenConns` contradict a networked
+engine's connection ceiling — and correctly answered no, because SQLite has no such ceiling to
+exceed. §3.9 asked a different, related question about the same two lines — does an unbounded
+local pool risk internal contention (`SQLITE_BUSY`) against SQLite's single-writer semantics —
+and reported it as a finding, `Critical`/`Medium`/**P1**, explicitly caveated as drawing on
+general engine knowledge beyond what the `conceptual`-tier registry entry supplies. This run's
+blind pass asked the same question §3.9 did, cited the same two lines
+(`common/database.go:57,65`), the same absence of a busy-timeout or WAL configuration, and the
+same underlying mechanism (SQLite serializes all writers regardless of pool size) — and landed on
+the identical score: `Critical (structural)`/`Medium`/**P1**. This is the single strongest data
+point in this comparison: not just agreement that something is wrong, but an exact match on both
+scored axes and the derived priority, from two agents that never saw each other's reasoning,
+independently re-deriving §3.9's own correction to §3.1 rather than independently discovering
+something new. It also replicates, a second time, §3.9's finding that this is a different
+question than §3.1 asked of the same code, not a disagreement about the same question.
+
+**Secondary findings: substantial overlap, and real, non-contradictory divergence in what each
+run chose to surface.** Both blind passes flagged: missing indexes on the same foreign-key-shaped
+columns (§3.9: "`AuthorID`, `FavoriteID`, `FavoriteByID`, `FollowingID`, `FollowedByID`"; this
+run's `PERF-002`: the same five columns by name, plus `users.username`); the total absence of
+observability (metrics, tracing, benchmarks, load tests) as its own finding rather than only a
+confidence cap; and the identical `SEC-001` — a hardcoded JWT signing secret in `common/utils.go`
+carrying a `#nosec G101` suppression, run through a CI security job. One real, one-directional
+miss: §3.9 also reported a second `SEC-` finding (a bearer token accepted via URL query
+parameter) that this run's pass did not report — an omission, not a contradiction, since nothing
+in this run's report addresses that code path at all. One real, one-directional addition: this
+run reported two correctness findings with no counterpart in §3.9's write-up — `COR-001`
+(`users.username` has no uniqueness constraint) and `COR-002` (`FollowModel`/`FavoriteModel` lack
+a uniqueness constraint on their relationship columns, letting a `FirstOrCreate` race double-count
+a favorite or follow). Both are real, evidenced, and correctly filed under rule 8. Whether §3.9's
+run considered and silently declined these, or never looked, cannot be determined — this project
+recorded §3.9's findings in prose, not as the full raw report, so a completely faithful
+run-to-run diff of *everything each pass looked at* is not possible from what was preserved. That
+gap is itself worth naming as a lesson: recording only a summary of a comparison run, rather than
+its full output, is exactly the kind of information loss that makes a later consistency
+measurement weaker than it needed to be.
+
+**The derivation itself never diverged.** Every scored finding in this run's report — ten `PERF-`
+findings plus three adjacent findings — re-derives to the priority the matrix specifies for its
+stated severity and confidence, with no exception (`Critical`/`High`→P0, `High`/`High`→P1,
+`Critical`/`Medium`→P1, `Medium`/`High`→P2, `Low`/`Medium` and `Low`/`High`→P3,
+`Informational`/`Confirmed`→P3). Cross-checked against §3.1's and §3.9's own recorded scores, the
+same holds for both of them. This is exactly what the matrix is for: it is a mechanical lookup,
+and across three independent runs and thirteen individually-scored findings in this run alone,
+it produced zero disagreements about how severity-and-confidence should turn into priority. Any
+divergence between runs was in the judgment call of *what severity or confidence a finding
+deserves*, never in the arithmetic that follows from it — which is the correct place for
+independent review to disagree, and the wrong place for a rubric to be inconsistent.
+
+**No bug found in the skill's own tooling on this run.** Detection matched §3.1's, the false
+positives §3.3 fixed did not recur, and the blind agent's handling of the `grpc`/`protobuf` signal
+— verified as an unused transitive dependency and correctly declined rather than assumed —
+worked as `methodology/discovery.md` intends. Go is `deep` tier and this exact repository has now
+been reviewed four times total across Rounds 1–2 and two blind passes; a fifth review finding
+nothing new to fix in the tooling itself is the expected result at this point, not a null result.
+
+**The honest verdict.** On the question this section exists to answer — does an independent pass,
+run twice against the same code, converge — the answer is **partial convergence, and the
+partiality is informative rather than a failure**. The primary finding's *location and mechanism*
+reproduced perfectly across all three reviews. Its *severity score* reproduced exactly between the
+two blind passes and diverged from the original manual review for a reason already on record
+(§3.9) before this run existed — the manual review answered a narrower question than the evidence
+in the repository actually supported, and both blind passes independently found the wider
+evidence. The secondary case-6 finding reproduced exactly on every scored axis between the two
+blind passes, which is the strongest single piece of evidence available that the same evidence,
+independently read twice, produces the same rubric outcome. Secondary findings beyond those two
+overlapped substantially but not completely, in both directions — each run surfaced something the
+other did not, the same pattern already documented across §3.8–3.11's *different*-repository
+comparisons, now confirmed to hold *within* a single repository reviewed twice as well. This is
+one repository, one extra run. It supports the reproducibility claim for the parts of a review
+that matter most (what the top finding is, where it lives, and — once the same evidence is in
+hand — how severely it scores) more than it contradicts it, but a second data point of this shape,
+on a different repository or stack, would be needed before calling the question closed.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -1036,9 +1158,17 @@ Stated rather than left implicit:
   had at least one blind pass except Node.js**, which has never been independently blind-passed
   despite `deep`-tier coverage since v0.2.0 — the one remaining gap of this shape. §3.13 (JVM),
   §3.14 (Rust), and §3.15 (.NET) closed the three runtime gaps flagged after §3.12.
-- No inter-run consistency measurement. The same repository reviewed twice may produce
-  different findings; the rubrics are designed to make rankings reproducible, but that has not
-  been measured.
+- **Inter-run consistency measured once, on one repository — not a general result.** §3.17
+  blind-passed `gin-realworld` a second time, at the identical pinned commit reviewed in §3.1 and
+  §3.9, and found the primary finding's location and mechanism reproduced exactly across all
+  three independent reviews, its severity and derived priority reproduced exactly between the two
+  blind passes (diverging from the original manual review for a reason already on record in
+  §3.9), and the severity×confidence→priority matrix applied with zero disagreements across all
+  three runs' scored findings. Secondary findings still varied run to run, each surfacing at
+  least one real thing the other missed — the same pattern §3.8–3.11 documented across different
+  repositories, now also confirmed within one repository reviewed twice. This is one repository,
+  one extra run: it does not establish that consistency holds for other repositories, other
+  stacks, or findings below the primary one.
 - No comparison against a human expert baseline.
 - No measurement of context cost per review, which matters for whether the routing design is
   actually paying off.
