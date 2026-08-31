@@ -15,7 +15,7 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing as of v0.1.0 |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run four times, one per repository** — agents with no memory of this session; in every run, reproduced or exceeded the manual review's primary finding, and in three of four found real evidence the manual review had missed; see §3.8–3.12 |
+| Independent (non-author) pass | **Run six times, across six stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all six, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (two of six — §3.13, §3.14 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.15 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
@@ -29,8 +29,12 @@ and reframed what case 2 is actually testing after a fourth repository still pro
 finding (§3.7). The independent blind pass, run once per repository (§3.8–3.11) and summarized in
 §3.12, reproduced or exceeded the manual review's primary finding on all four, and found real,
 previously-missed evidence — including one hard `SyntaxError` a careful reading had missed
-entirely — on three of the four. The false-positive/false-negative fixtures specified in §4 are
-now automated (`tests/test_detect_stack_regressions.py`, run on every push/PR).
+entirely — on three of the four. Two further blind passes (§3.13, §3.14), run against JVM and
+Rust repositories with no prior author review at all, closed two of the three untested
+`deep`-tier runtime gaps flagged in §3.12 and each found a real, fixed bug in the skill's own
+detection or reference content rather than only in the target repository — see §3.15. The
+false-positive/false-negative fixtures specified in §4 are now automated
+(`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
 ---
 
@@ -146,7 +150,9 @@ cannot. **Status reflects Round 1 (§3.1–§3.3) and Round 2 (§3.5–§3.7).**
 
 Case 6 is the cheapest high-value check: the answer is objectively verifiable from files, so
 there is a right answer to compare against. Remaining open work: a genuinely blind evaluator
-run without the author's involvement at all (§3.8 reports a first, partial step toward this).
+run without the author's involvement at all — §3.8 was a first, partial step; §3.13 and §3.14
+go further still, with no prior author review of the target repository to compare against at
+all, only the choice of repository and the prompt.
 
 ### 3.1 Round 1, repo A — `gothinkster/golang-gin-realworld-example-app`
 
@@ -721,6 +727,151 @@ project's own findings, given only the shipped skill, consistently produces a re
 least as rigorous as — and on three of four repositories, materially better evidenced than — the
 manual review it is compared against.
 
+### 3.13 The blind pass extended to a fifth repository, and a fifth stack — `gothinkster/spring-boot-realworld-example-app` (JVM)
+
+The largest remaining gap named in §3.12 was that all four prior blind passes were Go or Python,
+leaving the three `deep`-tier runtime references added in the v0.2.0 coverage push (JVM, .NET,
+Rust) completely untested against a real repository. This round closes one of those three.
+
+The agent was given the unmodified skill and a fresh, unmodified clone of
+`gothinkster/spring-boot-realworld-example-app` — a Spring Boot RealWorld implementation — with
+no memory of this project's own findings and no instruction beyond "review this repository."
+
+**What it found, in brief:**
+
+- **PERF-001 (`Critical`/`P0`)** — every GraphQL field resolver (`ProfileDatafetcher`,
+  `ArticleDatafetcher`) issues unbatched per-item queries with no `DataLoader` anywhere in the
+  codebase, an `O(N·M)` cost under nested queries. The agent noted the REST path in the same
+  codebase already batches the identical data (`ArticleQueryService.setFavoriteCount`), which it
+  used as direct evidence the fix is a known, available pattern rather than new work.
+- **PERF-002 (`High`/`P1`)** — no index on any foreign-key or filter column in the schema
+  (`tags.name`, `article_tags.article_id`/`tag_id`, `comments.article_id`,
+  `follows.user_id`/`follow_id`), provable directly from the migration file with no runtime
+  evidence needed.
+- **PERF-003 (`High`/`P1`, capped at `Medium` confidence)** — SQLite behind a 10-connection
+  HikariCP pool and a 200-thread Tomcat pool, with no journal-mode or busy-timeout configuration.
+  The agent explicitly declined to assert `Critical`/`High` confidence here, citing
+  `registry.yaml`'s own note that SQLite has no dedicated technology file and concurrency
+  questions should be flagged as unknowns — a correct, rule-following application of a
+  conceptual-tier degradation, not a missed opportunity.
+- **PERF-004 (`Medium`/`P2`)** — an unbounded per-tag loop inside a single write transaction on
+  article creation, with no upper bound on the caller-supplied tag list.
+- **SEC-001** — a JWT signing secret committed in plaintext to `application.properties`, correctly
+  filed under rule 8 as `Kind: Security` with a `Risk` note, not scored on the performance rubric.
+
+**A real, reproducible false negative, found and fixed.** `detect_stack.py` reported zero
+datastores for this repository — the `sqlite` signal's match list (`sqlite3`,
+`better-sqlite3`, `mattn/go-sqlite3`, `sqlite://`, `libsql`) covers no JVM driver coordinate or
+connection-string scheme, so `org.xerial:sqlite-jdbc` (the dominant Maven Central artifact for
+SQLite-on-JVM) and `jdbc:sqlite:` never matched. The agent only found the datastore — and, with
+it, PERF-002 and PERF-003, two of its three highest-priority findings — because
+`methodology/discovery.md`'s "read the lockfile, check connection-string schemes" instruction
+told it to check `build.gradle` and `application.properties` by hand regardless of what the
+accelerator reported. **Fixed**: `registry.yaml`'s `sqlite` entry now matches `sqlite-jdbc`,
+`org.xerial`, and `jdbc:sqlite:`, with two new regression fixtures in
+`tests/test_detect_stack_regressions.py` reproducing the exact dependency-coordinate and
+connection-string text that failed to match, verified to fail against the pre-fix registry before
+being accepted. This is the same failure shape as the Round 1 bugs in §3.3 — a signal that never
+fires produces no visible symptom to notice, and is caught only by deliberately checking that a
+claimed detection capability actually detects something.
+
+**On the reference content itself.** `technology/jvm.md`'s concurrency-model framing (identify
+thread-per-request vs. reactive vs. virtual-thread first) was, in the agent's own words, "directly
+actionable" from `build.gradle`/CI and correctly kept it from over-flagging synchronous MyBatis
+calls as event-loop-stalling — the framing a WebFlux service would deserve but this thread-per-
+request one does not. `application/api.md`'s GraphQL N+1 guidance, at `conceptual` tier with no
+dedicated file, mapped exactly onto the DGS datafetcher pattern found — a working instance of
+graceful degradation, not a gap. One piece of friction, not treated as a bug: the agent found the
+`registry.yaml` note capping SQLite concurrency reasoning at "unknown" slightly over-cautious for
+architectural facts (single-writer, file-locking) it considered closer to general relational-
+engine knowledge than to obscure engine trivia — a defensible complaint, left unresolved here
+pending a real `technology/sqlite.md` file, which is still the correct long-term fix per the
+roadmap in `docs/supported-technologies.md`.
+
+### 3.14 The blind pass extended to a sixth repository, and a sixth stack — `launchbadge/realworld-axum-sqlx` (Rust)
+
+Closing the second of the three untested `deep`-tier runtime references. The agent reviewed a
+fresh, unmodified clone of a RealWorld implementation in Rust (Axum + SQLx + PostgreSQL), again
+with no memory of this project's own findings.
+
+**What it found, in brief:**
+
+- **PERF-001 (`Critical`/`P0`)** — an unauthenticated, unbounded `GET /api/tags` endpoint running
+  a full-table `DISTINCT`-over-`unnest` scan with no cache and no rate limit. The agent cited the
+  codebase's *own* source comment — `"this query requires a full table scan and is a likely point
+  for a DoS attack"` — as corroborating evidence, exactly the kind of evidence-first sourcing rule
+  1 asks for.
+- **PERF-002 (`Critical`/`P0`, `quick-win`)** — `limit.unwrap_or(20)` used directly as the SQL
+  `LIMIT` on two list endpoints with no upper clamp, each returned row carrying two to three
+  correlated subqueries.
+- **PERF-003 (`High`/`P1`)** — no server-side request timeout or body-size limit configured
+  anywhere in the Axum middleware stack (`tower-http` included with only its `trace` feature, not
+  `limit` or `timeout`).
+- **PERF-006 (`High`/`P1`)** — the primary unfiltered article-listing sort (`ORDER BY created_at`)
+  has no supporting index; the schema's only secondary index is the GIN index on `tag_list`.
+- **PERF-005 (`Medium`/`P2`)** — correctly identified `spawn_blocking`-offloaded Argon2 hashing as
+  the *right* pattern (not a defect), then still raised a `Medium` finding that nothing bounds
+  concurrent offloaded hashes beyond Tokio's own default blocking-pool cap — a materially more
+  precise finding than either "flag the blocking call" or "say nothing" would have been.
+- **COR-001 and COR-002** — two real, verified correctness bugs found incidentally while reading
+  the same queries for cost analysis: a `favorited` field computed via an uncorrelated `EXISTS`
+  subquery (checks whether the user favorited *any* article, not *this* one) repeated across five
+  query sites, and a feed endpoint with no `ORDER BY` at all. Both filed under rule 8 with `Kind:
+  Correctness`, not scored on the performance rubric.
+
+**Two real gaps in the reference content, found and addressed.** First: `technology/rust.md`
+described Tokio's blocking-thread pool only as "usually small by default," with no concrete
+number or the actual `Builder::max_blocking_threads` configuration knob — the agent had to reason
+from general Tokio knowledge, outside the file, to correctly score PERF-005 as bounded rather than
+unbounded. **Fixed**: the file now states the default (512 threads) and names the builder method.
+Second, and more structural: the agent noticed `detect_stack.py`'s `references_to_load` did not
+include `application/data-access.md`, `application/connection-pools.md`, or
+`application/serialization.md` — all three of which turned out to be load-bearing for PERF-002,
+PERF-003, and PERF-006 — because those three rows in SKILL.md's reference-routing table are
+triggered by a *usage pattern* ("any pooled client", "ORM, query construction"), not by a
+registry-matched technology signal, so the accelerator structurally cannot surface them. The agent
+caught this only by cross-checking the routing table by hand rather than trusting the script's
+output as complete. **Addressed**: `SKILL.md`'s Phase 1 now states this explicitly —
+`references_to_load` is never the full reading list, and every "Always available" row is in scope
+for Phase 4's layer gate regardless of whether the accelerator named it. This is a documentation
+fix, not a code fix: the correct behavior was already "cross-check the table," the agent already
+did it correctly, and the gap was that nothing said so forcefully enough for a less careful pass
+to be guaranteed to do the same.
+
+**On the reference content that held up.** The agent reported `technology/rust.md`'s runtime-
+identification instruction (confirm `current_thread` vs. multi-threaded Tokio before reasoning
+about blocking) as directly actionable and load-bearing — it is what let the agent correctly
+*not* flag the `spawn_blocking` offload as a defect, a false positive the reference specifically
+prevented. Its explicit "confirm `--release`" warning also proved concretely relevant: this
+repository's CI never builds in release mode, a fact the agent said it would not have thought to
+check without the reference naming it. The agent checked every item in the file's Rc/Arc-cycle,
+static-vs-dynamic-dispatch, and unsafe-boundary checklist and found the codebase genuinely clean
+on all of them — reported plainly as a negative result rather than manufactured into a finding,
+consistent with rule 4.
+
+### 3.15 What six independent blind passes now establish
+
+§3.13 and §3.14 close two of the three runtime-coverage gaps named in §3.12 — JVM and Rust are no
+longer untested by an independent pass; only .NET remains. Both new runs reproduced the pattern
+established across §3.8–3.11: each found a `Critical`/`P0` finding with direct code-level
+evidence, and each found at least one real issue (JVM: `SEC-001`; Rust: `COR-001`, `COR-002`) the
+rule-8 "Adjacent findings" convention was designed for. Both also did something §3.8–3.11 did
+not: each found a real, reproducible bug **in the skill's own detection or reference content**,
+not only missed evidence in the target repository — a `sqlite-jdbc`/`jdbc:sqlite:` detection false
+negative structurally identical in shape to Round 1's (§3.3), and an undocumented Tokio default
+plus a structural gap in what `references_to_load` can ever contain. §3.8–3.11 exercised
+signal-and-reference paths this project's own Round 1–2 testing had already walked (Go and Python,
+the two ecosystems the author tested by hand); §3.13 and §3.14 are the first blind passes against
+reference content that had *never* been run against a real repository by anyone, author included
+— and both found something. That is closer to what an independent pass is actually for than
+reproducing an already-verified finding is.
+
+**What this still does not establish.** .NET remains the one `deep`-tier runtime with no
+independent pass. No repository has been blind-passed twice, so inter-run consistency is still
+unmeasured. No human-expert baseline exists. Six repositories is still six, not a statistically
+powered sample — the value of each additional run continues to be in what specific, checkable bug
+it surfaces, not in moving an aggregate pass rate.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -772,20 +923,23 @@ detection capability actually detects something.
 
 Stated rather than left implicit:
 
-- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Four
-  repositories, four legitimate findings; whether a true zero-finding real backend exists at all
-  is now an open question rather than an assumed baseline.
-- **The blind pass (§3.8–3.11) now covers all four repositories, but each only once.** It does not
-  repeat any of the four to check inter-run consistency, and was still set up by the author
-  (choosing the repositories and writing the prompts), even though the reviewing agents had no
-  access to this session's prior findings or to each other's results.
+- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Six
+  repositories now, six legitimate findings; whether a true zero-finding real backend exists at
+  all is now an open question rather than an assumed baseline.
+- **The blind pass (§3.8–3.11, §3.13–3.14) now covers six repositories, but each only once.** It
+  does not repeat any of the six to check inter-run consistency. §3.8–3.11 were still set up by
+  the author (choosing the repositories and writing the prompts) even though the reviewing agents
+  had no access to this session's prior findings; §3.13–3.14 went one step further and had no
+  prior author review of the target repository to compare against at all, only the choice of
+  repository and the prompt.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
-  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 are the
-  exception, and now cover the full set.
-- **All four blind-passed repositories are Go or Python.** JVM, .NET, and Rust-backed services
-  remain untested by an independent pass, despite all three now carrying `deep`-tier technology
-  references.
+  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.14
+  are the exception.
+- **Five of six blind-passed repositories are Go, Python, or JVM/Rust; .NET is the one remaining
+  `deep`-tier runtime untested by an independent pass.** §3.13 (JVM) and §3.14 (Rust) closed two
+  of the three gaps flagged after §3.12; a Node.js repository has also never been blind-passed
+  despite `deep`-tier coverage since v0.2.0.
 - No inter-run consistency measurement. The same repository reviewed twice may produce
   different findings; the rubrics are designed to make rankings reproducible, but that has not
   been measured.

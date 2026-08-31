@@ -17,14 +17,19 @@ Usage:
 Output shape:
     {
       "repo": "...",
-      "detected": {"datastore": [...], "cache": [...], "broker": [...],
-                   "runtime": [...], "framework": [...], "infrastructure": [...]},
+      "detected": {"datastore": [{
+                     "signal": "postgres", "tier": "deep", "category": "relational",
+                     "matched_on": [{"token": "postgres", "weak_evidence": false,
+                                     "files": ["requirements.txt"]}],
+                     "weak_evidence": false   # present and true only when every match
+                   }], ...},                  # for this signal came from a non-manifest
+                                               # YAML file (see content_kind())
       "references_to_load": [...],
       "tiers": {"postgres": "deep", ...},
       "notes": {"mysql": "...", ...},
       "secret_files_present": [...],
       "evidence_files": [...],
-      "warnings": [...]
+      "warnings": [...]   # includes a "weak evidence only for: ..." entry when applicable
     }
 """
 
@@ -217,24 +222,46 @@ def is_secret(rel_path):
     return any(pattern.search(normalized) for pattern in SECRET_PATTERNS)
 
 
-def wants_content(name, rel_path):
+def content_kind(name, rel_path):
+    """Classify why a file's content would be read, so a later match can be graded.
+
+    "manifest" and "migration" are recognized dependency/schema files — a match inside one
+    is real evidence a technology is actually used. "yaml" is the blanket catch-all for any
+    other .yaml/.yml file (CI workflows, k8s values files, arbitrary config, even this
+    project's own registry.yaml) — a match found only there is weaker: it is exactly the
+    shape of the false positives found during behavioral evaluation (a lockfile hash or a
+    bare English word colliding with a short match token). Returns None if content is not
+    worth reading at all.
+    """
     lowered = name.lower()
     if lowered in CONTENT_FILES:
-        return True
+        return "manifest"
     if lowered.endswith(CONTENT_SUFFIXES):
-        return True
-    if lowered.endswith(YAML_SUFFIXES):
-        return True
+        return "manifest"
     if lowered.startswith("dockerfile"):
-        return True
+        return "manifest"
     if "migration" in rel_path.lower() and lowered.endswith((".sql", ".py", ".js", ".ts")):
-        return True
-    return False
+        return "migration"
+    if lowered.endswith(YAML_SUFFIXES):
+        return "yaml"
+    return None
+
+
+def wants_content(name, rel_path):
+    return content_kind(name, rel_path) is not None
 
 
 def scan(repo, max_bytes):
-    """Return (corpus, evidence_files, secret_files, warnings)."""
-    corpus_parts = []
+    """Return (records, evidence_files, secret_files, warnings).
+
+    records is a list of (rel_path, text, kind) tuples — one per filename (kind
+    "filename", text is the path itself, so a match on the file's own name is still
+    detected) plus one more per file whose content was read (kind from content_kind()).
+    Keeping matches attributed to the specific file they came from, rather than one
+    flattened corpus string, is what lets detect() report *which* file supports a match
+    and grade manifest evidence above an incidental YAML hit.
+    """
+    records = []
     evidence = []
     secrets = []
     warnings = []
@@ -247,17 +274,18 @@ def scan(repo, max_bytes):
             seen += 1
             if seen > MAX_FILES:
                 warnings.append("file limit reached (%d); scan is partial" % MAX_FILES)
-                return "\n".join(corpus_parts), evidence, secrets, warnings
+                return records, evidence, secrets, warnings
 
             full = os.path.join(dirpath, name)
-            rel = os.path.relpath(full, repo)
-            corpus_parts.append(rel.replace(os.sep, "/"))
+            rel = os.path.relpath(full, repo).replace(os.sep, "/")
+            records.append((rel, rel, "filename"))
 
             if is_secret(rel):
-                secrets.append(rel.replace(os.sep, "/"))
+                secrets.append(rel)
                 continue
 
-            if not wants_content(name, rel):
+            kind = content_kind(name, rel)
+            if kind is None:
                 continue
 
             try:
@@ -265,10 +293,10 @@ def scan(repo, max_bytes):
             except OSError:
                 continue
             if size > max_bytes:
-                evidence.append(rel.replace(os.sep, "/") + " (truncated)")
+                evidence.append(rel + " (truncated)")
             if total + min(size, max_bytes) > MAX_TOTAL_BYTES:
                 warnings.append("content budget reached; scan is partial")
-                return "\n".join(corpus_parts), evidence, secrets, warnings
+                return records, evidence, secrets, warnings
 
             try:
                 with open(full, "r", encoding="utf-8", errors="replace") as handle:
@@ -278,19 +306,36 @@ def scan(repo, max_bytes):
                 continue
 
             total += len(content)
-            corpus_parts.append(content)
-            if not rel.endswith("(truncated)"):
-                evidence.append(rel.replace(os.sep, "/"))
+            records.append((rel, content, kind))
+            evidence.append(rel)
 
-    return "\n".join(corpus_parts), evidence, secrets, warnings
+    return records, evidence, secrets, warnings
 
 
 # --------------------------------------------------------------------------------------
 # Matching
 # --------------------------------------------------------------------------------------
 
+MAX_FILES_PER_TOKEN = 3
+
+# content_kind() values that count as real evidence a dependency is actually used, as
+# opposed to "yaml" — the blanket catch-all where a match is only as good as the file it
+# happened to land in (a CI workflow, a k8s values file, this project's own registry.yaml).
+STRONG_EVIDENCE_KINDS = {"filename", "manifest", "migration"}
+
+
+def _record_texts(corpus):
+    """Normalize either a records list (from scan()) or a legacy flat string into a list
+    of (path, lowered_text, kind) triples. A plain string (as passed directly by callers
+    and existing tests) carries no file provenance, so path is None and kind "unknown" —
+    detect() still matches correctly, it just can't grade or attribute the evidence."""
+    if isinstance(corpus, str):
+        return [(None, corpus.lower(), "unknown")]
+    return [(path, text.lower(), kind) for path, text, kind in corpus]
+
+
 def detect(corpus, entries):
-    lowered = corpus.lower()
+    records = _record_texts(corpus)
     detected = {}
     references = []
     tiers = {}
@@ -298,18 +343,53 @@ def detect(corpus, entries):
 
     for entry in entries:
         signal = entry["signal"]
-        matched = [m for m in entry.get("match", []) if m and m.lower() in lowered]
-        if not matched:
+        tokens = [m for m in entry.get("match", []) if m]
+
+        matched_on = []
+        any_matched = False
+        signal_has_strong_evidence = False
+        signal_has_graded_evidence = False
+        for token in sorted(set(tokens)):
+            token_lower = token.lower()
+            files = []
+            token_kinds = set()
+            for path, lowered_text, kind in records:
+                if token_lower in lowered_text:
+                    any_matched = True
+                    token_kinds.add(kind)
+                    if path is not None and path not in files:
+                        files.append(path)
+            if not token_kinds:
+                continue
+
+            entry_out = {"token": token}
+            if token_kinds != {"unknown"}:
+                # Real provenance exists — grade it. "unknown" means a legacy flat-string
+                # corpus with no per-file attribution; there is nothing to grade.
+                signal_has_graded_evidence = True
+                is_weak = not (token_kinds & STRONG_EVIDENCE_KINDS)
+                entry_out["weak_evidence"] = is_weak
+                if not is_weak:
+                    signal_has_strong_evidence = True
+            if files:
+                entry_out["files"] = sorted(files)[:MAX_FILES_PER_TOKEN]
+                if len(files) > MAX_FILES_PER_TOKEN:
+                    entry_out["file_count"] = len(files)
+            matched_on.append(entry_out)
+
+        if not any_matched:
             continue
 
         kind = entry.get("kind", "other")
         record = {
             "signal": signal,
-            "matched_on": sorted(set(matched))[:6],
+            "matched_on": matched_on[:6],
             "tier": entry.get("tier", "generic"),
         }
         if entry.get("category"):
             record["category"] = entry["category"]
+        if signal_has_graded_evidence and not signal_has_strong_evidence:
+            record["weak_evidence"] = True
         detected.setdefault(kind, []).append(record)
 
         tiers[signal] = entry.get("tier", "generic")
@@ -371,15 +451,29 @@ def main(argv=None):
     registry_path = os.path.normpath(registry_path)
 
     entries, warnings = parse_registry(registry_path)
-    corpus, evidence, secrets, scan_warnings = scan(repo, args.max_bytes)
+    records, evidence, secrets, scan_warnings = scan(repo, args.max_bytes)
     warnings.extend(scan_warnings)
 
-    detected, references, tiers, notes = detect(corpus, entries)
+    detected, references, tiers, notes = detect(records, entries)
 
     if not detected:
         warnings.append(
             "no registry signal matched; fall back to manual inspection "
             "(methodology/discovery.md) and classify any datastore by category")
+
+    weak_signals = sorted(
+        rec["signal"]
+        for records_for_kind in detected.values()
+        for rec in records_for_kind
+        if rec.get("weak_evidence")
+    )
+    if weak_signals:
+        warnings.append(
+            "weak evidence only for: %s — every match was found inside a non-manifest "
+            "YAML file (CI config, k8s values, arbitrary docs, even this project's own "
+            "registry.yaml), never a dependency manifest, lockfile, or matching filename; "
+            "verify with an actual import or client call before treating as a real "
+            "dependency" % ", ".join(weak_signals))
 
     result = {
         "repo": repo,

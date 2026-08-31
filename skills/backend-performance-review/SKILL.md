@@ -6,7 +6,7 @@ license: MIT
 compatibility: Requires read access to the target repository. Optional accelerator script requires Python 3.8+ (standard library only). No network access required.
 allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *)
 metadata:
-  version: 0.2.0
+  version: 0.3.0
   spec: backend-performance-review/2.0
 ---
 
@@ -98,6 +98,16 @@ It emits JSON with detected languages, frameworks, datastores, caches, brokers,
 infrastructure, and a `references_to_load` list. It is an accelerator, never a
 dependency — if it is missing or errors, inspect manifests manually (see
 `methodology/discovery.md`).
+
+**`references_to_load` is necessarily partial — it is not the reading list, §Reference
+routing's table is.** The script's list is built entirely from `registry.yaml`'s
+signal-matched entries; it structurally cannot include a row from §Reference routing's
+"Always available" table whose trigger is a *usage pattern* rather than a detected
+technology — `application/data-access.md` ("ORM, query construction, N+1"),
+`application/connection-pools.md` ("Any pooled client"), and `application/serialization.md`
+("JSON/protobuf, payload size") all apply the moment the code does that thing, independent
+of which specific library does it. Treat every row of that table as in scope for Phase 4's
+layer gate, not just the ones the script happened to name.
 
 **Inventory observability before anything else.** What metrics, traces, logs, benchmarks,
 load tests, dashboards-as-code, and SLOs exist in the repo? This sets the ceiling on the
@@ -231,26 +241,30 @@ table: ID, severity, confidence, priority, location, one-line summary. Deduplica
 - If a technology has no file, load its category file and note the reduced depth in the
   report's scope section.
 
-Always available, load as the phase requires:
+Always available, load as the phase requires. The **Category** column is which
+`Category:` values (§Finding format) that reference file's findings are expected to carry —
+every value in that enum must appear here at least once; `check_repo_invariants.py` enforces
+it, so a new finding category added to `SKILL.md` without a place to load from fails CI.
 
-| When | Load |
-|:--|:--|
-| Every review | `methodology/discovery.md`, `methodology/workload.md`, `methodology/critical-paths.md`, `methodology/bottleneck-analysis.md`, `methodology/validation.md` |
-| Latency or tail-latency questions | `principles/latency.md` |
-| Capacity, saturation, queueing | `principles/throughput.md` |
-| Pools, locks, workers, event loops | `principles/concurrency-and-contention.md` |
-| CPU, memory, I/O, fds, cost | `principles/resources.md` |
-| Repeated work, algorithms, N+1 | `principles/work-and-algorithms.md` |
-| HTTP/gRPC/GraphQL surface | `application/api.md` |
-| ORM, query construction, N+1 | `application/data-access.md` |
-| async/await, threads, blocking | `application/async-and-blocking.md` |
-| JSON/protobuf, payload size | `application/serialization.md` |
-| Any pooled client | `application/connection-pools.md` |
-| Any datastore | `databases/universal.md` + the category file |
-| Any runtime | `runtimes/universal.md` |
-| Service-to-service calls | `distributed/timeouts-and-deadlines.md`, `distributed/retries-and-backpressure.md` |
-| A cache exists | `distributed/caching.md` |
-| Containers, k8s, autoscaling, serverless | `infrastructure/resources.md` |
+| When | Load | Category |
+|:--|:--|:--|
+| Every review | `methodology/discovery.md`, `methodology/workload.md`, `methodology/critical-paths.md`, `methodology/bottleneck-analysis.md`, `methodology/validation.md` | — |
+| Latency or tail-latency questions | `principles/latency.md` | — |
+| Capacity, saturation, queueing | `principles/throughput.md` | — |
+| Pools, locks, workers, event loops | `principles/concurrency-and-contention.md` | concurrency |
+| CPU, memory, I/O, fds, cost, or instrumentation overhead | `principles/resources.md` | io, memory, cost, observability |
+| Repeated work, algorithms, N+1 | `principles/work-and-algorithms.md` | — |
+| HTTP/gRPC/GraphQL surface | `application/api.md` | networking |
+| ORM, query construction, N+1 | `application/data-access.md` | data-access |
+| async/await, threads, blocking | `application/async-and-blocking.md` | concurrency |
+| JSON/protobuf, payload size | `application/serialization.md` | serialization |
+| Any pooled client | `application/connection-pools.md` | concurrency |
+| Any datastore | `databases/universal.md` + the category file | data-access |
+| Any runtime | `runtimes/universal.md` | — |
+| Service-to-service calls | `distributed/timeouts-and-deadlines.md`, `distributed/retries-and-backpressure.md` | networking |
+| A cache exists | `distributed/caching.md` | io |
+| A tenant/workspace/account discriminator, shared pool, or shared cache across customers | `distributed/multi-tenancy.md` | — |
+| Containers, k8s, autoscaling, serverless | `infrastructure/resources.md` | infrastructure |
 
 ## Anti-patterns in your own output
 

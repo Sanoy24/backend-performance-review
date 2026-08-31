@@ -257,6 +257,64 @@ def check_tier_summary_counts(entries):
 
 
 # ---------------------------------------------------------------------------
+# 9. Every finding-format Category value resolves to a reference-routing table row
+#
+# The finding format's `Category:` enum in SKILL.md's "## Finding format" section and the
+# "## Reference routing" table's Category column are maintained by hand in two different
+# places. Nothing else keeps them in sync: an agent that classifies a finding as
+# `Category: observability` with no routing row pointing anywhere for it has nothing to
+# load — a silent gap the architecture self-check (docs/evaluation.md §1) is explicitly
+# supposed to catch and did not, until this check existed.
+# ---------------------------------------------------------------------------
+
+def check_category_routing_coverage():
+    skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+
+    category_match = re.search(
+        r"^Category:\s+(.+(?:\n\s{4,}.+)*)", skill_text, re.MULTILINE)
+    if not category_match:
+        fail("SKILL.md: could not find the 'Category:' enum line in ## Finding format")
+        return
+    declared = {tok.strip() for tok in category_match.group(1).split("|") if tok.strip()}
+
+    routing_match = re.search(
+        r"## Reference routing\n(.*?)\n## ", skill_text, re.DOTALL)
+    if not routing_match:
+        fail("SKILL.md: could not find the '## Reference routing' section")
+        return
+    routing_text = routing_match.group(1)
+
+    table_rows = re.findall(
+        r"^\|(.+)\|(.+)\|(.+)\|$", routing_text, re.MULTILINE)
+    # First two matches are the header and the '---' separator row.
+    data_rows = table_rows[2:]
+    if not data_rows:
+        fail("SKILL.md: reference-routing table has no Category column to check — "
+             "expected a three-column '| When | Load | Category |' table")
+        return
+
+    routed = set()
+    for _when, _load, category_cell in data_rows:
+        for tok in category_cell.split(","):
+            tok = tok.strip().strip("`")
+            if tok and tok != "—":
+                routed.add(tok)
+
+    missing = declared - routed
+    if missing:
+        fail("SKILL.md: Category value(s) with no reference-routing row to load from: "
+             + ", ".join(sorted(missing))
+             + " — add a Category-column entry in '## Reference routing' pointing at the "
+               "file that should be loaded for a finding of that category")
+
+    stray = routed - declared
+    if stray:
+        fail("SKILL.md: reference-routing table's Category column names value(s) not in "
+             "the Category: enum: " + ", ".join(sorted(stray))
+             + " — the enum and the routing table have drifted apart")
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     entries = check_registry()
@@ -266,6 +324,7 @@ def main():
     check_examples_not_loadable()
     check_priority_matrix_consistency()
     check_detect_script_stdlib_only()
+    check_category_routing_coverage()
     if entries:
         check_tier_summary_counts(entries)
 

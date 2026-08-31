@@ -1,7 +1,7 @@
 {
   "name": "backend-performance-review",
   "description": "A single-skill marketplace providing the backend-performance-review agent skill.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "owner": {
     "name": "backend-performance-review contributors",
     "url": "https://github.com/Sanoy24/backend-performance-review"
@@ -14,7 +14,7 @@
       "name": "backend-performance-review",
       "source": "./",
       "description": "Evidence-first, workload-driven backend performance review methodology for AI coding agents.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "license": "MIT"
     }
   ]
