@@ -1,7 +1,7 @@
 # Supported technologies
 
-Support is tiered, and the tiers are honest. Most technologies in v0.1.0 are at `conceptual`
-or `generic` — the methodology still applies, and a review says so in its scope section rather
+Support is tiered, and the tiers are honest. Most technologies are at `conceptual` or
+`generic` — the methodology still applies, and a review says so in its scope section rather
 than implying depth it does not have.
 
 This page is derived from `skills/backend-performance-review/registry.yaml`, which is the

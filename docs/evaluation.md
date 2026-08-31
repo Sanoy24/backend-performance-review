@@ -13,7 +13,7 @@ run** from **checks that are specified but not yet executed**.
 | Category | Status |
 |:--|:--|
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
-| Tooling checks | **Run** — passing as of v0.1.0 |
+| Tooling checks | **Run** — passing in CI on every push/PR |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
 | Independent (non-author) pass | **Run six times, across six stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all six, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (two of six — §3.13, §3.14 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.15 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |

@@ -13,6 +13,7 @@ first one, so a single CI run reports everything that needs fixing.
 """
 
 import ast
+import json
 import re
 import sys
 from pathlib import Path
@@ -315,6 +316,57 @@ def check_category_routing_coverage():
 
 
 # ---------------------------------------------------------------------------
+# 10. Every published version string agrees, and matches the newest CHANGELOG entry
+#
+# The version is declared independently in five places: the plugin manifest, both fields
+# of the marketplace manifest, SKILL.md's frontmatter, and the README badge. Nothing keeps
+# them in sync by construction, and a stale one is easy to miss because the skill still
+# works — it just tells users the wrong version. v0.3.0 shipped with the README badge and
+# two docs still reading v0.1.0/v0.2.0 before this check existed.
+# ---------------------------------------------------------------------------
+
+def check_version_coherence():
+    changelog_text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    changelog_match = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog_text, re.MULTILINE)
+    if not changelog_match:
+        fail("CHANGELOG.md: could not find a '## [X.Y.Z]' heading to determine "
+             "the current version")
+        return
+    current = changelog_match.group(1)
+
+    sources = {}
+
+    plugin_json = ROOT / ".claude-plugin" / "plugin.json"
+    sources[f"{plugin_json.relative_to(ROOT)} version"] = json.loads(
+        plugin_json.read_text(encoding="utf-8"))["version"]
+
+    marketplace_json = ROOT / ".claude-plugin" / "marketplace.json"
+    marketplace = json.loads(marketplace_json.read_text(encoding="utf-8"))
+    sources[f"{marketplace_json.relative_to(ROOT)} version"] = marketplace["version"]
+    sources[f"{marketplace_json.relative_to(ROOT)} plugins[0].version"] = (
+        marketplace["plugins"][0]["version"])
+
+    skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    skill_match = re.search(r"^\s*version:\s*(\d+\.\d+\.\d+)\s*$", skill_text, re.MULTILINE)
+    if skill_match:
+        sources["SKILL.md metadata.version"] = skill_match.group(1)
+    else:
+        fail("SKILL.md: could not find 'metadata.version' in the frontmatter")
+
+    readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_match = re.search(r"badge/version-(\d+\.\d+\.\d+)-", readme_text)
+    if readme_match:
+        sources["README.md version badge"] = readme_match.group(1)
+    else:
+        fail("README.md: could not find the version badge to check")
+
+    for label, value in sources.items():
+        if value != current:
+            fail(f"{label} is '{value}', but CHANGELOG.md's newest entry is "
+                 f"'{current}' — these must match")
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     entries = check_registry()
@@ -325,6 +377,7 @@ def main():
     check_priority_matrix_consistency()
     check_detect_script_stdlib_only()
     check_category_routing_coverage()
+    check_version_coherence()
     if entries:
         check_tier_summary_counts(entries)
 
