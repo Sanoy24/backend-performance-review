@@ -281,6 +281,12 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first. It sets out the review gates, inc
 rules against cargo-cult recommendations, unsupported claims, product names in category
 files, and fabricated performance guarantees.
 
+Not sure where to start? **[docs/roadmap.md](docs/roadmap.md)** lists open gaps and
+promotion candidates, several tagged `good first issue`.
+
+By participating, you're expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). To
+report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
+
 ## Honest limitations
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this methodology or reference it in research or writing, please cite it as below."
+title: "backend-performance-review: an evidence-first, workload-driven methodology for AI-agent backend performance review"
+type: software
+authors:
+  - alias: Sanoy24
+url: "https://github.com/Sanoy24/backend-performance-review"
+repository-code: "https://github.com/Sanoy24/backend-performance-review"
+license: MIT
+version: 0.3.0
+date-released: 2026-08-31
+keywords:
+  - performance-engineering
+  - ai-agents
+  - agent-skills
+  - code-review
+  - backend

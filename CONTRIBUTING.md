@@ -261,6 +261,8 @@ Be respectful, and argue with the claim rather than the person. This is a projec
 evidence, so challenging a finding or a design decision is expected and welcome — "this
 assertion has no mechanism behind it" is a good review comment. Keep it there.
 
+The full policy, including how to report a problem, is [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ## 12. License
 
 Contributions are accepted under the [MIT License](LICENSE). By submitting a pull request you
