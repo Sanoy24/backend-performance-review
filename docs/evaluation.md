@@ -15,7 +15,7 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing as of v0.1.0 |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run six times, across six stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all six, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (two of six — §3.13, §3.14 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.15 |
+| Independent (non-author) pass | **Run seven times, across seven stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all seven, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (three of seven — §3.13, §3.14, §3.16 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.16 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
@@ -29,12 +29,12 @@ and reframed what case 2 is actually testing after a fourth repository still pro
 finding (§3.7). The independent blind pass, run once per repository (§3.8–3.11) and summarized in
 §3.12, reproduced or exceeded the manual review's primary finding on all four, and found real,
 previously-missed evidence — including one hard `SyntaxError` a careful reading had missed
-entirely — on three of the four. Two further blind passes (§3.13, §3.14), run against JVM and
-Rust repositories with no prior author review at all, closed two of the three untested
-`deep`-tier runtime gaps flagged in §3.12 and each found a real, fixed bug in the skill's own
-detection or reference content rather than only in the target repository — see §3.15. The
-false-positive/false-negative fixtures specified in §4 are now automated
-(`tests/test_detect_stack_regressions.py`, run on every push/PR).
+entirely — on three of the four. Three further blind passes (§3.13, §3.14, §3.16), run against
+JVM, Rust, and Node.js repositories with no prior author review at all, closed two of the three
+untested `deep`-tier runtime gaps flagged in §3.12 plus the separately-flagged Node.js gap, and
+each found a real, fixed bug in the skill's own detection or reference content rather than only in
+the target repository — see §3.15, §3.16. The false-positive/false-negative fixtures specified in
+§4 are now automated (`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
 ---
 
@@ -872,6 +872,112 @@ unmeasured. No human-expert baseline exists. Six repositories is still six, not 
 powered sample — the value of each additional run continues to be in what specific, checkable bug
 it surfaces, not in moving an aggregate pass rate.
 
+### 3.16 The blind pass extended to a seventh repository, and the Node.js runtime — `gothinkster/node-express-realworld-example-app` (Node.js/Express/Prisma/PostgreSQL)
+
+Node.js has been `deep`-tier since before v0.2.0 — longer than JVM, .NET, or Rust — but, as §3.15
+and §5 both note, it had never been independently blind-passed. This run closes that gap. The
+repository is an actively maintained (3.8k stars, pushed 2024, still merged into in 2026) RealWorld
+implementation on Express + Prisma + PostgreSQL, cloned fresh and unmodified. PostgreSQL was
+chosen over the project's other RealWorld Node repository (Mongo-backed) specifically because
+`docs/examples/node-mongo-redis.md` already covers Node+Mongo+Redis in depth; a Postgres-backed
+repository adds independent coverage of `technology/postgres.md` and `databases/relational.md`
+under a stack neither had been checked against with a real repository before. The agent had no
+memory of this project's own findings and no instruction beyond "review this repository."
+
+**What it found, in brief:**
+
+- **PERF-002 (`Critical`/`P0`, `quick-win`)** — `GET /articles` and `GET /articles/feed` pass the
+  client-supplied `limit` query parameter straight into Prisma's `take` with only a
+  default-if-absent (`Number(query.limit) || 10`), never an enforced maximum
+  (`article.service.ts:82-83`, `:131-132`); `GET /articles/:slug/comments` has no page bound at
+  all (`article.service.ts:433-458`). Combined with PERF-001 below, a single crafted request has
+  no ceiling on the data it forces the service to materialize and serialize.
+- **PERF-001 (`High`/`P1`, `quick-win`)** — every article, profile, and comment-author read fetches
+  the *entire* `favoritedBy` and/or `followedBy` relation with no `select`, `where`, or `take`
+  (`article.service.ts:90-104` and six further call sites in the same file; `profile.service.ts:6-
+  13,22-40,42-60`), then reduces it to a boolean in JavaScript (`article.mapper.ts:11`,
+  `author.mapper.ts:7-9`, `profile.utils.ts:8-10`). The query already computes the efficient form
+  in parallel — `_count: { select: { favoritedBy: true } }` is present in every article query — but
+  `articleMapper` uses `article.favoritedBy.length` instead of the already-fetched
+  `article._count.favoritedBy` (`article.mapper.ts:12` against `article.service.ts:99-103`), the
+  cheap primitive fetched and silently discarded next to the expensive one actually used.
+- **PERF-003 (`High`/`P1`)** — no index on `Article.authorId`, `Comment.articleId`, or
+  `Comment.authorId` anywhere in the migration history (`src/prisma/migrations/*/migration.sql`,
+  four files, checked in full); the only non-PK/unique indexes created are on the implicit
+  many-to-many join tables' second column. Both are on the critical-path filter/join in
+  `getArticles`/`getFeed`/`getCommentsByArticle`.
+- **PERF-004 (`Low`/`P2`, `quick-win`)** — `checkUserUniqueness` awaits two independent,
+  unrelated `findUnique` calls sequentially rather than concurrently (`auth.service.ts:10-26`).
+- **SEC-001** — `process.env.JWT_SECRET || 'superSecret'`, a hardcoded fallback signing secret,
+  present at both call sites that construct the JWT middleware (`auth.ts:16,21`) and the one that
+  signs tokens (`token.utils.ts:4`); if the environment variable is unset in any deployment, any
+  caller can forge a valid token for any user id.
+- **SEC-002** — the same unbounded `favoritedBy`/`followedBy` includes behind PERF-001 pull the
+  full `User` row, including the `password` column (`schema.prisma:47`, a plain field with no
+  `@ignore` or `select` narrowing it out), into application memory for every favoriter and every
+  follower on every article/profile view. Verified not currently serialized into any response body
+  — the mappers only ever read `.some(...)`/`.length` off it — so this is unnecessary exposure
+  surface rather than a live leak, and PERF-001's fix removes it as a side effect.
+
+**A real, reproducible bug found and fixed — a false positive this time, not a false negative.**
+`detect_stack.py` reported `sqs` (Amazon SQS) as a detected broker with `weak_evidence` **absent**
+(i.e. graded as strong, manifest-level evidence), and `pgx` (the Go Postgres driver) as one of the
+tokens supporting the `postgres` datastore signal — in a repository with no AWS SDK dependency
+anywhere in it (`grep -c aws package-lock.json` → 0) and no Go code at all. Both tokens matched
+inside base64-encoded npm `"integrity"` hashes in `package-lock.json` by pure coincidence: `sqs`
+inside `mimic-fn`'s hash (`...Wydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ...`) and
+`pgx` inside `@babel/plugin-transform-typescript`'s (`...TDoqHCjLoHb6+QgsV1WsT2nipRqCPgxD3LXnEO7...`).
+`package-lock.json` is unconditionally classified as `manifest`-kind content (real dependency
+evidence, `STRONG_EVIDENCE_KINDS`), so unlike the `gin`/`echo` collisions found in Round 1 (§3.3,
+which landed in `yaml`-kind files already graded weak), these matches were reported as
+full-strength detections with nothing in the tool's own output to flag them as suspect. Left
+unfixed, this specific case was harmless — Postgres genuinely is the datastore, so `pgx`'s false
+match happened to agree with the true answer — but the `sqs` false positive was not harmless: it
+would have told a reviewing agent to load broker-analysis references and look for a message queue
+that does not exist, a direct violation of `SKILL.md` rule 6 ("absent layers are silent").
+**Fixed**: following the same narrowing precedent Round 1 established for `gin`/`echo`
+(`registry.yaml`), the `postgres` signal's `pgx` token is now the qualified Go module path
+`jackc/pgx`, and the `sqs` signal drops the bare `sqs` token in favor of `arn:aws:sqs` and
+`AWS::SQS` (its CloudFormation/SAM resource type) — both still catch real usage, neither can
+collide with an arbitrary base64 hash. Four new regression fixtures reproduce the exact collision
+text and confirm the narrowed tokens still match genuine dependency declarations, added to
+`LockfileHashCollisionTests` in `tests/test_detect_stack_regressions.py`.
+
+**A second, independent bug: a false negative, once the first fix is applied on its own.** Fixing
+the `pgx` collision in isolation would have *removed* the only match that fired the `postgres`
+signal for this repository at all — this Prisma-based project declares no dependency named `pg`,
+`postgres`, or any other postgres token anywhere `detect_stack.py` reads; the real datastore
+identity lives entirely in `datasource db { provider = "postgresql" }` inside
+`src/prisma/schema.prisma`, a file extension `detect_stack.py` never scanned (`content_kind()`
+returned `None` for it — the same silent-skip shape as any unrecognized file). Prisma is one of
+the most widely used Node.js ORMs, and package manifests name only `@prisma/client`/`prisma`,
+neither a datastore token; without reading the schema file, a Prisma project's actual datastore
+has no legitimate way to be detected at all. **Fixed**: `.prisma` was added to
+`CONTENT_SUFFIXES`, so `schema.prisma` (and any `*.prisma` file) is now scanned as manifest-kind
+content — the existing `postgresql`/`mysql`/`mongodb` tokens already in `registry.yaml` then match
+the `provider = "..."` line directly, no new registry entries needed. Two more regression fixtures
+(`PrismaSchemaFileTests`) confirm `content_kind()` now recognizes the extension and that a
+`postgresql` provider line is graded as strong (non-`weak_evidence`) evidence. Both bugs were
+verified to actually fail against the pre-fix code before being accepted, and
+`python -m unittest discover -s tests` plus `python scripts/check_repo_invariants.py` pass with
+both fixes applied.
+
+**On the reference content.** `application/data-access.md`'s "existence checks by full fetch" /
+"counting by materializing" framing (§3) mapped directly onto PERF-001 — the file names the exact
+shape found, down to preferring a bounded existence query over a full fetch. `databases/
+relational.md`'s "a referencing column is frequently unindexed by default" (§2) was directly
+actionable from the migration files alone, no runtime evidence needed, exactly as the file
+predicts. `technology/node.md`'s single-process/no-`cluster`/no-`worker_threads` guidance (§2) was
+consciously **not** turned into a finding: the file is explicit that under-utilized parallelism is
+checkable only "on a host with multiple cores available," and this repository defines no
+infrastructure-as-code, replica count, or host spec anywhere — asserting the host's core count
+would have been an invented fact, not evidence, and declining to do so is the file's own
+instruction followed correctly rather than a missed finding. The same restraint applied to a
+Postgres `statement_timeout` question: `technology/postgres.md` §5 calls its absence a common and
+consequential gap, but the only place it could be configured here is the `DATABASE_URL` connection
+string inside a `.env` file the skill's rule 3 forbids opening for content — so this is recorded as
+an unknown for the user to check, not asserted either way.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -923,23 +1029,23 @@ detection capability actually detects something.
 
 Stated rather than left implicit:
 
-- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Six
-  repositories now, six legitimate findings; whether a true zero-finding real backend exists at
+- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Seven
+  repositories now, seven legitimate findings; whether a true zero-finding real backend exists at
   all is now an open question rather than an assumed baseline.
-- **The blind pass (§3.8–3.11, §3.13–3.14) now covers six repositories, but each only once.** It
-  does not repeat any of the six to check inter-run consistency. §3.8–3.11 were still set up by
-  the author (choosing the repositories and writing the prompts) even though the reviewing agents
-  had no access to this session's prior findings; §3.13–3.14 went one step further and had no
-  prior author review of the target repository to compare against at all, only the choice of
-  repository and the prompt.
+- **The blind pass (§3.8–3.11, §3.13–3.14, §3.16) now covers seven repositories, but each only
+  once.** It does not repeat any of the seven to check inter-run consistency. §3.8–3.11 were
+  still set up by the author (choosing the repositories and writing the prompts) even though the
+  reviewing agents had no access to this session's prior findings; §3.13–3.14 and §3.16 went one
+  step further and had no prior author review of the target repository to compare against at all,
+  only the choice of repository and the prompt.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
-  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.14
-  are the exception.
-- **Five of six blind-passed repositories are Go, Python, or JVM/Rust; .NET is the one remaining
-  `deep`-tier runtime untested by an independent pass.** §3.13 (JVM) and §3.14 (Rust) closed two
-  of the three gaps flagged after §3.12; a Node.js repository has also never been blind-passed
-  despite `deep`-tier coverage since v0.2.0.
+  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11, §3.13–3.14, and
+  §3.16 are the exception.
+- **.NET is the one remaining `deep`-tier runtime untested by an independent pass.** §3.13 (JVM)
+  and §3.14 (Rust) closed two of the three runtime-coverage gaps flagged after §3.12; §3.16 closed
+  the separately-flagged Node.js gap — a Node.js repository had also never been blind-passed
+  despite `deep`-tier coverage since before v0.2.0, and now has been.
 - No inter-run consistency measurement. The same repository reviewed twice may produce
   different findings; the rubrics are designed to make rankings reproducible, but that has not
   been measured.
