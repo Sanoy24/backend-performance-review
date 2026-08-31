@@ -24,6 +24,14 @@ python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py <repo-path>
 It is a convenience, not a dependency. If it is missing, errors, or the repo has an
 unusual layout, do it by hand.
 
+Its output attributes every match to the specific file it came from. Treat a signal marked
+`"weak_evidence": true` (every match for it landed only in a non-manifest YAML file — CI
+config, k8s values, arbitrary docs) as an unverified lead, not a detected technology: check
+the files it actually names in `matched_on[].files` before loading that technology's
+reference or writing a finding that assumes it is in use. A signal with no `weak_evidence`
+field matched inside a real manifest, lockfile, or its own filename — normal-strength
+evidence, still a declared dependency rather than proof of runtime use.
+
 ### Manifests to read
 
 | Ecosystem | Files |
@@ -92,6 +100,9 @@ structure.
 - The primary database, especially a single writer
 - A shared cache instance
 - Rate limiters and circuit breakers with shared state
+- A `tenant_id`/`workspace_id`/`account_id`/`org_id` column, subdomain- or path-based
+  tenant routing, or any other sign that one deployment serves multiple customers who do
+  not trust each other — if present, load `distributed/multi-tenancy.md`
 
 **Identify external dependencies** — third-party APIs, internal services, object storage,
 auth providers. Each is a latency source you do not control and, without a timeout, a

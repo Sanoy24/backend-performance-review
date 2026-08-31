@@ -164,7 +164,51 @@ may not be correct. Say which lever the user is pulling, and let them choose.
 
 ---
 
-## 8. What to look for in a review
+## 8. Observability overhead
+
+Instrumentation consumes the same resources as everything else in this file — CPU, memory,
+network, disk, and money — and it sits disproportionately on the hot path, since that is
+where there is the most to observe. This skill's own evidence-first discipline (`SKILL.md`
+rule 1) depends on that instrumentation existing, which makes its cost worth analyzing on its
+own terms rather than waving through as free.
+
+- **Logging.** Synchronous, verbose logging on a hot path is disk and network I/O charged per
+  request (§4 above already names this as commonly missed). Structured logging with large
+  payloads (full request/response bodies, stack traces on expected errors) multiplies the
+  per-line cost. Log level configuration that ships `DEBUG` to production is a checkable,
+  static finding.
+- **Metric cardinality.** A metric labeled or tagged with an unbounded dimension — user ID,
+  request ID, raw URL path instead of a route template, a tenant identifier with no
+  cap — creates one time series per distinct value. This is a memory and cost problem in the
+  metrics backend, not the application, but the application is where the unbounded label is
+  introduced, and it is visible in the instrumentation call site. The database analogue is
+  `databases/time-series.md`'s series-cardinality section; the mechanism is the same.
+- **Trace sampling.** Sampling rate is a direct trade-off between observability coverage and
+  the CPU/network cost of exporting spans, and between storage cost and the ability to find
+  a specific rare failure later. A rate of 100% ("always sample") is a checkable, static
+  finding on a high-volume path; so is a rate low enough that the specific failure a report
+  needs to investigate would statistically never be captured.
+- **Span and attribute volume per request.** Deep instrumentation (a span per function call,
+  large attribute payloads per span) multiplies both the CPU cost of tracing and the network
+  cost of export, independent of the sampling rate applied on top of it.
+- **APM and agent overhead.** A bytecode-instrumentation or sidecar-based APM agent has a
+  measurable per-request CPU and memory cost, paid on every request regardless of whether
+  that request is ever inspected. This is a real, checkable resource line — treat an agent's
+  presence as a fact to note in the resource budget, not as free.
+- **The self-monitoring feedback loop.** Metrics about metrics, logs about logging failures,
+  and health checks that themselves query the primary database all consume the same shared
+  capacity as the traffic they monitor — and can degrade fastest exactly when the system is
+  already under load, at the moment their signal matters most.
+
+This section is about the **cost of instrumentation**, not its adequacy — whether enough
+observability exists to support a `Confirmed`-grade finding elsewhere is Phase 1's
+observability inventory (`methodology/discovery.md`), a different question with the opposite
+failure direction: too little instrumentation limits confidence; too much or too unbounded
+instrumentation is itself a resource finding.
+
+---
+
+## 9. What to look for in a review
 
 - For each resource: what is the limit, what consumes it, what happens at the limit, is it
   observable, and is it consistent with the other limits?
@@ -174,11 +218,15 @@ may not be correct. Say which lever the user is pulling, and let them choose.
 - Anything unbounded: caches, buffers, result sets, queues, concurrency.
 - Whether any CPU claim in the review is supported by a profile.
 - Whether cost is the real constraint.
+- Log volume, metric cardinality, trace sampling rate, and APM agent presence, on the hot
+  path specifically.
 
-## 9. What not to conclude
+## 10. What not to conclude
 
 - Do not attribute CPU time without a profile.
 - Do not recommend raising a limit without explaining what will then become the constraint.
 - Do not treat memory usage as a problem without distinguishing growth, steady state, and
   allocation rate — the three have different fixes.
 - Do not assume a resource is saturated because the code that uses it looks inefficient.
+- Do not recommend stripping instrumentation to save resources without weighing the evidence
+  it would cost the next review — this skill's own findings depend on it existing.

@@ -27,6 +27,8 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-31
+
 ### Added
 
 - Documented installation for OpenCode, Google Antigravity, and OpenAI Codex CLI in
@@ -35,6 +37,87 @@ Breaking changes carry a migration note in the entry.
   the same `.agents/skills/<name>/SKILL.md` convention as each other (Antigravity, Codex CLI).
   Checked against each tool's published documentation, not run end-to-end against a local
   install of any of the three — see the caveat added to the conventions verification record.
+- `distributed/multi-tenancy.md` — the one v2 domain named in the original build specification
+  (`guideline.md` §12.2) with no coverage at all until now: isolation models (silo, pool, bridge,
+  shared-everything), noisy-neighbor mechanics on a shared connection pool/cache/thread pool, the
+  presence-or-absence of per-tenant fairness as the single highest-value check, and the
+  tenant-size-skew failure mode where a schema tuned for the median tenant fails at the outlier.
+  Routed from `SKILL.md`'s reference-routing table and from `methodology/discovery.md`'s
+  shared-resources checklist.
+- `principles/resources.md` §8, "Observability overhead" — the cost of instrumentation itself
+  (hot-path log volume, unbounded metric-label cardinality, trace sampling rate as a coverage/cost
+  trade-off, APM/agent per-request overhead, the self-monitoring feedback loop), closing the gap
+  where the finding-format's `Category: observability` had no reference file whose findings were
+  expected to carry it — see the routing-coverage invariant below, which is what surfaced this gap.
+- A `Category` column in `SKILL.md`'s reference-routing table, and
+  `scripts/check_repo_invariants.py`'s new `check_category_routing_coverage` check enforcing that
+  every value in the finding-format `Category:` enum resolves to at least one routing-table row.
+  Mutation-tested by removing `observability` from the table and confirming the check fails with
+  the expected message before restoring it. Closes a real gap the existing architecture self-check
+  did not catch: `observability` and `cost` findings had nowhere to route to.
+- File-level match provenance in `scripts/detect_stack.py`. `scan()` now returns per-file records
+  instead of one flattened corpus string, and `detect()` attributes every match to the specific
+  file(s) it came from, grading a signal `weak_evidence: true` when every match for it landed only
+  in a non-manifest YAML file (a CI workflow, a k8s values file, arbitrary docs) rather than a real
+  dependency manifest, lockfile, or matching filename. Self-scanning this repository previously
+  reported roughly thirty spurious signals (Cassandra, Oracle, PHP, Kubernetes, and more) with no
+  way to tell they were all matching inside `registry.yaml` itself — the one file in the repo that
+  necessarily contains every match token in the system by construction. They are now all correctly
+  flagged weak and traced to that one file, and `main()` surfaces a single actionable warning
+  rather than silently returning them as ordinary detections. `detect()` still accepts a plain
+  string corpus for backward compatibility, so the ten existing regression tests pass unchanged;
+  five new tests cover the grading logic. `methodology/discovery.md` now tells the agent how to
+  read the new field.
+- Two further independent blind passes, closing two of the three untested `deep`-tier
+  runtime-coverage gaps named in `docs/evaluation.md` §3.12: JVM
+  (`gothinkster/spring-boot-realworld-example-app`, §3.13) and Rust
+  (`launchbadge/realworld-axum-sqlx`, §3.14) — see Evaluation below.
+- `docs/examples/node-mongo-redis.md` — the second worked example, delivering the "Planned"
+  Node.js + MongoDB + Redis example named in v0.2.0. Synthetic per the examples policy (§16 of
+  `guideline.md`): an Express + Mongoose + Redis/BullMQ service with a per-post N+1 query loop, a
+  synchronous `bcrypt.hashSync` call blocking Node's single event-loop thread for every
+  concurrently-open connection on that process (not just the request that triggered it), a
+  connection-pool-arithmetic check against a cited MongoDB Atlas tier limit, and a `KEYS`-based
+  cache invalidation contending with a BullMQ queue sharing the same Redis instance. Carries the
+  required explicit unknowns and four deliberately-declined optimizations with stated reasons.
+
+### Fixed
+
+- `registry.yaml`'s `sqlite` signal never matched `org.xerial:sqlite-jdbc` (the dominant Maven
+  Central artifact for SQLite on the JVM) or the `jdbc:sqlite:` connection-string scheme — found
+  during the JVM blind pass (§3.13), which located the datastore only because
+  `methodology/discovery.md`'s "check connection-string schemes regardless of the accelerator's
+  output" instruction told it to read `application.properties` by hand. An agent that trusted the
+  accelerator's zero-datastore result would have skipped `databases/relational.md` entirely and
+  missed two of that review's three highest-priority findings. Fixed, with two new regression
+  fixtures in `tests/test_detect_stack_regressions.py`, verified to fail against the pre-fix
+  registry before being accepted, per this project's own regression-fixture discipline (§4).
+- `technology/rust.md` described Tokio's blocking-thread pool only as "usually small by default,"
+  with no concrete default or the `Builder::max_blocking_threads` configuration knob — found
+  during the Rust blind pass (§3.14), which had to reason from general Tokio knowledge outside the
+  file to correctly score a finding as bounded rather than unbounded. Now states the default (512
+  threads) and names the builder method.
+- `SKILL.md` Phase 1 now states explicitly that `references_to_load` is necessarily partial: it
+  structurally cannot include an "Always available" routing-table row triggered by a *usage
+  pattern* (`application/data-access.md`, `application/connection-pools.md`,
+  `application/serialization.md`) rather than a registry-matched technology signal. Found during
+  the Rust blind pass, which caught the resulting gap in that specific review only by
+  cross-checking the routing table by hand rather than trusting the accelerator's output as
+  complete — a documentation fix ensuring a less careful pass is told to do the same.
+
+### Evaluation
+
+- `docs/evaluation.md` §3.13–§3.15: two further independent blind passes (JVM, Rust), each with no
+  memory of this project's own findings and — unlike every prior blind pass — no prior author
+  review of the target repository to compare against at all, only the choice of repository and
+  the prompt: the first fully author-uninvolved runs in this evaluation's history. Both reproduced
+  the pattern established across §3.8–§3.11 (a `Critical`/`P0` finding with direct code-level
+  evidence, at least one real correctness or security issue filed correctly under rule 8's
+  "Adjacent findings" convention on a repository that convention had never been tested against),
+  and both additionally did something none of §3.8–§3.11 did: found a real, now-fixed bug in the
+  skill's own detection or reference content, not only missed evidence in the target repository.
+  Status table, required-cases table, and known-gaps list (§5) updated accordingly; only .NET
+  remains among the `deep`-tier runtimes with no independent pass.
 
 ## [0.2.0] — 2026-08-26
 
@@ -304,6 +387,7 @@ coverage, rather than broad shallow coverage.
 - `detect_stack.py` reads a deliberately small YAML subset; extending `registry.yaml` beyond
   that subset requires extending the reader.
 
-[Unreleased]: https://github.com/Sanoy24/backend-performance-review/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Sanoy24/backend-performance-review/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Sanoy24/backend-performance-review/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Sanoy24/backend-performance-review/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Sanoy24/backend-performance-review/releases/tag/v0.1.0

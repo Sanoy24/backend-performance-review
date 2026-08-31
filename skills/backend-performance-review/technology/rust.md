@@ -71,6 +71,14 @@ Node's `worker_threads`/thread-pool offload or a JVM virtual thread's carrier-un
 elsewhere in this skill's runtime coverage. A blocking call inside `async fn` that was never moved
 to `spawn_blocking` is the single highest-value thing to check first in an async Rust service.
 
+This offload pool is bounded, not unlimited — it defaults to 512 threads (`Builder::max_blocking_threads`,
+checkable in code wherever the runtime is built with `Runtime::Builder` rather than the
+`#[tokio::main]` macro's defaults) — large enough that a single moderately concurrent workload
+rarely exhausts it, but not a substitute for an application-level bound on work that is
+individually expensive (large allocations, CPU-heavy hashing): see
+`application/async-and-blocking.md`'s general offload-pool-sizing guidance for when a semaphore
+in front of the call site is still the right additional control.
+
 ### Static dispatch is the default; dynamic dispatch is an explicit, checkable opt-in
 
 Generic functions are monomorphized — the compiler generates a specialized copy per concrete type

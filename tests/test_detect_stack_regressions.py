@@ -100,6 +100,118 @@ class LockfileHashCollisionTests(unittest.TestCase):
         corpus = '{\n  "dependencies": {\n    "koa": "^2.14.2"\n  }\n}\n'
         self.assertIn("rest", matched_signals(corpus, self.entries))
 
+    def test_sqlite_jdbc_dependency_matches_sqlite_signal(self):
+        # Regression for a false negative found during the independent blind pass against
+        # gothinkster/spring-boot-realworld-example-app (docs/evaluation.md §3.13): the
+        # sqlite signal's match list covered sqlite3/better-sqlite3/mattn-go-sqlite3/libsql
+        # but not org.xerial:sqlite-jdbc, the dominant JVM driver for SQLite, nor its
+        # jdbc:sqlite: connection-string scheme. The reviewing agent found the datastore
+        # only by manually reading application.properties against methodology/discovery.md's
+        # instruction to check connection-string schemes regardless of the accelerator's
+        # output — an agent that trusted detect_stack.py's output alone would have missed
+        # databases/relational.md entirely and, with it, two of that review's findings.
+        corpus = (
+            "dependencies {\n"
+            "    implementation 'org.xerial:sqlite-jdbc:3.36.0.3'\n"
+            "}\n"
+        )
+        self.assertIn("sqlite", matched_signals(corpus, self.entries))
+
+    def test_jdbc_sqlite_connection_scheme_matches_sqlite_signal(self):
+        corpus = "spring.datasource.url=jdbc:sqlite:dev.db\n"
+        self.assertIn("sqlite", matched_signals(corpus, self.entries))
+
+
+class WeakEvidenceProvenanceTests(unittest.TestCase):
+    """Regression for: scan()/detect() flattened every file into one corpus string, so a
+    match could never be traced back to the file it came from. Self-scanning this very
+    repository reported ~30 spurious signals (Cassandra, Oracle, PHP, Kubernetes, ...) with
+    no way to tell they were all matching inside registry.yaml itself, the one file in the
+    repo that necessarily contains every match token in the whole system by construction.
+    detect() now attributes each match to its source file and kind, and grades a signal
+    "weak_evidence" when every match for it came from a non-manifest YAML file rather than
+    a real dependency manifest, lockfile, or matching filename.
+    """
+
+    def setUp(self):
+        self.entries, warnings = detect.parse_registry(REGISTRY)
+        self.assertEqual(warnings, [])
+
+    def _record(self, signal):
+        detected, _, _, _ = detect.detect(self.records, self.entries)
+        for records_for_kind in detected.values():
+            for rec in records_for_kind:
+                if rec["signal"] == signal:
+                    return rec
+        return None
+
+    def test_match_only_inside_generic_yaml_is_flagged_weak(self):
+        # A signal's own match token appearing only in an arbitrary YAML file (a k8s
+        # values file, here) — not a manifest, not a matching filename — is exactly the
+        # shape of the registry.yaml self-scan false positive.
+        self.records = [("charts/values.yaml", "cassandra:\n  enabled: true\n", "yaml")]
+        record = self._record("cassandra")
+        self.assertIsNotNone(record)
+        self.assertTrue(record["weak_evidence"])
+        for token_entry in record["matched_on"]:
+            self.assertTrue(token_entry.get("weak_evidence", True))
+
+    def test_match_inside_real_manifest_is_not_flagged_weak(self):
+        # The same token, found in a real dependency manifest instead, must not be
+        # downgraded — the fix narrows evidence grading, it does not suppress detection.
+        self.records = [("requirements.txt", "cassandra-driver==3.28.0\n", "manifest")]
+        record = self._record("cassandra")
+        self.assertIsNotNone(record)
+        self.assertNotIn("weak_evidence", record)
+
+    def test_self_scan_flags_registry_yaml_only_matches_as_weak(self):
+        # The actual bug, reproduced end to end: scanning this skill's own directory (which
+        # necessarily contains registry.yaml, itself packed with every match token in the
+        # system) must not silently report Cassandra et al. as ordinary strong detections.
+        records, _, _, _ = detect.scan(str(SKILL), 256 * 1024)
+        detected, _, _, _ = detect.detect(records, self.entries)
+        cassandra = next(
+            rec for records_for_kind in detected.values() for rec in records_for_kind
+            if rec["signal"] == "cassandra"
+        )
+        self.assertTrue(cassandra["weak_evidence"])
+        matched_files = {
+            f for token_entry in cassandra["matched_on"] for f in token_entry.get("files", [])
+        }
+        self.assertEqual(matched_files, {"registry.yaml"})
+
+    def test_matched_on_attributes_files_for_a_real_manifest_match(self):
+        # A genuine detection (postgres via a requirements.txt entry) must carry the exact
+        # file it was found in, not just the bare fact that it matched somewhere.
+        self.records = [
+            ("app/requirements.txt", "psycopg2-binary==2.9.9\n", "manifest"),
+            (".github/workflows/ci.yml", "runs-on: ubuntu-latest\n", "yaml"),
+        ]
+        record = self._record("postgres")
+        self.assertIsNotNone(record)
+        self.assertNotIn("weak_evidence", record)
+        token_entry = next(t for t in record["matched_on"] if t["token"] == "psycopg2")
+        self.assertEqual(token_entry["files"], ["app/requirements.txt"])
+        self.assertFalse(token_entry["weak_evidence"])
+
+    def test_legacy_flat_string_corpus_still_detects_without_grading(self):
+        # detect() must keep accepting a plain string corpus (as every test above this
+        # class does, and as any external caller predating this change would) — it simply
+        # can't grade evidence it has no file attribution for, so weak_evidence is omitted
+        # rather than guessed.
+        corpus = "psycopg2==2.9.6\n"
+        self.assertIn("postgres", matched_signals(corpus, self.entries))
+        record = self._record_from_string("postgres", corpus)
+        self.assertNotIn("weak_evidence", record)
+
+    def _record_from_string(self, signal, corpus):
+        detected, _, _, _ = detect.detect(corpus, self.entries)
+        for records_for_kind in detected.values():
+            for rec in records_for_kind:
+                if rec["signal"] == signal:
+                    return rec
+        return None
+
 
 if __name__ == "__main__":
     unittest.main()
