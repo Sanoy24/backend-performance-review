@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Methodology or rubric discussion
+    url: https://github.com/Sanoy24/backend-performance-review/discussions
+    about: >-
+      Disagree with a rubric, a scoring rule, or a design decision? That's a discussion,
+      not a bug — open one here so it can be debated rather than closed as "working as
+      intended."

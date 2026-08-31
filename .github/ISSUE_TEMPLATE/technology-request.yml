@@ -1,0 +1,51 @@
+name: Technology reference request
+description: Ask for a new technology reference, or for an existing one to be promoted to deep tier.
+title: "[technology]: "
+labels: ["technology-reference"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        See [docs/roadmap.md](../../docs/roadmap.md) for the current promotion candidates
+        and [docs/extending.md](../../docs/extending.md) for what a `deep`-tier file
+        requires — one reference file plus one registry entry, no changes to SKILL.md.
+
+  - type: input
+    id: signal
+    attributes:
+      label: Technology / registry signal
+      description: The engine's name, and its `signal:` value in registry.yaml if it already has one.
+      placeholder: "e.g. clickhouse"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: current-tier
+    attributes:
+      label: Current tier
+      options:
+        - Not in registry.yaml yet
+        - generic
+        - conceptual
+        - "deep (proposing a content fix, not a promotion)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this deserves attention
+      description: >-
+        What engine-specific failure modes or diagnostics does the current tier miss?
+        Real usage, a repository you've reviewed, or a gap you hit is more useful than
+        "it's popular."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Are you able to contribute the reference file yourself?
+      options:
+        - label: "Yes, I'd like to write it (see docs/extending.md for the seven-section structure)"
+        - label: "No, I'm requesting it for someone else to pick up"

@@ -1,0 +1,56 @@
+name: False-positive finding
+description: >-
+  A review produced a finding that was wrong, invented, or not actually a problem.
+  CONTRIBUTING.md §8 calls this the most valuable bug report this project can receive.
+title: "[false positive]: "
+labels: ["false-positive", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. A false positive is a bug in the methodology or a
+        reference file, and every one reported here makes the skill more trustworthy.
+
+  - type: input
+    id: stack
+    attributes:
+      label: Stack
+      description: Language, framework, runtime, and datastore(s) involved.
+      placeholder: "e.g. Node.js + Express + MongoDB + Redis"
+    validations:
+      required: true
+
+  - type: textarea
+    id: finding
+    attributes:
+      label: The finding, verbatim
+      description: Paste the finding block the review produced (ID through Validation).
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-wrong
+    attributes:
+      label: Why this is wrong
+      description: >-
+        What's actually true about the code that the finding got wrong — a missing
+        condition, a misread mechanism, evidence that doesn't support the claim, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: repo-link
+    attributes:
+      label: Repository link (if public)
+      description: A link to the exact file/line, if the repository is public.
+    validations:
+      required: false
+
+  - type: input
+    id: skill-version
+    attributes:
+      label: Skill version
+      description: From SKILL.md's `metadata.version`, or the CHANGELOG entry you're on.
+    validations:
+      required: true

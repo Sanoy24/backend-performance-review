@@ -1,0 +1,46 @@
+name: Bug report
+description: >-
+  Something other than a false-positive finding is broken — a detection bug, a broken
+  reference or link, a failing check, or the accelerator script misbehaving.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is about a review producing a wrong or invented *finding*, use the
+        [false-positive report](./false-positive.yml) template instead — it captures the
+        right details for that case.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >-
+        Exact command if this involves `detect_stack.py` or `check_repo_invariants.py`,
+        or the exact prompt/repo if this is about the skill's behavior.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version (if relevant), and which agent/host you were using.
+    validations:
+      required: false
