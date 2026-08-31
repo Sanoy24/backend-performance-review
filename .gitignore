@@ -22,3 +22,6 @@ venv/
 /tmp/
 *.local.md
 reports/
+
+# Claude Code agent worktrees (local tooling state, never project content)
+.claude/
