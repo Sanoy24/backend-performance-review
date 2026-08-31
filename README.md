@@ -29,7 +29,7 @@ failure modes:
    hit rates, and a recommendation to add Redis to a service with fourteen users.
 
 Both come from the same root cause: no discipline about evidence, and no model of workload.
-A finding that cannot say *what workload makes this matter* and *what evidence supports it*
+A finding that cannot say _what workload makes this matter_ and _what evidence supports it_
 is not a finding.
 
 This skill enforces that discipline. Its most distinctive rule is that **returning zero
@@ -45,7 +45,7 @@ manufactures problems to fill a report.
   you do not answer, it proceeds and caps its own confidence accordingly.
 - **Loads only relevant references.** A Postgres service never loads the document-store file.
 - **Scores every finding on two axes** — severity and an evidence-graded confidence — and
-  *derives* priority from a published matrix, so rankings are reproducible rather than vibes.
+  _derives_ priority from a published matrix, so rankings are reproducible rather than vibes.
 - **Refuses to invent numbers.** Every figure in a report traces to a file, to something you
   supplied, or to a labelled derivation.
 - **Produces a validation plan** with every recommendation, including a falsifier and a
@@ -109,7 +109,7 @@ Does this PR introduce a performance regression?
 
 Or invoke it directly: `/backend-performance-review`
 
-**Two modes.** A *full review* covers the whole repository. A *change-scoped review* covers a
+**Two modes.** A _full review_ covers the whole repository. A _change-scoped review_ covers a
 diff, branch, or PR — cheaper, and the mode most worth running continuously.
 
 ### What to expect
@@ -157,52 +157,52 @@ More: **[docs/architecture.md](docs/architecture.md)**.
 Support is tiered honestly. Most engines are at `conceptual` or `generic` — the methodology
 still applies, and the report says so in its scope section.
 
-| Tier | Meaning |
-|:--|:--|
-| **Deep** | Dedicated reference: engine-specific failure modes, diagnostics, and config trade-offs |
-| **Conceptual** | Category principles apply in full; no engine-specific file yet |
-| **Generic** | Universal methodology only; the skill degrades gracefully and marks specifics as unknown |
+| Tier           | Meaning                                                                                  |
+| :------------- | :--------------------------------------------------------------------------------------- |
+| **Deep**       | Dedicated reference: engine-specific failure modes, diagnostics, and config trade-offs   |
+| **Conceptual** | Category principles apply in full; no engine-specific file yet                           |
+| **Generic**    | Universal methodology only; the skill degrades gracefully and marks specifics as unknown |
 
 ### Datastores
 
-| Technology | Category | Tier |
-|:--|:--|:--|
-| PostgreSQL | relational | **deep** |
-| MongoDB | document | **deep** |
-| **MySQL / MariaDB** | relational | **deep** |
-| SQL Server | relational | conceptual |
-| Oracle | relational | conceptual |
-| SQLite | relational | conceptual |
-| CockroachDB | relational | conceptual |
-| Couchbase | document | conceptual |
-| Firestore | document | conceptual |
-| **DynamoDB** | key-value | **deep** |
-| Neo4j | graph | conceptual |
-| Amazon Neptune | graph | conceptual |
-| Cassandra / ScyllaDB | wide-column | conceptual |
-| ClickHouse | wide-column | conceptual |
-| Elasticsearch / OpenSearch / Solr | search | conceptual |
-| InfluxDB | time-series | conceptual |
-| Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | conceptual |
-| S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual |
+| Technology                                       | Category     | Tier       |
+| :----------------------------------------------- | :----------- | :--------- |
+| PostgreSQL                                       | relational   | **deep**   |
+| MongoDB                                          | document     | **deep**   |
+| **MySQL / MariaDB**                              | relational   | **deep**   |
+| SQL Server                                       | relational   | conceptual |
+| Oracle                                           | relational   | conceptual |
+| SQLite                                           | relational   | conceptual |
+| CockroachDB                                      | relational   | conceptual |
+| Couchbase                                        | document     | conceptual |
+| Firestore                                        | document     | conceptual |
+| **DynamoDB**                                     | key-value    | **deep**   |
+| Neo4j                                            | graph        | conceptual |
+| Amazon Neptune                                   | graph        | conceptual |
+| Cassandra / ScyllaDB                             | wide-column  | conceptual |
+| ClickHouse                                       | wide-column  | conceptual |
+| Elasticsearch / OpenSearch / Solr                | search       | conceptual |
+| InfluxDB                                         | time-series  | conceptual |
+| Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector       | conceptual |
+| S3-compatible / GCS / Azure Blob / MinIO         | object-store | conceptual |
 
 ### Caches, brokers, runtimes, infrastructure
 
-| Technology | Tier |
-|:--|:--|
-| Redis / Valkey | **deep** |
-| Memcached | conceptual |
-| **Kafka / Redpanda** | **deep** |
-| **RabbitMQ** | **deep** |
-| SQS · Celery/Sidekiq/BullMQ-style queues | generic |
-| **Node.js** | **deep** |
-| **Python (CPython)** | **deep** |
-| **JVM (Java / Kotlin)** | **deep** |
-| **Go** | **deep** |
-| **.NET** | **deep** |
-| **Rust** | **deep** |
-| PHP · Ruby | conceptual |
-| REST · GraphQL · gRPC | conceptual |
+| Technology                                   | Tier       |
+| :------------------------------------------- | :--------- |
+| Redis / Valkey                               | **deep**   |
+| Memcached                                    | conceptual |
+| **Kafka / Redpanda**                         | **deep**   |
+| **RabbitMQ**                                 | **deep**   |
+| SQS · Celery/Sidekiq/BullMQ-style queues     | generic    |
+| **Node.js**                                  | **deep**   |
+| **Python (CPython)**                         | **deep**   |
+| **JVM (Java / Kotlin)**                      | **deep**   |
+| **Go**                                       | **deep**   |
+| **.NET**                                     | **deep**   |
+| **Rust**                                     | **deep**   |
+| PHP · Ruby                                   | conceptual |
+| REST · GraphQL · gRPC                        | conceptual |
 | Docker · Kubernetes · Serverless · Terraform | conceptual |
 
 An unrecognized technology is not a failure: the skill classifies it by category, applies
@@ -215,7 +215,7 @@ Full list and what each tier includes: **[docs/supported-technologies.md](docs/s
 ## Finding format
 
 Every finding carries the same fields. Two are unusual and deliberate: `Conditions` may never
-be empty, and `Validation` must include something that would prove the finding *wrong*.
+be empty, and `Validation` must include something that would prove the finding _wrong_.
 
 ```
 ID:            PERF-001
@@ -238,12 +238,12 @@ Validation:            Baseline, measurement, expectation, falsifier, safety lab
 ### Priority is derived
 
 | Severity ＼ Confidence | Confirmed | High | Medium | Low |
-|:--|:--|:--|:--|:--|
-| Critical | P0 | P0 | P1 | P2 |
-| High | P0 | P1 | P1 | P2 |
-| Medium | P1 | P2 | P2 | P3 |
-| Low | P2 | P3 | P3 | P3 |
-| Informational | P3 | P3 | P3 | P3 |
+| :--------------------- | :-------- | :--- | :----- | :-- |
+| Critical               | P0        | P0   | P1     | P2  |
+| High                   | P0        | P1   | P1     | P2  |
+| Medium                 | P1        | P2   | P2     | P3  |
+| Low                    | P2        | P3   | P3     | P3  |
+| Informational          | P3        | P3   | P3     | P3  |
 
 Effort never changes priority. A cheap fix is tagged `quick-win` and sequenced early; its
 priority is unchanged, because priority measures impact.
@@ -263,7 +263,12 @@ Adding a technology requires **one reference file and one registry entry**. No c
   kind: datastore
   category: relational
   match: [cockroach, cockroachdb]
-  load: [databases/universal.md, databases/relational.md, technology/cockroachdb.md]
+  load:
+      [
+          databases/universal.md,
+          databases/relational.md,
+          technology/cockroachdb.md,
+      ]
   tier: deep
 ```
 
@@ -295,21 +300,26 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
-- Behavioral evaluation has run against seven real public repositories and found five real bugs
+- Behavioral evaluation has run against eight real public repositories and found seven real bugs
   in the detection tooling (now fixed), verified a real merged pull request's fix in
   change-scoped mode, and ran committed benchmarks for real evidence. It has not yet found a
   repository with literally zero findings — worth reading as a result in itself, not a gap; see
   [docs/evaluation.md](docs/evaluation.md) §3.7. An independent blind pass — agents with no
   memory of this project's own findings, each reviewing one repository from scratch — has now
-  been run against seven repositories across seven stacks (§3.8–3.11, §3.13–3.15), including the
-  first three runs with no prior author review of the target repository at all. On the four with a
+  been run nine times against eight repositories across eight stacks (§3.8–3.11, §3.13–3.17),
+  including three runs with no prior author review of the target repository at all, and one
+  repository blind-passed a second time to measure inter-run consistency. On the four with a
   prior review to compare against, it reproduced or exceeded the original review's primary
   finding every time, and on three of those four it found real evidence — including, on one
   repository, a hard `SyntaxError` that made the application fail to import entirely — that the
-  original review had missed (§3.12). The JVM, Rust, and .NET runs each found a real, now-fixed
-  bug in the skill's own detection or reference content rather than only in the target repository
-  (§3.16) — two structurally identical ORM-provider detection false negatives (`sqlite-jdbc` for
-  JVM, `Microsoft.EntityFrameworkCore.SqlServer` for .NET) and an undocumented runtime default.
+  original review had missed (§3.12). The JVM, Rust, .NET, and Node.js runs each found a real,
+  now-fixed bug in the skill's own detection or reference content rather than only in the target
+  repository (§3.13–§3.16) — two structurally identical ORM/ODM-provider detection false
+  negatives (`sqlite-jdbc` for JVM, `Microsoft.EntityFrameworkCore.SqlServer` for .NET), an
+  undocumented runtime default, and a pair of Node.js bugs (a `package-lock.json` hash-collision
+  false positive and an unread Prisma-schema false negative). The repeat pass (§3.17) found the
+  primary finding's location, mechanism, and derived priority reproduced exactly across all
+  three independent reviews of that repository.
 
 ## License
 

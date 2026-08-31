@@ -85,6 +85,12 @@ CONTENT_FILES = {
 
 CONTENT_SUFFIXES = (
     ".csproj", ".fsproj", ".sln", ".tf", ".tfvars.example",
+    # Prisma's schema file (conventionally schema.prisma) is the only place a Prisma-based
+    # Node/TypeScript project declares its actual datastore — `datasource db { provider =
+    # "postgresql" }` etc. package.json/package-lock.json name only "@prisma/client" and
+    # "prisma", neither of which is a datastore token, so without reading this file a
+    # Prisma project's datastore signal never fires from any legitimate match at all.
+    ".prisma",
 )
 
 # Kubernetes/Helm/compose manifests are matched by content, so scan small YAML too.
