@@ -15,7 +15,7 @@ run** from **checks that are specified but not yet executed**.
 | Architecture self-check | **Automated in CI** — `scripts/check_repo_invariants.py`, every push/PR |
 | Tooling checks | **Run** — passing in CI on every push/PR |
 | Behavioral evaluation against public repositories | **Rounds 1–2 run** — 5 of 6 required cases covered; 3 real bugs found and fixed; 1 case reframed after evidence (§3.7) |
-| Independent (non-author) pass | **Run seven times, across seven stacks** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all seven, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (three of seven — §3.13, §3.14, §3.16 — had no prior author review at all, the first fully author-uninvolved runs); see §3.8–3.16 |
+| Independent (non-author) pass | **Run nine times, across eight repositories** — agents with no memory of this session; on the four repositories with a prior author review to compare against (§3.8–3.11), reproduced or exceeded its primary finding every time; on all eight repositories, found real evidence a comparison review had missed, or a real, fixed bug in the skill itself (four of eight — §3.13, §3.14, §3.15, §3.16 — had no prior author review at all, the first fully author-uninvolved runs); one repository (`gin-realworld`) has now been blind-passed twice, giving a first, single-repository measurement of inter-run consistency: the primary finding's location and mechanism reproduced exactly across all three reviews, and its severity/priority reproduced exactly between the two blind passes; see §3.8–3.18 |
 | Regression protection (§4 fixtures) | **Automated in CI** — `tests/test_detect_stack_regressions.py`, every push/PR |
 
 Behavioral evaluation is the real test, and it has now been run against four unmodified public
@@ -29,12 +29,14 @@ and reframed what case 2 is actually testing after a fourth repository still pro
 finding (§3.7). The independent blind pass, run once per repository (§3.8–3.11) and summarized in
 §3.12, reproduced or exceeded the manual review's primary finding on all four, and found real,
 previously-missed evidence — including one hard `SyntaxError` a careful reading had missed
-entirely — on three of the four. Three further blind passes (§3.13, §3.14, §3.16), run against
-JVM, Rust, and Node.js repositories with no prior author review at all, closed two of the three
-untested `deep`-tier runtime gaps flagged in §3.12 plus the separately-flagged Node.js gap, and
-each found a real, fixed bug in the skill's own detection or reference content rather than only in
-the target repository — see §3.15, §3.16. The false-positive/false-negative fixtures specified in
-§4 are now automated (`tests/test_detect_stack_regressions.py`, run on every push/PR).
+entirely — on three of the four. Four further blind passes (§3.13, §3.14, §3.15, §3.16), run
+against JVM, Rust, .NET, and Node.js repositories with no prior author review at all, closed
+all four untested `deep`-tier runtime gaps flagged in §3.12 and §5 and each found a real, fixed
+bug in the skill's own detection or reference content rather than only in the target
+repository — see §3.17. A fifth run (§3.18) blind-passed one of those repositories a second
+time and measured, for the first time, whether two independent passes over the same code
+converge. The false-positive/false-negative fixtures specified in §4 are now automated
+(`tests/test_detect_stack_regressions.py`, run on every push/PR).
 
 ---
 
@@ -849,7 +851,7 @@ static-vs-dynamic-dispatch, and unsafe-boundary checklist and found the codebase
 on all of them — reported plainly as a negative result rather than manufactured into a finding,
 consistent with rule 4.
 
-### 3.15 The blind pass extended to a seventh repository, and the last untested stack — `gothinkster/aspnetcore-realworld-example-app` (.NET)
+### 3.15 The blind pass extended to a seventh repository — `gothinkster/aspnetcore-realworld-example-app` (.NET)
 
 The last of the three `deep`-tier runtime gaps named in §3.12 and narrowed by §3.13–3.14: JVM and
 Rust are covered, and .NET was the one remaining runtime reference (`technology/dotnet.md`) never
@@ -936,23 +938,133 @@ from "sync-over-async on a `Task`" as two distinct sub-shapes of the same starva
 the agent had to reason that distinction from `application/async-and-blocking.md` §2's general
 table instead. Worth a future addition, not a defect serious enough to block this write-up.
 
-### 3.16 What seven independent blind passes now establish
 
-§3.13, §3.14, and §3.15 close all three runtime-coverage gaps named in §3.12 — JVM, Rust, and now
-.NET are no longer untested by an independent pass. All three new runs reproduced the pattern
-established across §3.8–3.11: each found a `Critical`/`P0` finding with direct code-level
-evidence, and each found at least one real issue (JVM: `SEC-001`; Rust: `COR-001`, `COR-002`;
-.NET: `SEC-001`) the rule-8 "Adjacent findings" convention was designed for. All three also did
+### 3.16 The blind pass extended to an eighth repository, and the Node.js runtime — `gothinkster/node-express-realworld-example-app` (Node.js/Express/Prisma/PostgreSQL)
+
+Node.js has been `deep`-tier since before v0.2.0 — longer than JVM, .NET, or Rust — but, as §5 notes, it had never been independently blind-passed. This run closes that gap. The
+repository is an actively maintained (3.8k stars, pushed 2024, still merged into in 2026) RealWorld
+implementation on Express + Prisma + PostgreSQL, cloned fresh and unmodified. PostgreSQL was
+chosen over the project's other RealWorld Node repository (Mongo-backed) specifically because
+`docs/examples/node-mongo-redis.md` already covers Node+Mongo+Redis in depth; a Postgres-backed
+repository adds independent coverage of `technology/postgres.md` and `databases/relational.md`
+under a stack neither had been checked against with a real repository before. The agent had no
+memory of this project's own findings and no instruction beyond "review this repository."
+
+**What it found, in brief:**
+
+- **PERF-002 (`Critical`/`P0`, `quick-win`)** — `GET /articles` and `GET /articles/feed` pass the
+  client-supplied `limit` query parameter straight into Prisma's `take` with only a
+  default-if-absent (`Number(query.limit) || 10`), never an enforced maximum
+  (`article.service.ts:82-83`, `:131-132`); `GET /articles/:slug/comments` has no page bound at
+  all (`article.service.ts:433-458`). Combined with PERF-001 below, a single crafted request has
+  no ceiling on the data it forces the service to materialize and serialize.
+- **PERF-001 (`High`/`P1`, `quick-win`)** — every article, profile, and comment-author read fetches
+  the *entire* `favoritedBy` and/or `followedBy` relation with no `select`, `where`, or `take`
+  (`article.service.ts:90-104` and six further call sites in the same file; `profile.service.ts:6-
+  13,22-40,42-60`), then reduces it to a boolean in JavaScript (`article.mapper.ts:11`,
+  `author.mapper.ts:7-9`, `profile.utils.ts:8-10`). The query already computes the efficient form
+  in parallel — `_count: { select: { favoritedBy: true } }` is present in every article query — but
+  `articleMapper` uses `article.favoritedBy.length` instead of the already-fetched
+  `article._count.favoritedBy` (`article.mapper.ts:12` against `article.service.ts:99-103`), the
+  cheap primitive fetched and silently discarded next to the expensive one actually used.
+- **PERF-003 (`High`/`P1`)** — no index on `Article.authorId`, `Comment.articleId`, or
+  `Comment.authorId` anywhere in the migration history (`src/prisma/migrations/*/migration.sql`,
+  four files, checked in full); the only non-PK/unique indexes created are on the implicit
+  many-to-many join tables' second column. Both are on the critical-path filter/join in
+  `getArticles`/`getFeed`/`getCommentsByArticle`.
+- **PERF-004 (`Low`/`P2`, `quick-win`)** — `checkUserUniqueness` awaits two independent,
+  unrelated `findUnique` calls sequentially rather than concurrently (`auth.service.ts:10-26`).
+- **SEC-001** — `process.env.JWT_SECRET || 'superSecret'`, a hardcoded fallback signing secret,
+  present at both call sites that construct the JWT middleware (`auth.ts:16,21`) and the one that
+  signs tokens (`token.utils.ts:4`); if the environment variable is unset in any deployment, any
+  caller can forge a valid token for any user id.
+- **SEC-002** — the same unbounded `favoritedBy`/`followedBy` includes behind PERF-001 pull the
+  full `User` row, including the `password` column (`schema.prisma:47`, a plain field with no
+  `@ignore` or `select` narrowing it out), into application memory for every favoriter and every
+  follower on every article/profile view. Verified not currently serialized into any response body
+  — the mappers only ever read `.some(...)`/`.length` off it — so this is unnecessary exposure
+  surface rather than a live leak, and PERF-001's fix removes it as a side effect.
+
+**A real, reproducible bug found and fixed — a false positive this time, not a false negative.**
+`detect_stack.py` reported `sqs` (Amazon SQS) as a detected broker with `weak_evidence` **absent**
+(i.e. graded as strong, manifest-level evidence), and `pgx` (the Go Postgres driver) as one of the
+tokens supporting the `postgres` datastore signal — in a repository with no AWS SDK dependency
+anywhere in it (`grep -c aws package-lock.json` → 0) and no Go code at all. Both tokens matched
+inside base64-encoded npm `"integrity"` hashes in `package-lock.json` by pure coincidence: `sqs`
+inside `mimic-fn`'s hash (`...Wydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ...`) and
+`pgx` inside `@babel/plugin-transform-typescript`'s (`...TDoqHCjLoHb6+QgsV1WsT2nipRqCPgxD3LXnEO7...`).
+`package-lock.json` is unconditionally classified as `manifest`-kind content (real dependency
+evidence, `STRONG_EVIDENCE_KINDS`), so unlike the `gin`/`echo` collisions found in Round 1 (§3.3,
+which landed in `yaml`-kind files already graded weak), these matches were reported as
+full-strength detections with nothing in the tool's own output to flag them as suspect. Left
+unfixed, this specific case was harmless — Postgres genuinely is the datastore, so `pgx`'s false
+match happened to agree with the true answer — but the `sqs` false positive was not harmless: it
+would have told a reviewing agent to load broker-analysis references and look for a message queue
+that does not exist, a direct violation of `SKILL.md` rule 6 ("absent layers are silent").
+**Fixed**: following the same narrowing precedent Round 1 established for `gin`/`echo`
+(`registry.yaml`), the `postgres` signal's `pgx` token is now the qualified Go module path
+`jackc/pgx`, and the `sqs` signal drops the bare `sqs` token in favor of `arn:aws:sqs` and
+`AWS::SQS` (its CloudFormation/SAM resource type) — both still catch real usage, neither can
+collide with an arbitrary base64 hash. Four new regression fixtures reproduce the exact collision
+text and confirm the narrowed tokens still match genuine dependency declarations, added to
+`LockfileHashCollisionTests` in `tests/test_detect_stack_regressions.py`.
+
+**A second, independent bug: a false negative, once the first fix is applied on its own.** Fixing
+the `pgx` collision in isolation would have *removed* the only match that fired the `postgres`
+signal for this repository at all — this Prisma-based project declares no dependency named `pg`,
+`postgres`, or any other postgres token anywhere `detect_stack.py` reads; the real datastore
+identity lives entirely in `datasource db { provider = "postgresql" }` inside
+`src/prisma/schema.prisma`, a file extension `detect_stack.py` never scanned (`content_kind()`
+returned `None` for it — the same silent-skip shape as any unrecognized file). Prisma is one of
+the most widely used Node.js ORMs, and package manifests name only `@prisma/client`/`prisma`,
+neither a datastore token; without reading the schema file, a Prisma project's actual datastore
+has no legitimate way to be detected at all. **Fixed**: `.prisma` was added to
+`CONTENT_SUFFIXES`, so `schema.prisma` (and any `*.prisma` file) is now scanned as manifest-kind
+content — the existing `postgresql`/`mysql`/`mongodb` tokens already in `registry.yaml` then match
+the `provider = "..."` line directly, no new registry entries needed. Two more regression fixtures
+(`PrismaSchemaFileTests`) confirm `content_kind()` now recognizes the extension and that a
+`postgresql` provider line is graded as strong (non-`weak_evidence`) evidence. Both bugs were
+verified to actually fail against the pre-fix code before being accepted, and
+`python -m unittest discover -s tests` plus `python scripts/check_repo_invariants.py` pass with
+both fixes applied.
+
+**On the reference content.** `application/data-access.md`'s "existence checks by full fetch" /
+"counting by materializing" framing (§3) mapped directly onto PERF-001 — the file names the exact
+shape found, down to preferring a bounded existence query over a full fetch. `databases/
+relational.md`'s "a referencing column is frequently unindexed by default" (§2) was directly
+actionable from the migration files alone, no runtime evidence needed, exactly as the file
+predicts. `technology/node.md`'s single-process/no-`cluster`/no-`worker_threads` guidance (§2) was
+consciously **not** turned into a finding: the file is explicit that under-utilized parallelism is
+checkable only "on a host with multiple cores available," and this repository defines no
+infrastructure-as-code, replica count, or host spec anywhere — asserting the host's core count
+would have been an invented fact, not evidence, and declining to do so is the file's own
+instruction followed correctly rather than a missed finding. The same restraint applied to a
+Postgres `statement_timeout` question: `technology/postgres.md` §5 calls its absence a common and
+consequential gap, but the only place it could be configured here is the `DATABASE_URL` connection
+string inside a `.env` file the skill's rule 3 forbids opening for content — so this is recorded as
+an unknown for the user to check, not asserted either way.
+
+### 3.17 What eight independent blind passes now establish
+
+§3.13, §3.14, §3.15, and §3.16 close all four runtime-coverage gaps named in §3.12 and §5 — JVM,
+Rust, .NET, and Node.js are no longer untested by an independent pass, the last of the six
+`deep`-tier runtimes now covered. All four new runs reproduced the pattern established across
+§3.8–3.11: each found a `Critical`/`P0` finding with direct code-level evidence, and each found at
+least one real issue (JVM: `SEC-001`; Rust: `COR-001`, `COR-002`; .NET: `SEC-001`; Node.js:
+`SEC-001`, `SEC-002`) the rule-8 "Adjacent findings" convention was designed for. All four also did
 something §3.8–3.11 did not: each found a real, reproducible bug **in the skill's own detection or
 reference content**, not only missed evidence in the target repository — a
 `sqlite-jdbc`/`jdbc:sqlite:` detection false negative and an `Microsoft.EntityFrameworkCore.SqlServer`
 detection false negative, both structurally identical in shape to Round 1's (§3.3) and to each
 other, plus an undocumented Tokio default and a structural gap in what `references_to_load` can
-ever contain. §3.8–3.11 exercised signal-and-reference paths this project's own Round 1–2 testing
-had already walked (Go and Python, the two ecosystems the author tested by hand); §3.13–3.15 are
-the first blind passes against reference content that had *never* been run against a real
-repository by anyone, author included — and all three found something. That is closer to what an
-independent pass is actually for than reproducing an already-verified finding is.
+ever contain (Rust), and a pair of Node.js bugs — a `package-lock.json` base64-hash-collision false
+positive on `sqs`/`pgx` and a false negative where Prisma-based projects had no legitimate way to
+have their datastore detected at all, since `schema.prisma` was never scanned. §3.8–3.11 exercised
+signal-and-reference paths this project's own Round 1–2 testing had already walked (Go and Python,
+the two ecosystems the author tested by hand); §3.13–3.16 are the first blind passes against
+reference content that had *never* been run against a real repository by anyone, author included —
+and all four found something. That is closer to what an independent pass is actually for than
+reproducing an already-verified finding is.
 
 Two false negatives in two different datastore signals (§3.13's `sqlite`, §3.15's `sqlserver`),
 found by two different agents against two different stacks, share the identical root cause: the
@@ -960,13 +1072,137 @@ match list was built from the raw driver/client library, not the ORM provider pa
 real projects actually declare. That is now a pattern worth naming explicitly rather than treating
 each occurrence as an isolated bug — a plausible next step is auditing every `deep`- and
 `conceptual`-tier datastore signal for the equivalent gap across each supported runtime's dominant
-ORM, rather than waiting for the next blind pass to find the next instance one at a time.
+ORM, rather than waiting for the next blind pass to find the next instance one at a time. §3.16's
+bugs are a different shape — a lockfile hash-collision false positive and an unscanned schema-file
+false negative — but point at the same underlying lesson: detection evidence graded as strong
+(`STRONG_EVIDENCE_KINDS`) needs to earn that grade, not just come from a manifest-kind file.
 
-**What this still does not establish.** .NET remains the one `deep`-tier runtime with no
-independent pass. No repository has been blind-passed twice, so inter-run consistency is still
-unmeasured. No human-expert baseline exists. Six repositories is still six, not a statistically
+**What this still does not establish.** No `deep`-tier runtime remains untested by an independent
+pass. No human-expert baseline exists. Eight repositories is still eight, not a statistically
 powered sample — the value of each additional run continues to be in what specific, checkable bug
-it surfaces, not in moving an aggregate pass rate.
+it surfaces, not in moving an aggregate pass rate. Whether inter-run consistency holds is addressed
+next, for one repository — see §3.18.
+### 3.18 A second blind pass on the same repository — inter-run consistency, measured once
+
+Every prior comparison in this section reviewed a repository once. The README's claim —
+priority is "derived from the matrix, never chosen," and rankings are meant to be reproducible —
+has never actually been tested against the same code twice. This section is that test: `gin-realworld`
+is blind-passed a second time, giving three independent reviews of the same commit to compare —
+§3.1 (the original manual review), §3.9 (blind pass 1), and this one (blind pass 2).
+
+**Setup.** A fresh clone of `gothinkster/golang-gin-realworld-example-app` resolved to
+`626c372d259472148d93303f74aa9b9a1cdcef24` — the identical commit §3.1 and §3.9 were run against,
+confirmed by `git rev-parse HEAD` before anything else ran, not merely "the same repository" but
+the literal same source text, removing repo drift as a possible explanation for any difference
+found below. A fresh `general-purpose` agent, spawned with no memory of this session, was given
+only the path to the unmodified `SKILL.md` and the path to this clone, told it was a full review
+of a real, unmodified Go backend, and told nothing about §3.1's or §3.9's existence, contents, or
+scores — the same blindness protocol as §3.8–3.14. `detect_stack.py` was also re-run directly
+(outside the blind agent, for this write-up) against the fresh clone and produced identical
+detections to §3.1's, modulo one accretion from the skill's own evolution since §3.1 was written:
+`go` is now `deep` tier (the Go runtime reference was added and promoted after Round 1), where
+§3.1 explicitly describes this repository as having "no `deep`-tier engine." That is a fact about
+the skill's coverage growing, not about this repository or this comparison, and is noted here
+rather than silently absorbed.
+
+**The primary finding: location and mechanism reproduced exactly, three for three.** All three
+reviews independently trace the identical call chain — `ArticlesSerializer.Response()`
+(`articles/serializers.go:116-141`) batches favorite counts and status before its loop but calls
+`ArticleUserSerializer.Response()` → `ProfileSerializer.Response()` (`users/serializers.go:24-38`)
+→ `isFollowing()` (`users/models.go:121-129`) per rendered article and comment author, one query
+each, unbatched. No review disagreed about where the bug is or what it does.
+
+**Severity: two of three converge exactly, and the two that converge are the two blind passes.**
+§3.1 scored `High`/`High`/**P1**. §3.9 scored `Critical`/`High`/**P0**, escalating on evidence
+§3.1's write-up didn't carry: no server-side HTTP timeouts anywhere in the codebase, and no
+enforced maximum on the article-list `limit` parameter, meaning the blast radius is shared-pool
+saturation, not a bounded per-request cost. This run's blind pass reached the identical score —
+`Critical`/`High`/**P0** — independently, citing the same two facts: it filed the missing
+timeout as a considered-but-not-promoted note (§6.2 of its report) and the missing `limit` cap as
+its own finding (`PERF-003`, `High`/`High`/**P1**), then used exactly that evidence — "each extra
+row is also an extra `isFollowing` round trip against the shared pool" — to justify `Critical`
+under the rubric's own definition ("critical path **and** ... saturation of a shared resource").
+Two agents, spawned separately, with no access to each other's output, independently found the
+same escalating evidence and reached the same score. §3.1's `High`/`High`/P1 is not wrong by its
+own lights — it scored the N+1 in isolation, before the unbounded-`limit` evidence was in the
+write-up at all — but on the question actually asked here (does the primary finding's *severity*
+reproduce run to run), the answer is: not with the original manual review, but yes, exactly,
+between the two independent blind passes.
+
+**The case-6 pool-arithmetic question reproduces exactly, including its score.** §3.1 checked
+one specific question — does `SetMaxIdleConns(10)`/no `SetMaxOpenConns` contradict a networked
+engine's connection ceiling — and correctly answered no, because SQLite has no such ceiling to
+exceed. §3.9 asked a different, related question about the same two lines — does an unbounded
+local pool risk internal contention (`SQLITE_BUSY`) against SQLite's single-writer semantics —
+and reported it as a finding, `Critical`/`Medium`/**P1**, explicitly caveated as drawing on
+general engine knowledge beyond what the `conceptual`-tier registry entry supplies. This run's
+blind pass asked the same question §3.9 did, cited the same two lines
+(`common/database.go:57,65`), the same absence of a busy-timeout or WAL configuration, and the
+same underlying mechanism (SQLite serializes all writers regardless of pool size) — and landed on
+the identical score: `Critical (structural)`/`Medium`/**P1**. This is the single strongest data
+point in this comparison: not just agreement that something is wrong, but an exact match on both
+scored axes and the derived priority, from two agents that never saw each other's reasoning,
+independently re-deriving §3.9's own correction to §3.1 rather than independently discovering
+something new. It also replicates, a second time, §3.9's finding that this is a different
+question than §3.1 asked of the same code, not a disagreement about the same question.
+
+**Secondary findings: substantial overlap, and real, non-contradictory divergence in what each
+run chose to surface.** Both blind passes flagged: missing indexes on the same foreign-key-shaped
+columns (§3.9: "`AuthorID`, `FavoriteID`, `FavoriteByID`, `FollowingID`, `FollowedByID`"; this
+run's `PERF-002`: the same five columns by name, plus `users.username`); the total absence of
+observability (metrics, tracing, benchmarks, load tests) as its own finding rather than only a
+confidence cap; and the identical `SEC-001` — a hardcoded JWT signing secret in `common/utils.go`
+carrying a `#nosec G101` suppression, run through a CI security job. One real, one-directional
+miss: §3.9 also reported a second `SEC-` finding (a bearer token accepted via URL query
+parameter) that this run's pass did not report — an omission, not a contradiction, since nothing
+in this run's report addresses that code path at all. One real, one-directional addition: this
+run reported two correctness findings with no counterpart in §3.9's write-up — `COR-001`
+(`users.username` has no uniqueness constraint) and `COR-002` (`FollowModel`/`FavoriteModel` lack
+a uniqueness constraint on their relationship columns, letting a `FirstOrCreate` race double-count
+a favorite or follow). Both are real, evidenced, and correctly filed under rule 8. Whether §3.9's
+run considered and silently declined these, or never looked, cannot be determined — this project
+recorded §3.9's findings in prose, not as the full raw report, so a completely faithful
+run-to-run diff of *everything each pass looked at* is not possible from what was preserved. That
+gap is itself worth naming as a lesson: recording only a summary of a comparison run, rather than
+its full output, is exactly the kind of information loss that makes a later consistency
+measurement weaker than it needed to be.
+
+**The derivation itself never diverged.** Every scored finding in this run's report — ten `PERF-`
+findings plus three adjacent findings — re-derives to the priority the matrix specifies for its
+stated severity and confidence, with no exception (`Critical`/`High`→P0, `High`/`High`→P1,
+`Critical`/`Medium`→P1, `Medium`/`High`→P2, `Low`/`Medium` and `Low`/`High`→P3,
+`Informational`/`Confirmed`→P3). Cross-checked against §3.1's and §3.9's own recorded scores, the
+same holds for both of them. This is exactly what the matrix is for: it is a mechanical lookup,
+and across three independent runs and thirteen individually-scored findings in this run alone,
+it produced zero disagreements about how severity-and-confidence should turn into priority. Any
+divergence between runs was in the judgment call of *what severity or confidence a finding
+deserves*, never in the arithmetic that follows from it — which is the correct place for
+independent review to disagree, and the wrong place for a rubric to be inconsistent.
+
+**No bug found in the skill's own tooling on this run.** Detection matched §3.1's, the false
+positives §3.3 fixed did not recur, and the blind agent's handling of the `grpc`/`protobuf` signal
+— verified as an unused transitive dependency and correctly declined rather than assumed —
+worked as `methodology/discovery.md` intends. Go is `deep` tier and this exact repository has now
+been reviewed four times total across Rounds 1–2 and two blind passes; a fifth review finding
+nothing new to fix in the tooling itself is the expected result at this point, not a null result.
+
+**The honest verdict.** On the question this section exists to answer — does an independent pass,
+run twice against the same code, converge — the answer is **partial convergence, and the
+partiality is informative rather than a failure**. The primary finding's *location and mechanism*
+reproduced perfectly across all three reviews. Its *severity score* reproduced exactly between the
+two blind passes and diverged from the original manual review for a reason already on record
+(§3.9) before this run existed — the manual review answered a narrower question than the evidence
+in the repository actually supported, and both blind passes independently found the wider
+evidence. The secondary case-6 finding reproduced exactly on every scored axis between the two
+blind passes, which is the strongest single piece of evidence available that the same evidence,
+independently read twice, produces the same rubric outcome. Secondary findings beyond those two
+overlapped substantially but not completely, in both directions — each run surfaced something the
+other did not, the same pattern already documented across §3.8–3.11's *different*-repository
+comparisons, now confirmed to hold *within* a single repository reviewed twice as well. This is
+one repository, one extra run. It supports the reproducibility claim for the parts of a review
+that matter most (what the top finding is, where it lives, and — once the same evidence is in
+hand — how severely it scores) more than it contradicts it, but a second data point of this shape,
+on a different repository or stack, would be needed before calling the question closed.
 
 ### Recording results
 
@@ -1019,26 +1255,30 @@ detection capability actually detects something.
 
 Stated rather than left implicit:
 
-- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Seven
-  repositories now, seven legitimate findings; whether a true zero-finding real backend exists at
+- **Case 2 (no significant problem) is reframed, not literally satisfied** — see §3.7. Eight
+  repositories now, eight legitimate findings; whether a true zero-finding real backend exists at
   all is now an open question rather than an assumed baseline.
-- **The blind pass (§3.8–3.11, §3.13–3.14, §3.16) now covers seven repositories, but each only
-  once.** It does not repeat any of the seven to check inter-run consistency. §3.8–3.11 were
-  still set up by the author (choosing the repositories and writing the prompts) even though the
-  reviewing agents had no access to this session's prior findings; §3.13–3.14 and §3.16 went one
-  step further and had no prior author review of the target repository to compare against at all,
-  only the choice of repository and the prompt.
+- **The blind pass (§3.8–3.11, §3.13–3.16) now covers eight repositories, but each only once
+  except one.** §3.8–3.11 were still set up by the author (choosing the repositories and writing
+  the prompts) even though the reviewing agents had no access to this session's prior findings;
+  §3.13–3.16 went one step further and had no prior author review of the target repository to
+  compare against at all, only the choice of repository and the prompt. §3.18 blind-passed one of
+  the §3.8–3.11 repositories a second time — see that bullet below for what it found.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
-  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.14
+  `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.16
   are the exception.
-- **Five of six blind-passed repositories are Go, Python, or JVM/Rust; .NET is the one remaining
-  `deep`-tier runtime untested by an independent pass.** §3.13 (JVM) and §3.14 (Rust) closed two
-  of the three gaps flagged after §3.12; a Node.js repository has also never been blind-passed
-  despite `deep`-tier coverage since v0.2.0.
-- No inter-run consistency measurement. The same repository reviewed twice may produce
-  different findings; the rubrics are designed to make rankings reproducible, but that has not
-  been measured.
+- **Inter-run consistency measured once, on one repository — not a general result.** §3.18
+  blind-passed `gin-realworld` a second time, at the identical pinned commit reviewed in §3.1 and
+  §3.9, and found the primary finding's location and mechanism reproduced exactly across all
+  three independent reviews, its severity and derived priority reproduced exactly between the two
+  blind passes (diverging from the original manual review for a reason already on record in
+  §3.9), and the severity×confidence→priority matrix applied with zero disagreements across all
+  three runs' scored findings. Secondary findings still varied run to run, each surfacing at
+  least one real thing the other missed — the same pattern §3.8–3.11 documented across different
+  repositories, now also confirmed within one repository reviewed twice. This is one repository,
+  one extra run: it does not establish that consistency holds for other repositories, other
+  stacks, or findings below the primary one.
 - No comparison against a human expert baseline.
 - No measurement of context cost per review, which matters for whether the routing design is
   actually paying off.
