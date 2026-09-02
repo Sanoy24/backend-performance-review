@@ -100,6 +100,50 @@ class LockfileHashCollisionTests(unittest.TestCase):
         corpus = '{\n  "dependencies": {\n    "koa": "^2.14.2"\n  }\n}\n'
         self.assertIn("rest", matched_signals(corpus, self.entries))
 
+    def test_npm_lockfile_hash_containing_pgx_does_not_trigger_postgres(self):
+        # The actual collision found in gothinkster/node-express-realworld-example-app's
+        # package-lock.json (docs/evaluation.md, Node.js independent blind pass): the
+        # postgres signal's bare "pgx" token (meant for the Go driver import path
+        # github.com/jackc/pgx) matched case-insensitively inside the npm integrity hash
+        # for @babel/plugin-transform-typescript, a package with nothing to do with
+        # Postgres or Go.
+        corpus = (
+            '"node_modules/@babel/plugin-transform-typescript": {\n'
+            '  "version": "7.23.6",\n'
+            '  "integrity": "sha512-6cBG5mBvUu4VUD04OHKnYzbuHNP8huDsD3EDqqpIpsswTDoqHCjLoHb6'
+            '+QgsV1WsT2nipRqCPgxD3LXnEO7XfA==",\n'
+            '  "dev": true\n'
+            "}\n"
+        )
+        self.assertNotIn("postgres", matched_signals(corpus, self.entries))
+
+    def test_npm_lockfile_hash_containing_sqs_does_not_trigger_sqs_broker(self):
+        # The actual collision found in the same package-lock.json: the sqs signal's bare
+        # "sqs" token matched inside the integrity hash for "mimic-fn", an unrelated
+        # utility package. The repo has no AWS SDK dependency anywhere in it.
+        corpus = (
+            '"node_modules/mimic-fn": {\n'
+            '  "version": "2.1.0",\n'
+            '  "integrity": "sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3'
+            'vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==",\n'
+            '  "dev": true\n'
+            "}\n"
+        )
+        self.assertNotIn("sqs", matched_signals(corpus, self.entries))
+
+    def test_go_pgx_module_path_still_matches_postgres(self):
+        # The fix must narrow, not remove, real detection: a genuine pgx dependency
+        # declared by its fully-qualified Go module path must still be caught.
+        corpus = "github.com/jackc/pgx/v5 v5.4.3 h1:cxFyXhxlvAifxnkKKdlxv8XvDkJPk1v2eZoKtWxL=\n"
+        self.assertIn("postgres", matched_signals(corpus, self.entries))
+
+    def test_cloudformation_sqs_resource_still_matches_sqs_broker(self):
+        # Same narrowing principle for the sqs signal: a real CloudFormation/SAM SQS queue
+        # declaration must still be caught via its resource type, not just the SDK client
+        # package names.
+        corpus = "Resources:\n  MyQueue:\n    Type: AWS::SQS::Queue\n"
+        self.assertIn("sqs", matched_signals(corpus, self.entries))
+
     def test_sqlite_jdbc_dependency_matches_sqlite_signal(self):
         # Regression for a false negative found during the independent blind pass against
         # gothinkster/spring-boot-realworld-example-app (docs/evaluation.md §3.13): the
@@ -120,6 +164,67 @@ class LockfileHashCollisionTests(unittest.TestCase):
     def test_jdbc_sqlite_connection_scheme_matches_sqlite_signal(self):
         corpus = "spring.datasource.url=jdbc:sqlite:dev.db\n"
         self.assertIn("sqlite", matched_signals(corpus, self.entries))
+
+    def test_ef_core_sqlserver_provider_matches_sqlserver_signal(self):
+        # Regression for a false negative found during the independent blind pass against
+        # gothinkster/aspnetcore-realworld-example-app (docs/evaluation.md, .NET blind
+        # pass): the sqlserver signal's match list covered the raw ADO.NET client library
+        # names (System.Data.SqlClient, Microsoft.Data.SqlClient) and the
+        # "sqlserver://" connection-string scheme, but not
+        # Microsoft.EntityFrameworkCore.SqlServer — the official EF Core provider package,
+        # and the dominant way a .NET project actually declares a SQL Server dependency in
+        # its .csproj. This repo's own .csproj (src/Conduit/Conduit.csproj) references only
+        # that package; detection only succeeded incidentally, via
+        # Microsoft.Data.SqlClient appearing as a transitive entry in packages.lock.json. A
+        # .NET repo that references the EF Core provider without committing a lock file —
+        # common, since restore-with-lock-file is opt-in — was invisible to this signal
+        # entirely. Same shape of gap as the sqlite-jdbc false negative above: an ORM
+        # provider package name missing from a datastore's match list.
+        corpus = (
+            '<Project Sdk="Microsoft.NET.Sdk.Web">\n'
+            "  <ItemGroup>\n"
+            '    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />\n'
+            "  </ItemGroup>\n"
+            "</Project>\n"
+        )
+        self.assertIn("sqlserver", matched_signals(corpus, self.entries))
+
+
+class PrismaSchemaFileTests(unittest.TestCase):
+    """Regression for a false negative found during the independent Node.js blind pass
+    (docs/evaluation.md): gothinkster/node-express-realworld-example-app uses Prisma
+    against PostgreSQL, but declares neither in a form the old registry could see.
+    package.json/package-lock.json name only "@prisma/client" and "prisma" — neither is a
+    datastore token — and the actual datastore lives in `datasource db { provider =
+    "postgresql" }` inside src/prisma/schema.prisma, a file extension detect_stack.py never
+    read (content_kind() returned None for it, so it was skipped like a binary asset).
+    Before this fix, the only reason postgres detection fired on that repo at all was the
+    unrelated "pgx"/package-lock.json hash-collision bug fixed alongside this one — with
+    that bug fixed on its own, the repo's real datastore would have gone undetected
+    entirely, silently dropping databases/relational.md and technology/postgres.md from
+    references_to_load for a repo running deep-tier Postgres in production-shaped code.
+    """
+
+    def setUp(self):
+        self.entries, warnings = detect.parse_registry(REGISTRY)
+        self.assertEqual(warnings, [])
+
+    def test_prisma_schema_file_content_is_read(self):
+        self.assertEqual(detect.content_kind("schema.prisma", "src/prisma/schema.prisma"),
+                          "manifest")
+
+    def test_prisma_postgresql_provider_matches_postgres_signal_as_strong_evidence(self):
+        records = [(
+            "src/prisma/schema.prisma",
+            'datasource db {\n  provider = "postgresql"\n  url = env("DATABASE_URL")\n}\n',
+            "manifest",
+        )]
+        detected, _, _, _ = detect.detect(records, self.entries)
+        postgres = next(
+            rec for records_for_kind in detected.values() for rec in records_for_kind
+            if rec["signal"] == "postgres"
+        )
+        self.assertNotIn("weak_evidence", postgres)
 
 
 class WeakEvidenceProvenanceTests(unittest.TestCase):

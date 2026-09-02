@@ -13,7 +13,7 @@ Performance principle → observed implementation → technology manifestation
 ```
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-informational.svg)](CHANGELOG.md)
 [![checks](https://github.com/Sanoy24/backend-performance-review/actions/workflows/checks.yml/badge.svg)](.github/workflows/checks.yml)
 
 ---
@@ -154,8 +154,8 @@ More: **[docs/architecture.md](docs/architecture.md)**.
 
 ## Supported technologies
 
-Support is tiered honestly. Most engines are at `conceptual` or `generic` in v0.1.0 — the
-methodology still applies, and the report says so in its scope section.
+Support is tiered honestly. Most engines are at `conceptual` or `generic` — the methodology
+still applies, and the report says so in its scope section.
 
 | Tier | Meaning |
 |:--|:--|
@@ -281,6 +281,12 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first. It sets out the review gates, inc
 rules against cargo-cult recommendations, unsupported claims, product names in category
 files, and fabricated performance guarantees.
 
+Not sure where to start? **[docs/roadmap.md](docs/roadmap.md)** lists open gaps and
+promotion candidates, several tagged `good first issue`.
+
+By participating, you're expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). To
+report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
+
 ## Honest limitations
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
@@ -289,21 +295,26 @@ files, and fabricated performance guarantees.
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
-- Behavioral evaluation has run against six real public repositories and found four real bugs
+- Behavioral evaluation has run against eight real public repositories and found seven real bugs
   in the detection tooling (now fixed), verified a real merged pull request's fix in
   change-scoped mode, and ran committed benchmarks for real evidence. It has not yet found a
   repository with literally zero findings — worth reading as a result in itself, not a gap; see
   [docs/evaluation.md](docs/evaluation.md) §3.7. An independent blind pass — agents with no
   memory of this project's own findings, each reviewing one repository from scratch — has now
-  been run against six repositories across six stacks (§3.8–3.11, §3.13–3.14), including the
-  first two runs with no prior author review of the target repository at all. On the four with a
+  been run nine times against eight repositories across eight stacks (§3.8–3.11, §3.13–3.18),
+  including three runs with no prior author review of the target repository at all, and one
+  repository blind-passed a second time to measure inter-run consistency. On the four with a
   prior review to compare against, it reproduced or exceeded the original review's primary
   finding every time, and on three of those four it found real evidence — including, on one
   repository, a hard `SyntaxError` that made the application fail to import entirely — that the
-  original review had missed (§3.12). The two JVM and Rust runs each found a real, now-fixed bug
-  in the skill's own detection or reference content rather than only in the target repository
-  (§3.15) — a `sqlite-jdbc` detection false negative structurally identical to earlier bugs found
-  this way, and an undocumented runtime default.
+  original review had missed (§3.12). The JVM, Rust, .NET, and Node.js runs each found a real,
+  now-fixed bug in the skill's own detection or reference content rather than only in the target
+  repository (§3.13–§3.16) — two structurally identical ORM/ODM-provider detection false
+  negatives (`sqlite-jdbc` for JVM, `Microsoft.EntityFrameworkCore.SqlServer` for .NET), an
+  undocumented runtime default, and a pair of Node.js bugs (a `package-lock.json` hash-collision
+  false positive and an unread Prisma-schema false negative). The repeat pass (§3.18) found the
+  primary finding's location, mechanism, and derived priority reproduced exactly across all
+  three independent reviews of that repository.
 
 ## License
 

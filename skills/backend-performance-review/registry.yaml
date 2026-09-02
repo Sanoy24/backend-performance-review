@@ -30,7 +30,7 @@ version: 1
 - signal: postgres
   kind: datastore
   category: relational
-  match: [psycopg, psycopg2, asyncpg, "pg8000", postgresql, postgres, "pgx", npgsql,
+  match: [psycopg, psycopg2, asyncpg, "pg8000", postgresql, postgres, "jackc/pgx", npgsql,
           "org.postgresql", "postgres://", "postgresql://", pg_dump, timescale]
   load: [databases/universal.md, databases/relational.md, technology/postgres.md]
   tier: deep
@@ -51,10 +51,17 @@ version: 1
 - signal: sqlserver
   kind: datastore
   category: relational
-  match: [pyodbc, pymssql, "System.Data.SqlClient", "Microsoft.Data.SqlClient", mssql,
-          "sqlserver://", tedious]
+  match: [pyodbc, pymssql, "System.Data.SqlClient", "Microsoft.Data.SqlClient",
+          "Microsoft.EntityFrameworkCore.SqlServer", mssql, "sqlserver://", tedious]
   load: [databases/universal.md, databases/relational.md]
   tier: conceptual
+  notes: >
+    Behavioral evaluation (a .NET blind pass, docs/evaluation.md) found the match list
+    covered only the raw ADO.NET client libraries and connection-string scheme, missing
+    Microsoft.EntityFrameworkCore.SqlServer — the official EF Core provider package and the
+    dominant way a .NET project declares a SQL Server dependency in its .csproj. A repo that
+    references only this package, without also committing a packages.lock.json listing the
+    transitive Microsoft.Data.SqlClient dependency, was invisible to this signal entirely.
 
 - signal: oracle
   kind: datastore
@@ -269,7 +276,7 @@ version: 1
 
 - signal: sqs
   kind: broker
-  match: ["aws-sdk/client-sqs", sqs, "aws-sdk-go-v2/service/sqs"]
+  match: ["aws-sdk/client-sqs", "aws-sdk-go-v2/service/sqs", "arn:aws:sqs", "AWS::SQS"]
   load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
   tier: generic
 
