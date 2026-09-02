@@ -1204,6 +1204,47 @@ that matter most (what the top finding is, where it lives, and — once the same
 hand — how severely it scores) more than it contradicts it, but a second data point of this shape,
 on a different repository or stack, would be needed before calling the question closed.
 
+### 3.19 Context cost: what routing actually saves, measured once
+
+`SKILL.md`'s central architectural bet is that loading only what the detected stack calls for
+(§Reference routing) beats loading every reference file for every review — but until now nothing
+had measured whether that is actually true, or by how much.
+
+**Method.** Reference-file size (lines and bytes of Markdown, excluding `templates/`) is a
+measurable, reproducible proxy for context cost — it is not a token count, and it excludes the
+much larger cost of reading the target repository's own source and writing the report, both of
+which are identical under either loading strategy and so do not affect the *comparison*. The
+naive baseline is every `.md` file under `skills/backend-performance-review/` except
+`templates/review-report.md` (loaded regardless, as the report structure, under both
+strategies): 8,183 lines, 454,598 bytes across every category, technology, principle, and
+methodology file the registry can ever point to. The routed set is the reference-routing table
+applied to a real, already-documented scenario —
+[`docs/examples/fastapi-postgres.md`](examples/fastapi-postgres.md)'s FastAPI + PostgreSQL +
+Redis + Celery service — assuming a full review touches every "Every review" file plus every
+usage-pattern row a typical API-with-a-database-and-a-cache-and-a-queue service triggers
+(latency, throughput, concurrency, resources, work-and-algorithms, api, data-access,
+async-and-blocking, serialization, connection-pools), `SKILL.md` and `rubrics.md` themselves,
+and the `postgres`, `redis`, `task-queue`, and `python` registry signals' `load:` lists,
+deduplicated: 26 files, 4,640 lines, 225,492 bytes.
+
+**Result.** The routed set is 56.7% of the naive baseline by lines, 49.6% by bytes — roughly
+half. Not the order-of-magnitude reduction "load only what the detected stack requires" might
+suggest in the abstract: this scenario has three `deep`-tier signals (Postgres, Redis, Python)
+and a broad usage-pattern footprint (an async API with a database, a cache, and a queue is close
+to the busiest realistic profile short of loading everything), so it exercises most of the
+"Every review" and usage-pattern rows regardless of routing. A narrower service — a single
+`conceptual`-tier datastore, no cache, no queue — would show a larger gap; a service touching
+every `deep`-tier signal in the registry at once would show a smaller one. This one data point is
+the upper bound on what routing saves for a stack this broad, not a general figure.
+
+**What this does not establish.** This is one synthetic scenario, not a real review's actual
+measured token usage — an instrumented run (recording real context consumption during an actual
+review, across a range of stack breadths from minimal to maximal) is the harder, more valuable
+version of this measurement and remains undone. It also does not capture what routing is really
+for: a Postgres-only service never loading `databases/document.md` at all is a correctness
+property (the report never reasons about a datastore that is not present), not only a cost
+saving, and that property held before this measurement and does not depend on it.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -1280,8 +1321,11 @@ Stated rather than left implicit:
   one extra run: it does not establish that consistency holds for other repositories, other
   stacks, or findings below the primary one.
 - No comparison against a human expert baseline.
-- No measurement of context cost per review, which matters for whether the routing design is
-  actually paying off.
+- **Context cost per review measured once, on a synthetic scenario — not a real instrumented
+  run.** §3.19 found reference-file routing loads roughly half the reference corpus (56.7% of
+  lines, 49.6% of bytes) for a broad FastAPI + PostgreSQL + Redis + Celery scenario. A narrower
+  stack would show a larger saving; the actual token cost of a real review, across a range of
+  stack breadths, has still never been instrumented and measured directly.
 
 Contributions that close any of these are welcome, and are worth more than additional
 reference content.

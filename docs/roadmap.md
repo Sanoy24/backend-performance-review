@@ -13,10 +13,8 @@ These are worth more than additional reference content — see
 
 | Gap | Why it matters | Difficulty |
 |:--|:--|:--|
-| No independent blind pass against a .NET repository | The last untested `deep`-tier runtime; JVM (§3.13) and Rust (§3.14) passes each found a real bug this way | Medium — needs a real public .NET repo and a fresh agent with no memory of this project |
-| No independent blind pass against a Node.js repository | `deep`-tier since v0.2.0, never blind-passed despite five other stacks covered | Medium |
-| No inter-run consistency measurement | The rubrics claim priority is "derived... not vibes" (README). Never measured: does the same repository reviewed twice by two independent agents produce the same ranking? | Medium — pick one already-reviewed repository, run a second independent pass, diff the findings |
-| No context-cost measurement per review | Tests whether the reference-routing architecture (loading only what the detected stack calls for) actually pays off over loading everything | Medium — instrument token/context usage across a review and compare against a naive "load every reference" baseline |
+| Inter-run consistency measured only once (§3.18) | One repository, one repeat pass. Whether the result holds across other repositories and stacks is still open | Medium — pick another already-reviewed repository, run a second independent pass, diff the findings |
+| Context cost measured only once, on a synthetic scenario (§3.19) | The routing-vs-load-everything comparison used file sizes, not real instrumented token usage across an actual review | Medium — instrument real token/context usage across a range of stack breadths, from a single-signal service to one touching most `deep`-tier signals at once |
 | No human-expert baseline comparison | Would tell us how the skill's findings compare to a senior engineer's manual review of the same repository | Hard — needs a willing reviewer and a repository neither has seen |
 
 ## Technology promotion candidates
