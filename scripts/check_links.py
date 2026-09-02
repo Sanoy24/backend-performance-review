@@ -27,7 +27,7 @@ for _stream in (sys.stdout, sys.stderr):
 # add a dependency this project's tooling avoids.
 LINK_PATTERN = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 
-EXCLUDED_DIRS = {".git", "__pycache__", "node_modules"}
+EXCLUDED_DIRS = {".git", "__pycache__", "node_modules", ".claude"}
 
 
 def iter_markdown_files():
