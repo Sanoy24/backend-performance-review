@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 14 deep · 23 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 15 deep · 22 conceptual · 2 generic (39 detection signals).
 
 ---
 
