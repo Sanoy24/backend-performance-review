@@ -161,12 +161,8 @@ version: 1
   kind: datastore
   category: wide-column
   match: [cassandra, scylla, "cassandra-driver", gocql, datastax]
-  load: [databases/universal.md, databases/wide-column.md]
-  tier: conceptual
-  notes: >
-    Partition-oriented wide-column category principles apply in full. No engine-specific file
-    yet — compaction strategy tuning, tombstone thresholds, and driver-level retry/consistency
-    defaults are not covered; treat those as unknowns.
+  load: [databases/universal.md, databases/wide-column.md, technology/cassandra.md]
+  tier: deep
 
 - signal: elasticsearch
   kind: datastore

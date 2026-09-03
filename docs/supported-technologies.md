@@ -40,7 +40,7 @@ more careful section — not a guessed one.
 | **DynamoDB** | key-value | **deep** | Partition-key-driven hot partitions, `Scan`'s per-item-examined cost model, and GSI throttling propagating back to the base table |
 | Neo4j | graph | conceptual | Traversal-depth, index-free-adjacency, and supernode reasoning apply in full; engine-specific diagnostics not yet written |
 | Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
-| Cassandra / ScyllaDB | wide-column | conceptual | Partition-oriented wide-column reasoning applies in full; compaction/tombstone tuning and driver defaults not yet written |
+| **Cassandra / ScyllaDB** | wide-column | **deep** | Compaction-strategy trade-offs, tombstone thresholds, LWT/Paxos cost, `ALLOW FILTERING`/batch anti-patterns, and Cassandra-vs-Scylla (JVM GC vs shard-per-core) divergence |
 | ClickHouse | wide-column | conceptual | Column-oriented analytical reasoning applies (a different sub-model within the same category file); merge-tree tuning specifics not yet written |
 | **Elasticsearch / OpenSearch** | search | **deep** | Circuit breakers, heap-vs-page-cache sizing, `_source`/doc-values/stored-field layers, scroll/search_after/PIT trade-offs, bulk-queue rejection. Solr specifics (ZooKeeper/SolrCloud, `solrconfig.xml`) remain unknowns |
 | InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |

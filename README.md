@@ -179,7 +179,7 @@ still applies, and the report says so in its scope section.
 | **DynamoDB** | key-value | **deep** |
 | Neo4j | graph | conceptual |
 | Amazon Neptune | graph | conceptual |
-| Cassandra / ScyllaDB | wide-column | conceptual |
+| **Cassandra / ScyllaDB** | wide-column | **deep** |
 | ClickHouse | wide-column | conceptual |
 | **Elasticsearch / OpenSearch / Solr** | search | **deep** |
 | InfluxDB | time-series | conceptual |
