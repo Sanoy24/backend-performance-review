@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 13 deep · 24 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 14 deep · 23 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -40,7 +40,7 @@ more careful section — not a guessed one.
 | **DynamoDB** | key-value | **deep** | Partition-key-driven hot partitions, `Scan`'s per-item-examined cost model, and GSI throttling propagating back to the base table |
 | Neo4j | graph | conceptual | Traversal-depth, index-free-adjacency, and supernode reasoning apply in full; engine-specific diagnostics not yet written |
 | Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
-| Cassandra / ScyllaDB | wide-column | conceptual | Partition-oriented wide-column reasoning applies in full; compaction/tombstone tuning and driver defaults not yet written |
+| **Cassandra / ScyllaDB** | wide-column | **deep** | Compaction-strategy trade-offs, tombstone thresholds, LWT/Paxos cost, `ALLOW FILTERING`/batch anti-patterns, and Cassandra-vs-Scylla (JVM GC vs shard-per-core) divergence |
 | ClickHouse | wide-column | conceptual | Column-oriented analytical reasoning applies (a different sub-model within the same category file); merge-tree tuning specifics not yet written |
 | Elasticsearch / OpenSearch / Solr | search | conceptual | Search category reasoning (filter vs. query context, deep-pagination cost, mapping decisions) applies in full; engine-specific settings not yet written |
 | InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |
