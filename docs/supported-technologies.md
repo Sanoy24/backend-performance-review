@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 14 deep · 23 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 15 deep · 22 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -42,7 +42,7 @@ more careful section — not a guessed one.
 | Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
 | **Cassandra / ScyllaDB** | wide-column | **deep** | Compaction-strategy trade-offs, tombstone thresholds, LWT/Paxos cost, `ALLOW FILTERING`/batch anti-patterns, and Cassandra-vs-Scylla (JVM GC vs shard-per-core) divergence |
 | ClickHouse | wide-column | conceptual | Column-oriented analytical reasoning applies (a different sub-model within the same category file); merge-tree tuning specifics not yet written |
-| Elasticsearch / OpenSearch / Solr | search | conceptual | Search category reasoning (filter vs. query context, deep-pagination cost, mapping decisions) applies in full; engine-specific settings not yet written |
+| **Elasticsearch / OpenSearch** | search | **deep** | Circuit breakers, heap-vs-page-cache sizing, `_source`/doc-values/stored-field layers, scroll/search_after/PIT trade-offs, bulk-queue rejection. Solr specifics (ZooKeeper/SolrCloud, `solrconfig.xml`) remain unknowns |
 | InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |
 | Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | conceptual | Recall/latency/memory trade-offs, the search-breadth parameter, and filter/search-order interaction apply in full; engine-specific parameter names and defaults not yet written |
 | S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual | Request-count-dominated cost, key/prefix-only access, immutable full-object writes, multipart size limits, and egress cost apply in full; provider-specific size limits, consistency guarantees, and tier pricing not yet written |

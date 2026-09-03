@@ -181,7 +181,7 @@ still applies, and the report says so in its scope section.
 | Amazon Neptune | graph | conceptual |
 | **Cassandra / ScyllaDB** | wide-column | **deep** |
 | ClickHouse | wide-column | conceptual |
-| Elasticsearch / OpenSearch / Solr | search | conceptual |
+| **Elasticsearch / OpenSearch / Solr** | search | **deep** |
 | InfluxDB | time-series | conceptual |
 | Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | conceptual |
 | S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual |
@@ -291,7 +291,7 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Fourteen engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Fifteen engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
