@@ -172,12 +172,8 @@ version: 1
   kind: datastore
   category: search
   match: [elasticsearch, opensearch, "@elastic/elasticsearch", "elastic/go-elasticsearch", solr]
-  load: [databases/universal.md, databases/search.md]
-  tier: conceptual
-  notes: >
-    Search category principles apply in full. No engine-specific file yet — circuit-breaker
-    memory thresholds, default refresh interval, and query-profiling command syntax are not
-    covered; treat those as unknowns.
+  load: [databases/universal.md, databases/search.md, technology/elasticsearch.md]
+  tier: deep
 
 - signal: clickhouse
   kind: datastore
