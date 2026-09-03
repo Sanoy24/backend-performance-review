@@ -272,16 +272,19 @@ class WeakEvidenceProvenanceTests(unittest.TestCase):
     def test_self_scan_flags_registry_yaml_only_matches_as_weak(self):
         # The actual bug, reproduced end to end: scanning this skill's own directory (which
         # necessarily contains registry.yaml, itself packed with every match token in the
-        # system) must not silently report Cassandra et al. as ordinary strong detections.
+        # system) must not silently report Oracle et al. as ordinary strong detections.
+        # Uses a signal with no dedicated technology/*.md file (unlike cassandra, whose own
+        # filename now legitimately strong-matches its signal token since its deep-tier
+        # promotion) so the only match in this directory really is registry.yaml itself.
         records, _, _, _ = detect.scan(str(SKILL), 256 * 1024)
         detected, _, _, _ = detect.detect(records, self.entries)
-        cassandra = next(
+        oracle = next(
             rec for records_for_kind in detected.values() for rec in records_for_kind
-            if rec["signal"] == "cassandra"
+            if rec["signal"] == "oracle"
         )
-        self.assertTrue(cassandra["weak_evidence"])
+        self.assertTrue(oracle["weak_evidence"])
         matched_files = {
-            f for token_entry in cassandra["matched_on"] for f in token_entry.get("files", [])
+            f for token_entry in oracle["matched_on"] for f in token_entry.get("files", [])
         }
         self.assertEqual(matched_files, {"registry.yaml"})
 
