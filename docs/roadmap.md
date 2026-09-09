@@ -27,11 +27,9 @@ table.
 
 Roughly ordered by how commonly they show up as the primary datastore/cache in a backend
 (rather than as one dependency among many). Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
-ClickHouse, and SQL Server were on this list and are now `deep` — see
+ClickHouse, SQL Server, and Memcached were on this list and are now `deep` — see
 [CHANGELOG.md](../CHANGELOG.md).
 
-- **Memcached** (conceptual) — sits alongside `deep`-tier Redis but has never gotten its
-  own file; slab allocation and eviction behavior differ meaningfully from Redis's.
 - **SQLite** (`relational`, conceptual) — the §3.13 blind pass (evaluation.md) found a real
   detection bug here (`sqlite-jdbc` false negative); the fix closed the bug but SQLite
   itself is still conceptual-tier.
