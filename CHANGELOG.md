@@ -27,6 +27,8 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-09
+
 ### Added
 
 - `technology/clickhouse.md`, promoting the `clickhouse` registry signal from
