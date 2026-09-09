@@ -26,12 +26,9 @@ and [docs/supported-technologies.md](supported-technologies.md) for the full cur
 table.
 
 Roughly ordered by how commonly they show up as the primary datastore/cache in a backend
-(rather than as one dependency among many):
+(rather than as one dependency among many). Elasticsearch/OpenSearch and Cassandra/ScyllaDB
+were on this list and are now `deep` — see [CHANGELOG.md](../CHANGELOG.md).
 
-- **Elasticsearch / OpenSearch** (`search`, conceptual) — shard sizing, refresh interval,
-  query-vs-filter context, aggregation cost.
-- **Cassandra / ScyllaDB** (`wide-column`, conceptual) — partition-key design, tombstone
-  accumulation, read-repair cost, consistency-level trade-offs.
 - **ClickHouse** (`wide-column`, conceptual) — MergeTree engine choice, insert batching,
   the cost of point lookups on a column store built for scans.
 - **SQL Server** (`relational`, conceptual) — its own execution-plan and locking model
@@ -46,15 +43,6 @@ The full conceptual/generic list — Oracle, CockroachDB, Couchbase, Firestore, 
 Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC, REST,
 Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a valid
 contribution, the list above is just where the highest leverage looks to be right now.
-
-## Project infrastructure
-
-- **Markdown link checking in CI.** Nothing currently verifies that a relative link between
-  these ~14,000 lines of cross-referenced Markdown still resolves. A stdlib checker fits
-  the project's no-dependencies posture for tooling.
-- **Cross-platform CI matrix for `detect_stack.py`.** CI currently runs the stdlib-only
-  jobs on `ubuntu-latest` only; the script's path handling is claimed portable but never
-  verified on Windows or macOS runners.
 
 ---
 

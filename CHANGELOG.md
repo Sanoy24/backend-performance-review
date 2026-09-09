@@ -27,6 +27,26 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Added
+
+- `technology/cassandra.md`, promoting the `cassandra` registry signal (also matching
+  ScyllaDB) from `conceptual` to `deep`. Covers compaction-strategy trade-offs
+  (STCS/LCS/TWCS), engine-specific tombstone thresholds and `gc_grace_seconds`, read repair
+  and hinted handoff, lightweight transactions (Paxos) as an expensive anti-pattern when
+  overused, `ALLOW FILTERING`/multi-partition `BATCH` as checkable CQL-text red flags, and
+  where ScyllaDB's shard-per-core/no-GC architecture diverges from Cassandra's JVM-based one.
+  Closes #19.
+- `technology/elasticsearch.md`, promoting the `elasticsearch` registry signal (also matching
+  OpenSearch and, partially, Solr) from `conceptual` to `deep`. Covers named circuit breakers
+  (request/fielddata/parent), heap-vs-OS-page-cache sizing, the three storage layers
+  (`_source`, doc values, stored fields), `scroll`/`search_after`/point-in-time as three
+  deep-pagination mechanisms with different resource trade-offs, the bulk API's own thread
+  pool and its `429`/`EsRejectedExecutionException` rejection mode, and node-role topology as
+  a distinct bottleneck surface. Solr's ZooKeeper-based coordination and admin surface are
+  explicitly scoped out beyond a brief note. Closes #18.
+
+Coverage is now 15 `deep` · 22 `conceptual` · 2 `generic`, up from 13/24/2.
+
 ## [0.3.0] — 2026-08-31
 
 ### Added

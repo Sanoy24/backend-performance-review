@@ -28,6 +28,8 @@ a comment, so the reviewer isn't left guessing.
 - [ ] No invented metrics anywhere, including in examples.
 - [ ] Registry entry added/updated: category file ordered before technology file, tier declared.
 - [ ] README and `docs/supported-technologies.md` tier tables/counts match `registry.yaml`.
+- [ ] `CHANGELOG.md` updated under `[Unreleased]`, and `docs/roadmap.md` no longer lists this
+      change as an open item.
 
 ## Verification
 
