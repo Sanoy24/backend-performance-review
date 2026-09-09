@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 17 deep · 20 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 18 deep · 19 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -52,7 +52,7 @@ more careful section — not a guessed one.
 | Technology | Tier | Notes |
 |:--|:--|:--|
 | **Redis / Valkey** | **deep** | Redis Stack modules (Search, JSON, TimeSeries, vector) out of scope |
-| Memcached | conceptual | Key-value category reasoning plus cache reasoning |
+| **Memcached** | **deep** | Slab-allocation calcification, client-side sharding/hashing blast radius, no persistence/replication/clustering, and the multi-threaded (vs Redis single-threaded) execution model |
 
 ## Message brokers and queues
 

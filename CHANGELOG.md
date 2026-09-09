@@ -44,8 +44,17 @@ Breaking changes carry a migration note in the entry.
   distinct mechanism from stale statistics, heap forwarding-pointer fragmentation, and
   `WITH (NOLOCK)`'s correctness risk (not just staleness) under a concurrent page split.
   Closes #21.
+- `technology/memcached.md`, promoting the `memcached` registry signal from `conceptual`
+  to `deep`. Covers the absence of persistence, replication, and clustering as
+  architectural (not configurable) facts, client-side sharding/hashing as what decides a
+  topology change's blast radius, slab-allocation calcification, per-slab-class segmented
+  LRU eviction, `cas` as the only concurrency primitive (no richer data structures to fall
+  back on), the multi-threaded worker-thread model as a direct contrast to Redis's
+  single-threaded execution, and the fixed item-size ceiling. Also fixes a pre-existing
+  registry gap: the `memcached` entry's load list was missing `databases/universal.md`,
+  unlike every other datastore/cache entry. Closes #22.
 
-Coverage is now 17 `deep` · 20 `conceptual` · 2 `generic`, up from 15/22/2.
+Coverage is now 18 `deep` · 19 `conceptual` · 2 `generic`, up from 15/22/2.
 
 ## [0.4.0] — 2026-09-09
 

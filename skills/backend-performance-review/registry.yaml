@@ -231,8 +231,9 @@ version: 1
 - signal: memcached
   kind: cache
   match: [memcached, pymemcache, "gomemcache", memjs]
-  load: [databases/key-value.md, distributed/caching.md]
-  tier: conceptual
+  load: [databases/universal.md, databases/key-value.md, distributed/caching.md,
+         technology/memcached.md]
+  tier: deep
 
 # ---------------------------------------------------------------------------
 # Message brokers and queues
