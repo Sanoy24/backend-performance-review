@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 16 deep · 21 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 17 deep · 20 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -31,7 +31,7 @@ more careful section — not a guessed one.
 | **PostgreSQL** | relational | **deep** | Includes TimescaleDB and pgvector detection; those extensions are themselves out of scope |
 | **MongoDB** | document | **deep** | Atlas-specific features (Search, Federation, Online Archive) out of scope |
 | **MySQL / MariaDB** | relational | **deep** | InnoDB's clustered-index primary-key design, `REPEATABLE READ` gap/next-key locking, and buffer-pool sizing versus Postgres-style guidance |
-| SQL Server | relational | conceptual | |
+| **SQL Server** | relational | **deep** | Lock escalation, RCSI/snapshot-isolation opt-in, tempdb as a shared bottleneck, parameter sniffing, heap forwarding-pointer fragmentation, and `NOLOCK`'s correctness risk |
 | Oracle | relational | conceptual | |
 | SQLite | relational | conceptual | Single-writer and WAL semantics dominate and are not covered; concurrency questions are flagged as unknowns |
 | CockroachDB | relational | conceptual | Range distribution, transaction retries, and locality-aware placement not covered |
@@ -159,8 +159,8 @@ Python, JVM, Go, .NET, Rust). Every datastore category, including object storage
 category file.
 
 1. Promote any `conceptual` engine to `deep` by writing its technology reference — the largest
-   remaining gap, and a bounded, well-defined contribution (see below). SQL Server, Oracle, and
-   the object-storage engines (S3-compatible, GCS, Azure Blob) are reasonable starting points.
+   remaining gap, and a bounded, well-defined contribution (see below). Oracle and the
+   object-storage engines (S3-compatible, GCS, Azure Blob) are reasonable starting points.
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 

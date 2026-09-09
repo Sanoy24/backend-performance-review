@@ -37,8 +37,15 @@ Breaking changes carry a migration note in the entry.
   rewrites, "too many parts" as a specific named insert-saturation failure, the default
   join algorithm's in-memory right-hand-table limit, data-skipping secondary indexes, and
   materialized views as insert-triggered rather than query-time. Closes #20.
+- `technology/sqlserver.md`, promoting the `sqlserver` registry signal from `conceptual`
+  to `deep`. Covers automatic lock escalation (~5,000 locks per statement), RCSI/snapshot
+  isolation as an opt-in departure from the locking `READ COMMITTED` default, tempdb as a
+  single shared resource behind row versioning/temp tables/spills, parameter sniffing as a
+  distinct mechanism from stale statistics, heap forwarding-pointer fragmentation, and
+  `WITH (NOLOCK)`'s correctness risk (not just staleness) under a concurrent page split.
+  Closes #21.
 
-Coverage is now 16 `deep` · 21 `conceptual` · 2 `generic`, up from 15/22/2.
+Coverage is now 17 `deep` · 20 `conceptual` · 2 `generic`, up from 15/22/2.
 
 ## [0.4.0] — 2026-09-09
 
