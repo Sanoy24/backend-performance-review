@@ -175,12 +175,8 @@ version: 1
   kind: datastore
   category: wide-column
   match: [clickhouse, "clickhouse-driver", "clickhouse-connect"]
-  load: [databases/universal.md, databases/wide-column.md]
-  tier: conceptual
-  notes: >
-    Column-oriented analytical category principles apply (wide-column.md §4), not the
-    partition-key reasoning in §2-3 — this is a column-scan engine, not a partition-oriented
-    one. No engine-specific file yet; treat merge-tree tuning specifics as unknowns.
+  load: [databases/universal.md, databases/wide-column.md, technology/clickhouse.md]
+  tier: deep
 
 - signal: influxdb
   kind: datastore

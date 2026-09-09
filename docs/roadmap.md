@@ -26,11 +26,9 @@ and [docs/supported-technologies.md](supported-technologies.md) for the full cur
 table.
 
 Roughly ordered by how commonly they show up as the primary datastore/cache in a backend
-(rather than as one dependency among many). Elasticsearch/OpenSearch and Cassandra/ScyllaDB
-were on this list and are now `deep` — see [CHANGELOG.md](../CHANGELOG.md).
+(rather than as one dependency among many). Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
+and ClickHouse were on this list and are now `deep` — see [CHANGELOG.md](../CHANGELOG.md).
 
-- **ClickHouse** (`wide-column`, conceptual) — MergeTree engine choice, insert batching,
-  the cost of point lookups on a column store built for scans.
 - **SQL Server** (`relational`, conceptual) — its own execution-plan and locking model
   differs enough from PostgreSQL/MySQL to be worth dedicated coverage.
 - **Memcached** (conceptual) — sits alongside `deep`-tier Redis but has never gotten its
