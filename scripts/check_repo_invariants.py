@@ -367,6 +367,89 @@ def check_version_coherence():
 
 
 # ---------------------------------------------------------------------------
+# 11. Every `deep`-tier entry loads exactly one technology/ file, and every
+#     technology/*.md file is loaded by exactly one `deep`-tier entry
+#
+# check_registry() already verifies every load[] path resolves to a real file. This check
+# verifies the other direction of the deep-tier promise: a `deep` entry with no
+# technology/ file in its load list is mistagged (it's actually conceptual), a
+# non-`deep` entry loading one is under-tagged, and an orphan technology/*.md file nothing
+# points to is dead weight nothing would ever load.
+# ---------------------------------------------------------------------------
+
+def check_technology_registry_consistency(entries):
+    tech_dir = SKILL / "technology"
+    all_tech_files = {f"technology/{p.name}" for p in tech_dir.glob("*.md")}
+    loaded_tech_files = set()
+
+    for entry in entries:
+        signal = entry.get("signal", "<unnamed>")
+        tier = entry.get("tier")
+        tech_refs = [r for r in entry.get("load", []) if r.startswith("technology/")]
+
+        if tier == "deep" and not tech_refs:
+            fail(f"registry.yaml: '{signal}' is tier: deep but loads no technology/ "
+                 f"file — either write one or demote the tier")
+        if tier != "deep" and tech_refs:
+            fail(f"registry.yaml: '{signal}' is tier: {tier} but loads "
+                 f"{tech_refs} — a technology/ file in the load list means it should be "
+                 f"tier: deep")
+
+        loaded_tech_files.update(tech_refs)
+
+    orphans = all_tech_files - loaded_tech_files
+    if orphans:
+        fail(f"technology/ file(s) not loaded by any registry entry: "
+             f"{sorted(orphans)} — either wire them into registry.yaml or remove them")
+
+
+# ---------------------------------------------------------------------------
+# 12. The roadmap's promotion candidates must not name an already-`deep` signal
+#
+# Promoting a technology and forgetting to remove it from docs/roadmap.md's "Technology
+# promotion candidates" list is a real, previously observed failure: Elasticsearch and
+# Cassandra both stayed listed there for a full release after their promotion to `deep`.
+# ---------------------------------------------------------------------------
+
+def check_roadmap_freshness(entries):
+    roadmap_file = ROOT / "docs" / "roadmap.md"
+    if not roadmap_file.exists():
+        fail("docs/roadmap.md does not exist")
+        return
+    text = roadmap_file.read_text(encoding="utf-8")
+
+    section_match = re.search(
+        r"## Technology promotion candidates\n(.*?)\n## ", text, re.DOTALL)
+    if not section_match:
+        fail("docs/roadmap.md: could not find the "
+             "'## Technology promotion candidates' section")
+        return
+    section = section_match.group(1)
+
+    # Only the bolded bullet headers are actual candidates — surrounding prose legitimately
+    # mentions other engines for comparison (e.g. "differs from PostgreSQL/MySQL") or as
+    # historical context (a promotion noted as no longer listed), and must not be checked.
+    bullet_headers = " ".join(
+        re.findall(r"^-\s+\*\*(.+?)\*\*", section, re.MULTILINE))
+
+    for entry in entries:
+        if entry.get("tier") != "deep":
+            continue
+        signal = entry.get("signal", "")
+        # Short tokens (e.g. 'go') would false-positive against ordinary prose, so only
+        # check tokens long enough to be an unambiguous product-name match.
+        candidates = [signal] + [m for m in entry.get("match", []) if len(m) >= 5]
+        for token in candidates:
+            if len(token) < 5:
+                continue
+            if re.search(r"\b" + re.escape(token) + r"\b", bullet_headers, re.IGNORECASE):
+                fail(f"docs/roadmap.md: 'Technology promotion candidates' still names "
+                     f"'{token}', but registry.yaml's '{signal}' signal is already "
+                     f"tier: deep — remove it from the roadmap")
+                break
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     entries = check_registry()
@@ -380,6 +463,8 @@ def main():
     check_version_coherence()
     if entries:
         check_tier_summary_counts(entries)
+        check_technology_registry_consistency(entries)
+        check_roadmap_freshness(entries)
 
     if warnings:
         print(f"{len(warnings)} warning(s):")

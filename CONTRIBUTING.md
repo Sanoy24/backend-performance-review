@@ -181,6 +181,8 @@ A pull request will be checked against these. Most rejections are one of the fir
 - [ ] No invented metrics anywhere, including in examples.
 - [ ] Registry entry added, category file ordered before technology file, tier declared.
 - [ ] README support table consistent with `registry.yaml`.
+- [ ] `CHANGELOG.md` updated under `[Unreleased]`; `docs/roadmap.md` no longer lists the
+      change as an open item.
 - [ ] Under the ~400 line soft cap, or a reason given.
 - [ ] A reported false positive or false negative in `detect_stack.py` ships with a new
       fixture in `tests/` reproducing it.
