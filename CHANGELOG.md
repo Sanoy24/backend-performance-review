@@ -27,6 +27,19 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Added
+
+- `technology/clickhouse.md`, promoting the `clickhouse` registry signal from
+  `conceptual` to `deep`. Covers MergeTree engine-variant correctness/timing trade-offs
+  (`ReplacingMergeTree`/`SummingMergeTree`/`AggregatingMergeTree`/`CollapsingMergeTree`),
+  the `ORDER BY`-vs-`PARTITION BY` distinction, the sparse primary index's
+  `index_granularity` floor on point-lookup cost, mutations as asynchronous whole-part
+  rewrites, "too many parts" as a specific named insert-saturation failure, the default
+  join algorithm's in-memory right-hand-table limit, data-skipping secondary indexes, and
+  materialized views as insert-triggered rather than query-time. Closes #20.
+
+Coverage is now 16 `deep` · 21 `conceptual` · 2 `generic`, up from 15/22/2.
+
 ## [0.4.0] — 2026-09-09
 
 ### Added
