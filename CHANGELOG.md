@@ -27,6 +27,8 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-09
+
 ### Added
 
 - `technology/cassandra.md`, promoting the `cassandra` registry signal (also matching
@@ -46,6 +48,21 @@ Breaking changes carry a migration note in the entry.
   explicitly scoped out beyond a brief note. Closes #18.
 
 Coverage is now 15 `deep` · 22 `conceptual` · 2 `generic`, up from 13/24/2.
+
+### Fixed
+
+- The "update CHANGELOG under Unreleased" checklist item existed only in
+  `docs/extending.md`, not in `.github/PULL_REQUEST_TEMPLATE.md`'s actual review gates or
+  `CONTRIBUTING.md` §6 — both the Cassandra and Elasticsearch PRs above skipped it as a
+  result. Added the gate to both, and refreshed `docs/roadmap.md`'s stale
+  "Technology promotion candidates" list (Elasticsearch and Cassandra were still listed
+  after their own promotion) and its "Project infrastructure" section (both items —
+  Markdown link checking, cross-platform CI — had already shipped).
+- `scripts/check_repo_invariants.py`: two new checks so this class of drift fails CI
+  instead of passing silently — a `deep`-tier registry entry with no `technology/` file in
+  its load list (or vice versa: a non-`deep` entry loading one), an orphaned
+  `technology/*.md` file nothing loads, and `docs/roadmap.md` still naming an
+  already-`deep` signal as a promotion candidate.
 
 ## [0.3.0] — 2026-08-31
 
