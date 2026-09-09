@@ -172,7 +172,7 @@ still applies, and the report says so in its scope section.
 | **MySQL / MariaDB** | relational | **deep** |
 | **SQL Server** | relational | **deep** |
 | Oracle | relational | conceptual |
-| SQLite | relational | conceptual |
+| **SQLite** | relational | **deep** |
 | CockroachDB | relational | conceptual |
 | Couchbase | document | conceptual |
 | Firestore | document | conceptual |
@@ -291,7 +291,7 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Eighteen engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Nineteen engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.

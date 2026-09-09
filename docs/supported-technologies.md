@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 18 deep · 19 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 19 deep · 18 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -33,7 +33,7 @@ more careful section — not a guessed one.
 | **MySQL / MariaDB** | relational | **deep** | InnoDB's clustered-index primary-key design, `REPEATABLE READ` gap/next-key locking, and buffer-pool sizing versus Postgres-style guidance |
 | **SQL Server** | relational | **deep** | Lock escalation, RCSI/snapshot-isolation opt-in, tempdb as a shared bottleneck, parameter sniffing, heap forwarding-pointer fragmentation, and `NOLOCK`'s correctness risk |
 | Oracle | relational | conceptual | |
-| SQLite | relational | conceptual | Single-writer and WAL semantics dominate and are not covered; concurrency questions are flagged as unknowns |
+| **SQLite** | relational | **deep** | Whole-file single-writer locking, WAL-mode checkpoint growth, connection pooling's write-throughput ceiling, network-filesystem locking hazards, and type-affinity index misses |
 | CockroachDB | relational | conceptual | Range distribution, transaction retries, and locality-aware placement not covered |
 | Couchbase | document | conceptual | |
 | Firestore | document | conceptual | Billing is per document read/write, so cost is often the binding constraint; the skill treats cost as a first-class axis here |

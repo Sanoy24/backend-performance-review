@@ -75,11 +75,8 @@ version: 1
   category: relational
   match: [sqlite3, "better-sqlite3", "mattn/go-sqlite3", "sqlite://", libsql,
           "sqlite-jdbc", "org.xerial", "jdbc:sqlite:"]
-  load: [databases/universal.md, databases/relational.md]
-  tier: conceptual
-  notes: >
-    Single-writer semantics and WAL behavior dominate SQLite performance and are not
-    covered by the generic relational file. Flag concurrency questions as unknowns.
+  load: [databases/universal.md, databases/relational.md, technology/sqlite.md]
+  tier: deep
 
 - signal: cockroachdb
   kind: datastore
