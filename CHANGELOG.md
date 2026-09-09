@@ -53,8 +53,20 @@ Breaking changes carry a migration note in the entry.
   single-threaded execution, and the fixed item-size ceiling. Also fixes a pre-existing
   registry gap: the `memcached` entry's load list was missing `databases/universal.md`,
   unlike every other datastore/cache entry. Closes #22.
+- `technology/sqlite.md`, promoting the `sqlite` registry signal from `conceptual` to
+  `deep`. Covers the whole-database-file single-writer lock (a lock in *kind*, not just
+  duration, unlike every other relational engine covered), WAL mode as buying concurrent
+  readers but never concurrent writers, why a larger connection pool provides no
+  additional write throughput here, the database file's location on a network filesystem
+  as a correctness precondition rather than a performance question, type affinity making
+  an implicit-conversion index miss more likely than the category file's general warning
+  suggests, and the absence of any background process (no autovacuum, no auto-`ANALYZE`,
+  no checkpoint daemon) that every client-server engine in this skill's coverage has.
+  Closes #23.
 
-Coverage is now 18 `deep` · 19 `conceptual` · 2 `generic`, up from 15/22/2.
+Coverage is now 19 `deep` · 18 `conceptual` · 2 `generic`, up from 15/22/2. Every engine
+named in the roadmap's "Technology promotion candidates" list at the start of this
+release cycle is now `deep`.
 
 ## [0.4.0] — 2026-09-09
 

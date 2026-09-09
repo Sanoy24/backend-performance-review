@@ -25,19 +25,16 @@ that would most benefit from a `deep`-tier reference file. See
 and [docs/supported-technologies.md](supported-technologies.md) for the full current tier
 table.
 
-Roughly ordered by how commonly they show up as the primary datastore/cache in a backend
-(rather than as one dependency among many). Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
-ClickHouse, SQL Server, and Memcached were on this list and are now `deep` — see
-[CHANGELOG.md](../CHANGELOG.md).
+Every engine originally named on this list — Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
+ClickHouse, SQL Server, Memcached, and SQLite — is now `deep`; see
+[CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
-- **SQLite** (`relational`, conceptual) — the §3.13 blind pass (evaluation.md) found a real
-  detection bug here (`sqlite-jdbc` false negative); the fix closed the bug but SQLite
-  itself is still conceptual-tier.
-
-The full conceptual/generic list — Oracle, CockroachDB, Couchbase, Firestore, Neo4j,
-Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC, REST,
-Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a valid
-contribution, the list above is just where the highest leverage looks to be right now.
+The full remaining conceptual/generic list — Oracle, CockroachDB, Couchbase, Firestore,
+Neo4j, Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC,
+REST, Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a
+valid contribution. Oracle and the object-storage engines (S3-compatible, GCS, Azure Blob)
+are reasonable next candidates, being the most commonly encountered as a primary
+datastore/cache among what remains.
 
 ---
 
