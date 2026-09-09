@@ -14,7 +14,7 @@ These are worth more than additional reference content — see
 | Gap | Why it matters | Difficulty |
 |:--|:--|:--|
 | Inter-run consistency measured only once (§3.18) | One repository, one repeat pass. Whether the result holds across other repositories and stacks is still open | Medium — pick another already-reviewed repository, run a second independent pass, diff the findings |
-| Context cost measured only once, on a synthetic scenario (§3.19) | The routing-vs-load-everything comparison used file sizes, not real instrumented token usage across an actual review | Medium — instrument real token/context usage across a range of stack breadths, from a single-signal service to one touching most `deep`-tier signals at once |
+| Context cost measured with a real tokenizer, but not from a live instrumented run (§3.20) | §3.20 replaced the byte proxy with real token counts across four stack breadths; a live, API-metered review's actual context consumption — which also includes the target repo's source and the growing conversation — is still unmeasured | Hard — needs an actual dispatched review with token usage recorded, not an offline reference-file count |
 | No human-expert baseline comparison | Would tell us how the skill's findings compare to a senior engineer's manual review of the same repository | Hard — needs a willing reviewer and a repository neither has seen |
 
 ## Technology promotion candidates
