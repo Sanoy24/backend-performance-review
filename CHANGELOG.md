@@ -27,6 +27,22 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/evaluation.md` §3.20, a real-tokenizer context-cost measurement replacing §3.19's
+  byte-count proxy: four synthetic stack-breadth scenarios (single-signal to five
+  `deep`-tier signals across four categories at once), each routed by actually running
+  `detect_stack.py` rather than a hand-assembled file list, tokenized with `tiktoken`'s
+  `cl100k_base` encoding. Result: 25.4% of the naive full-corpus baseline for the minimal
+  scenario, up to 48.6% for the maximal one — a measured range in place of §3.19's single
+  anchored point. Closes #27.
+
+### Fixed
+
+- Filed (not fixed in this change): the Node.js `pg` package — the most common Postgres
+  driver in that ecosystem — matches no token in the `postgres` signal's `match:` list,
+  discovered while building §3.20's maximal scenario. See #40.
+
 ## [0.5.0] — 2026-09-09
 
 ### Added

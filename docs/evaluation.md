@@ -1245,6 +1245,84 @@ for: a Postgres-only service never loading `databases/document.md` at all is a c
 property (the report never reasons about a datastore that is not present), not only a cost
 saving, and that property held before this measurement and does not depend on it.
 
+### 3.20 Context cost, redone with a real tokenizer across four stack breadths
+
+§3.19 measured one scenario using file size (lines and bytes) as a proxy for context cost — an
+explicit stand-in for what §3.19 itself named as the harder, undone measurement: real token usage
+across a range of stack breadths. This section closes most of that gap: real subword tokenization
+in place of a byte proxy, across four scenarios spanning single-signal to broad, with the routed
+set for each computed by actually running `detect_stack.py` rather than hand-assembling a file
+list.
+
+**Method.** Four synthetic dependency-manifest fixtures, each `detect_stack.py` was actually run
+against (not a manually reasoned-through file list):
+
+| Scenario | Fixture | Signals detected |
+|:--|:--|:--|
+| A — minimal | `go.mod`, no datastore | `go` (`deep`) |
+| B — narrow | `requirements.txt`: FastAPI + `psycopg2` | `postgres`, `python` (`deep`); `rest` (`conceptual`) |
+| C — medium | `requirements.txt`: FastAPI + `psycopg2` + `redis` + `celery` | `postgres`, `redis`, `python` (`deep`); `task-queue` (`generic`); `rest` (`conceptual`) |
+| D — maximal | `package.json` (`pg`, `ioredis`, `kafkajs`, `@elastic/elasticsearch`, `express`) + a `docker-compose.yml` naming `postgres`/`redis`/`kafka`/`elasticsearch` images | `postgres`, `elasticsearch`, `redis`, `kafka`, `node` (`deep`); `rest`, `docker` (`conceptual`) |
+
+Each scenario's routed set is `detect_stack.py`'s real `references_to_load` output, unioned with
+the twelve files `SKILL.md`'s reference-routing table loads regardless of registry signal and
+that no manifest scan can detect: `SKILL.md` and `rubrics.md` themselves, the five "Every review"
+methodology files, and the five universal principle files (`latency`, `throughput`, `resources`,
+`concurrency-and-contention`, `work-and-algorithms`). It deliberately excludes usage-pattern rows
+that depend on what application code actually does rather than what manifests declare —
+`application/data-access.md` and `application/serialization.md`, notably — so every number below
+is a **reproducible lower bound** on what a real review of an equivalent codebase would route, not
+a prediction of the exact set. Tokens are counted with `tiktoken`'s `cl100k_base` encoding: a real,
+public, subword-level tokenizer, not Claude's own (no public library exposes that one), but a
+material improvement on a linear byte proxy — two files of equal byte size do not tokenize
+identically, and this measurement is the first in this project to reflect that. The naive baseline
+is unchanged in definition from §3.19 (every `.md` file under `skills/backend-performance-review/`
+except `templates/`) but larger in absolute size than §3.19's, since four `deep`-tier technology
+files were added between when §3.19 and this section were written: 52 files, 534,718 bytes,
+115,378 tokens.
+
+**Result.**
+
+| Scenario | Routed files | Bytes (% of naive) | Tokens (% of naive) |
+|:--|:--|:--|:--|
+| A — minimal | 15 | 133,104 (24.9%) | 29,319 (25.4%) |
+| B — narrow | 19 | 171,025 (32.0%) | 37,375 (32.4%) |
+| C — medium | 24 | 212,601 (39.8%) | 46,250 (40.1%) |
+| D — maximal | 28 | 258,765 (48.4%) | 56,027 (48.6%) |
+
+Real subword tokenization tracks the byte-based percentage closely at every point (within 0.5
+points each time) — this project's Markdown does not contain the kind of token-density skew
+(heavy code blocks, non-English text, repeated punctuation) that would make bytes a materially
+misleading proxy for it specifically, which is itself a useful, previously unconfirmed fact. The
+more important result is the **range**: token cost as a fraction of the naive baseline goes from
+25.4% for a single-signal service with no datastore to 48.6% for a service touching five
+`deep`-tier signals across four different registry categories (datastore, cache, broker, search)
+plus its runtime — confirming §3.19's qualitative prediction ("a narrower service would show a
+larger gap; a service touching every `deep`-tier signal at once would show a smaller one") with
+an actual measured spread rather than a single anchored point and a guess about the rest of the
+range.
+
+**A real detection gap surfaced while building scenario D.** The Node.js `pg` package — the most
+common Postgres driver in the Node ecosystem — matches no token in the `postgres` signal's
+`match:` list; `pg` is deliberately absent as a token elsewhere in the registry for being too
+short and too common a substring, but no longer token (`node-postgres`, the package's own project
+name, for instance) was added to cover it either. Scenario D's fixture had to trigger the signal
+via a `docker-compose.yml` image reference instead of its actual dependency file. This is a real,
+previously unknown false-negative gap, in the same family as the `sqlite-jdbc`/`org.xerial` one
+§3.13 found and this measurement did not set out to find — filed as its own issue rather than
+folded into this one, since fixing it is unrelated to context cost.
+
+**What this still does not establish.** Counting reference-file tokens offline is not the same as
+instrumenting a live, dispatched review and recording what its context window actually contains
+— that context also includes the target repository's own source, the growing conversation, and
+the report being composed, none of which this measurement touches, and all of which dominate the
+total over the reference files measured here. Nor is `cl100k_base` Claude's own tokenizer; the
+close agreement with the byte proxy observed above suggests the qualitative range would not shift
+much under Claude's actual tokenizer, but that is an inference from this corpus's characteristics,
+not a substitute for measuring it directly. The harder version of this measurement — real,
+API-metered context consumption from an actual dispatched review, across a comparable range of
+stack breadths — remains undone.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -1321,11 +1399,15 @@ Stated rather than left implicit:
   one extra run: it does not establish that consistency holds for other repositories, other
   stacks, or findings below the primary one.
 - No comparison against a human expert baseline.
-- **Context cost per review measured once, on a synthetic scenario — not a real instrumented
-  run.** §3.19 found reference-file routing loads roughly half the reference corpus (56.7% of
-  lines, 49.6% of bytes) for a broad FastAPI + PostgreSQL + Redis + Celery scenario. A narrower
-  stack would show a larger saving; the actual token cost of a real review, across a range of
-  stack breadths, has still never been instrumented and measured directly.
+- **Context cost measured with a real tokenizer across four scenarios, but still not from a
+  live instrumented run.** §3.20 replaced §3.19's byte proxy with real `tiktoken` counts across
+  four stack breadths, computed from `detect_stack.py`'s actual output rather than a
+  hand-assembled file list: 25.4% of the naive baseline for a single-signal service up to 48.6%
+  for one touching five `deep`-tier signals across four categories at once. What remains
+  undone is the harder version: real, API-metered context consumption recorded from an actual
+  dispatched review — which also includes the target repository's own source and the growing
+  conversation, both of which dominate the total over the reference files measured here — and
+  a tokenizer count using Claude's own tokenizer rather than `cl100k_base` as a close proxy.
 
 Contributions that close any of these are welcome, and are worth more than additional
 reference content.
