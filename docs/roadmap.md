@@ -61,53 +61,55 @@ accident.
 
 ## Technology promotion candidates
 
-`conceptual`/`generic` signals in [`registry.yaml`](../skills/backend-performance-review/registry.yaml)
-that would most benefit from a `deep`-tier reference file. See
-[docs/extending.md](extending.md) for the seven-section structure a technology file needs,
-and [docs/supported-technologies.md](supported-technologies.md) for the full current tier
-table.
+**None. The 1.0.0 milestone — leave nothing below `deep` — is complete.** All 39 detection
+signals in [`registry.yaml`](../skills/backend-performance-review/registry.yaml) are `deep`
+tier: every datastore, cache, broker, runtime, API-surface framework, and infrastructure
+signal. No signal is `conceptual` or `generic` any more.
 
-**The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore, every runtime,
-and every broker is now there — **no signal is `generic` any more.** Datastores: the six
-originally on this list (Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL
-Server, Memcached, SQLite), then Oracle, then CockroachDB, Couchbase, Firestore, Neo4j,
-Neptune, and InfluxDB, and then `vector-store` (`technology/vector-stores.md`) and
-`object-storage` (`technology/object-storage.md`). Runtimes: `php` (`technology/php.md`)
-and `ruby` (`technology/ruby.md`) — the last two of eight. Brokers: `sqs`
-(`technology/sqs.md`) and `task-queue` (`technology/task-queues.md`) — the last two signals
-of any kind at `generic` tier. See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
+This section stays in place — empty of candidates — as where a future promotion candidate
+belongs if a genuinely new engine, framework, or platform emerges and is added at
+`conceptual` or `generic` tier first. See [docs/extending.md](extending.md) for the
+seven-section structure a technology file needs, and
+[docs/supported-technologies.md](supported-technologies.md) for the full current tier table.
 
-Remaining for 1.0.0, in planned batch order:
+The complete promotion history, batch by batch: the six datastores originally on this list
+(Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite),
+then Oracle, CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, then the
+`vector-store` and `object-storage` umbrellas; all eight runtimes, `php` and `ruby` last;
+both remaining brokers, `sqs` and `task-queue`; the frameworks batch (`graphql`, `grpc`,
+`rest`); and finally the infrastructure batch (`kubernetes`, `docker`, `serverless`,
+`terraform`). See [CHANGELOG.md](../CHANGELOG.md) for each promotion's detail.
 
-| Batch | Signals | Note |
-|:--|:--|:--|
-| Frameworks | `graphql`, `grpc`, `rest` | `rest` spans 15 web frameworks |
-| Infrastructure | `kubernetes`, `docker`, `serverless`, `terraform` | `serverless` is an umbrella |
+### How an umbrella signal gets promoted, for the next one
 
-### The remaining umbrella signals, and how they get promoted
-
-Two of the remaining signals are not one engine each: `serverless` spans five platforms, and
-`rest` spans fifteen web frameworks. The same approach already applied to `vector-store`,
-`object-storage`, and `task-queue` is the plan for these too.
+Five of the promotions above were genuine multi-vendor umbrellas rather than one engine
+each: `vector-store` (eight engines), `object-storage` (four providers),
+`task-queue` (eight libraries), `rest` (fifteen frameworks), and `serverless` (five
+platforms). The precedent, should a new umbrella signal ever need it:
 
 Unlike the `elasticsearch`/`redis` signals — which combine engines that really are
-API-compatible forks — these span independently designed systems whose limits and defaults
-genuinely differ. The decided approach is **one deliberately comparative technology file per
-umbrella**, not splitting each signal into per-vendor signals (which would have turned the
-datastore umbrellas alone into ten separate promotions). `technology/vector-stores.md`,
-`technology/object-storage.md`, and `technology/task-queues.md` are now the precedent for
-this shape, alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
+API-compatible forks — an umbrella signal spans independently designed systems whose limits
+and defaults genuinely differ. The decided approach is **one deliberately comparative
+technology file per umbrella**, not splitting the signal into per-vendor signals (which would
+have turned these five promotions into thirty-nine separate ones).
+`technology/vector-stores.md`, `technology/object-storage.md`, `technology/task-queues.md`,
+`technology/rest.md`, and `technology/serverless.md` are the precedent for this shape,
+alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
 `technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its Solr gaps).
-`technology/task-queues.md` additionally had to decide what to do with Temporal, which is
-architecturally a durable-execution engine rather than a simple job queue — flagging that
-distinction explicitly, rather than forcing it into the same comparison table as the other
-seven libraries, is itself part of what "the bar such a file has to clear" (below) means in
-practice.
+`technology/rest.md` additionally had to decide what to do with genuinely different
+concurrency models under one signal (Node's single event loop versus the JVM's
+thread-per-request Servlet stack versus Go's goroutine-per-request) — naming which model each
+framework actually uses, rather than writing generic "concurrency" advice true of none of
+them specifically, is what kept the file from collapsing into a restatement of
+`application/api.md`. `technology/terraform.md` had the opposite problem to solve: Terraform
+is not a runtime at all, so its file is a map from provider resource types to the specific
+arguments `infrastructure/resources.md`'s arithmetic needs, rather than a runtime-behavior
+comparison — the same non-derivable-content bar, met by a different shape of content.
 
 The bar such a file has to clear is the same as any other: per
 [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-non-derivable-content-rule), it must carry what
-the category file cannot — for these, that is the concrete divergences (parameter names,
-documented limits, defaults) presented side by side, the same gap
+the category file cannot — for a comparative file, the concrete divergences (parameter
+names, documented limits, defaults) presented side by side, the same gap
 `docs/supported-technologies.md` named for the two datastore umbrellas before they were
 promoted: *"engine-specific parameter names and defaults not yet written."* A file that
 hedges every claim to the lowest common denominator would fail that bar and should not be

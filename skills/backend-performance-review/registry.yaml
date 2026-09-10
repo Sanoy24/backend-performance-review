@@ -423,26 +423,23 @@ version: 1
 - signal: graphql
   kind: framework
   match: [graphql, apollo, strawberry, graphene, gqlgen, "graphql-java", nexus]
-  load: [application/api.md, application/data-access.md]
-  tier: conceptual
-  notes: >
-    Resolver-level N+1 and unbounded query depth are the dominant GraphQL performance
-    risks. Covered generically in application/api.md.
+  load: [application/api.md, application/data-access.md, technology/graphql.md]
+  tier: deep
 
 - signal: grpc
   kind: framework
   match: [grpc, "grpc-go", grpcio, "@grpc/grpc-js", protobuf]
   load: [application/api.md, application/serialization.md,
-         distributed/timeouts-and-deadlines.md]
-  tier: conceptual
+         distributed/timeouts-and-deadlines.md, technology/grpc.md]
+  tier: deep
 
 - signal: rest
   kind: framework
   match: [fastapi, flask, django, express, nestjs, "\"koa\":", "gin-gonic/gin",
           "labstack/echo", "gofiber/fiber", "spring-boot", actix, axum, laravel, rails,
           "aspnetcore"]
-  load: [application/api.md]
-  tier: conceptual
+  load: [application/api.md, technology/rest.md]
+  tier: deep
   notes: >
     Go framework tokens use their full module path ("gin-gonic/gin", "labstack/echo",
     "gofiber/fiber") rather than the bare framework name. Behavioral evaluation found bare
@@ -457,27 +454,25 @@ version: 1
 - signal: kubernetes
   kind: infrastructure
   match: ["kind: Deployment", "kind: StatefulSet", "apiVersion: apps/v1", helm, "Chart.yaml"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/kubernetes.md]
+  tier: deep
 
 - signal: docker
   kind: infrastructure
   match: [Dockerfile, "docker-compose.yml", "compose.yaml"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/docker.md]
+  tier: deep
 
 - signal: serverless
   kind: infrastructure
   match: ["serverless.yml", "template.yaml", "AWS::Serverless", lambda_handler,
           "func.HttpTrigger", "cloud-functions", vercel, "netlify.toml"]
-  load: [infrastructure/resources.md, application/connection-pools.md]
-  tier: conceptual
-  notes: >
-    Cold starts, per-invocation connection setup, and concurrency limits dominate.
-    Connection pooling advice inverts under serverless — see infrastructure/resources.md.
+  load: [infrastructure/resources.md, application/connection-pools.md,
+         technology/serverless.md]
+  tier: deep
 
 - signal: terraform
   kind: infrastructure
   match: [".tf", "terraform"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/terraform.md]
+  tier: deep
