@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 32 deep · 7 conceptual · 0 generic (39 detection signals).
+**Current coverage:** 35 deep · 4 conceptual · 0 generic (39 detection signals).
 
 ---
 
@@ -111,14 +111,11 @@ planned for this coverage push.
 
 ## API surfaces
 
-| Surface | Tier |
-|:--|:--|
-| REST (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo, Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core) | conceptual |
-| GraphQL | conceptual |
-| gRPC | conceptual |
-
-Resolver-level N+1 and unbounded query depth — the dominant GraphQL performance risks — are
-covered generically in `application/api.md`.
+| Surface | Tier | Notes |
+|:--|:--|:--|
+| REST (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo, Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core) | **deep** | Comparative: concurrency model divergence (event-loop vs. thread/process/goroutine-per-request), request body-size defaults, Fiber's non-`net/http` foundation, PHP-FPM's process-per-request model |
+| GraphQL | **deep** | The resolver-tree execution model that makes GraphQL's N+1 structural rather than incidental, DataLoader's request-scoped batching mechanism, caller-controlled query shape (depth/breadth), and federation's per-subgraph fan-out |
+| gRPC | **deep** | HTTP/2 stream multiplexing versus connection-pool sizing, Protobuf message-shape (de)serialization cost, streaming-call state lifetime, and automatic deadline propagation |
 
 ## Infrastructure
 
@@ -159,15 +156,15 @@ Python, JVM, Go, .NET, Rust). Every datastore category, including object storage
 category file.
 
 Every datastore engine, every runtime, and every broker is now `deep` — no signal is
-`generic` any more. The multi-vendor umbrellas (vector stores, object storage, task queues)
-are each covered by a deliberately comparative technology file rather than a per-vendor
-split — see `docs/roadmap.md` for the reasoning.
+`generic` any more. The multi-vendor umbrellas (vector stores, object storage, task queues,
+and now REST frameworks) are each covered by a deliberately comparative technology file
+rather than a per-vendor split — see `docs/roadmap.md` for the reasoning.
 
-1. Promote any remaining `conceptual` engine to `deep` by writing its technology
-   reference — the largest remaining gap toward the 1.0.0 milestone, and a bounded,
-   well-defined contribution (see below). `docs/roadmap.md` tracks the remaining batches:
-   frameworks (GraphQL, gRPC, REST) and infrastructure (Kubernetes, Docker, Serverless,
-   Terraform).
+The frameworks batch is done: GraphQL, gRPC, and REST are all `deep`.
+
+1. Promote the remaining infrastructure signals (Kubernetes, Docker, Serverless, Terraform)
+   to `deep` — the last batch toward the 1.0.0 milestone, and a bounded, well-defined
+   contribution (see below). `docs/roadmap.md` tracks it.
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 

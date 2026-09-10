@@ -250,7 +250,9 @@ scope section.
 | **Rust** | **deep** |
 | **PHP** | **deep** |
 | **Ruby** | **deep** |
-| REST · GraphQL · gRPC | conceptual |
+| **REST (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo, Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core)** | **deep** |
+| **GraphQL** | **deep** |
+| **gRPC** | **deep** |
 | Docker · Kubernetes · Serverless · Terraform | conceptual |
 
 An unrecognized technology is not a failure: the skill classifies it by category, applies

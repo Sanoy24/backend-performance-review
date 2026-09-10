@@ -68,41 +68,43 @@ and [docs/supported-technologies.md](supported-technologies.md) for the full cur
 table.
 
 **The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore, every runtime,
-and every broker is now there — **no signal is `generic` any more.** Datastores: the six
+every broker, and now every API-surface framework is there — **no signal is `generic` any
+more, and `conceptual` is down to the four infrastructure signals.** Datastores: the six
 originally on this list (Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL
 Server, Memcached, SQLite), then Oracle, then CockroachDB, Couchbase, Firestore, Neo4j,
 Neptune, and InfluxDB, and then `vector-store` (`technology/vector-stores.md`) and
 `object-storage` (`technology/object-storage.md`). Runtimes: `php` (`technology/php.md`)
 and `ruby` (`technology/ruby.md`) — the last two of eight. Brokers: `sqs`
 (`technology/sqs.md`) and `task-queue` (`technology/task-queues.md`) — the last two signals
-of any kind at `generic` tier. See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
+of any kind at `generic` tier. Frameworks: `graphql` (`technology/graphql.md`), `grpc`
+(`technology/grpc.md`), and `rest` (`technology/rest.md`) — the frameworks batch, now done.
+See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
-Remaining for 1.0.0, in planned batch order:
+Remaining for 1.0.0 — one batch:
 
 | Batch | Signals | Note |
 |:--|:--|:--|
-| Frameworks | `graphql`, `grpc`, `rest` | `rest` spans 15 web frameworks |
 | Infrastructure | `kubernetes`, `docker`, `serverless`, `terraform` | `serverless` is an umbrella |
 
-### The remaining umbrella signals, and how they get promoted
+### The remaining umbrella signal, and how it gets promoted
 
-Two of the remaining signals are not one engine each: `serverless` spans five platforms, and
-`rest` spans fifteen web frameworks. The same approach already applied to `vector-store`,
-`object-storage`, and `task-queue` is the plan for these too.
+`serverless` spans five platforms (AWS Lambda, Google Cloud Functions, Azure Functions,
+Vercel, Netlify), the same shape `vector-store`, `object-storage`, `task-queue`, and — now
+done — `rest` were promoted under.
 
 Unlike the `elasticsearch`/`redis` signals — which combine engines that really are
 API-compatible forks — these span independently designed systems whose limits and defaults
 genuinely differ. The decided approach is **one deliberately comparative technology file per
-umbrella**, not splitting each signal into per-vendor signals (which would have turned the
-datastore umbrellas alone into ten separate promotions). `technology/vector-stores.md`,
-`technology/object-storage.md`, and `technology/task-queues.md` are now the precedent for
-this shape, alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
-`technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its Solr gaps).
-`technology/task-queues.md` additionally had to decide what to do with Temporal, which is
-architecturally a durable-execution engine rather than a simple job queue — flagging that
-distinction explicitly, rather than forcing it into the same comparison table as the other
-seven libraries, is itself part of what "the bar such a file has to clear" (below) means in
-practice.
+umbrella**, not splitting each signal into per-vendor signals. `technology/vector-stores.md`,
+`technology/object-storage.md`, `technology/task-queues.md`, and `technology/rest.md` are now
+the precedent for this shape, alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's
+divergence) and `technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its
+Solr gaps). `technology/rest.md` additionally had to decide what to do with genuinely
+different concurrency models under one signal (Node's single event loop versus the JVM's
+thread-per-request Servlet stack versus Go's goroutine-per-request) — naming which model each
+framework actually uses, rather than writing generic "concurrency" advice that would be true
+of none of them specifically, is what kept the file from collapsing into a restatement of
+`application/api.md`.
 
 The bar such a file has to clear is the same as any other: per
 [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-non-derivable-content-rule), it must carry what

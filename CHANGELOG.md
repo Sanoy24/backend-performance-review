@@ -37,6 +37,37 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added — frameworks batch (1.0.0 milestone)
+
+- **`graphql`, `grpc`, and `rest` promoted to `deep` tier** — the frameworks batch of the
+  1.0.0 "leave nothing below deep" milestone. Only the infrastructure batch (`kubernetes`,
+  `docker`, `serverless`, `terraform`) remains below `deep`.
+  - **`technology/graphql.md`** — the resolver-tree execution model that makes GraphQL's
+    N+1 structural rather than incidental (every field in a selection set resolves
+    independently; there is no "forgot to join" version of this), DataLoader's
+    request-scoped batching mechanism (collapses sibling resolver calls within one tick, not
+    within a single resolver), the caller-controlled-query-shape risk (unbounded nesting and
+    alias-multiplied breadth) that has no REST equivalent, and federation's per-subgraph
+    fan-out.
+  - **`technology/grpc.md`** — HTTP/2 stream multiplexing inverting ordinary
+    connection-pool-sizing reasoning (one connection now often serves many concurrent calls,
+    which means an L4 load balancer sees one flow rather than N requests and can pin all of a
+    client's traffic to one backend), Protobuf message-shape cost (nesting and field
+    cardinality, not wire size alone, dominate (de)serialization CPU), streaming-call state
+    lifetime, and automatic deadline propagation.
+  - **`technology/rest.md`** — a deliberately comparative file across all fifteen frameworks
+    the `rest` signal matches (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo,
+    Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core), following the umbrella
+    precedent `technology/vector-stores.md`/`object-storage.md`/`task-queues.md` set. Names
+    which concurrency model each framework actually uses (single event loop vs.
+    thread/process/goroutine-per-request vs. async-task-based) rather than writing generic
+    concurrency advice true of none of them specifically — the same bar
+    `docs/roadmap.md` sets for every umbrella file. Also covers Fiber's non-`net/http`
+    foundation (a real correctness footgun from request-object reuse, not just a performance
+    note), PHP-FPM's process-per-request model, and Rails' app-server-dependent concurrency.
+  - `docs/supported-technologies.md`, README.md, and `docs/roadmap.md` updated to match;
+    coverage is now 35 deep / 4 conceptual / 0 generic.
+
 ### Changed — BREAKING
 
 - **The finding format gains four required fields, and the report gains a machine-readable

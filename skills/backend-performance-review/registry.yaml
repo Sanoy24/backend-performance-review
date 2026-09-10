@@ -423,26 +423,23 @@ version: 1
 - signal: graphql
   kind: framework
   match: [graphql, apollo, strawberry, graphene, gqlgen, "graphql-java", nexus]
-  load: [application/api.md, application/data-access.md]
-  tier: conceptual
-  notes: >
-    Resolver-level N+1 and unbounded query depth are the dominant GraphQL performance
-    risks. Covered generically in application/api.md.
+  load: [application/api.md, application/data-access.md, technology/graphql.md]
+  tier: deep
 
 - signal: grpc
   kind: framework
   match: [grpc, "grpc-go", grpcio, "@grpc/grpc-js", protobuf]
   load: [application/api.md, application/serialization.md,
-         distributed/timeouts-and-deadlines.md]
-  tier: conceptual
+         distributed/timeouts-and-deadlines.md, technology/grpc.md]
+  tier: deep
 
 - signal: rest
   kind: framework
   match: [fastapi, flask, django, express, nestjs, "\"koa\":", "gin-gonic/gin",
           "labstack/echo", "gofiber/fiber", "spring-boot", actix, axum, laravel, rails,
           "aspnetcore"]
-  load: [application/api.md]
-  tier: conceptual
+  load: [application/api.md, technology/rest.md]
+  tier: deep
   notes: >
     Go framework tokens use their full module path ("gin-gonic/gin", "labstack/echo",
     "gofiber/fiber") rather than the bare framework name. Behavioral evaluation found bare
