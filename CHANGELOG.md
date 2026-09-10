@@ -27,6 +27,8 @@ Breaking changes carry a migration note in the entry.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-10
+
 ### Added
 
 - Oracle Database promoted to `deep` tier: `technology/oracle.md`, covering bind-variable/
