@@ -81,7 +81,7 @@
   "findings": [
     {
       "id": "PERF-001",
-      "stable_id": "a3f19c47b2e08d51",
+      "stable_id": "c542cc3a16a939db",
       "root_cause_id": "ROOT-001",
       "state": "OPEN",
       "severity": "High",

@@ -81,6 +81,11 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "location": { "$ref": "#/$defs/location" },
+        "also_locations": {
+          "description": "Other files a reasonable reviewer might cite as this finding's location instead of `location` — added after two independent real reviews of the identical bug (a per-item query reached through a call chain) legitimately cited opposite ends of the chain: one the query-issuing method's definition site, the other the call site that would actually need to change. Neither citation is more correct than the other, and picking a single canonical file as `location` makes the choice you did not pick score as a miss. A match against any entry here counts the same as a match against `location`.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/location" }
+        },
         "category": {
           "$ref": "finding.schema.json#/properties/category"
         },

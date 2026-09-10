@@ -1,0 +1,72 @@
+{
+  "repository": {
+    "name": "gothinkster/rails-realworld-example-app",
+    "commit": "a2ae4fff78b3337683cea988c023281dcb5551b9",
+    "url": "https://github.com/gothinkster/rails-realworld-example-app",
+    "language": "Ruby",
+    "framework": "Rails 4.2 (API mode)",
+    "datastore": "SQLite (all environments, including production)",
+    "workload": "Not supplied — a public RealWorld reference implementation with no stated production traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from a real, live independent blind-pass run (not narrated in docs/evaluation.md — that document predates this schema) performed specifically to validate the measurement system end to end after the 1.0.0 milestone. Ruby on Rails had never been independently blind-passed in this project's evaluation history before this run, unlike Go/Python/JVM/Rust/.NET/Node.js. This is the first ground-truth file built directly from a raw agent review's JSON output rather than from prose already treated as established — two of its four expected findings (PERF-002's unbounded-limit shape, PERF-003's SQLite-in-production concern) and its one adjacent finding were spot-verified directly against the cloned repository's source before being accepted here, specifically the self-referential has_many claim (confirmed verbatim in app/models/article.rb) and the unclamped params[:limit] || 20 pattern (confirmed verbatim in app/controllers/articles_controller.rb). This run also serves as an E4 (zero-findings repository) attempt; it did not succeed — four real findings were produced — consistent with docs/evaluation.md §3.7's finding that no repository reviewed in this project's history has produced a literal zero-finding result."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "app/views/articles/_article.json.jbuilder",
+        "symbol": "articles/_article partial"
+      },
+      "category": "data-access",
+      "mechanism": "The article and comment JSON serializers call three per-item accessors (tag_list, favorited?, following?) that each issue their own database query per item in a list, instead of being batched once across the collection — the same per-item-query-in-a-render-path shape as the N+1 patterns found in every other RealWorld implementation blind-passed in this project (Go, Python, JVM, Rust, .NET, Node.js all have an equivalent finding).",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["batch", "includes", "preload", "single query"],
+      "forbidden_recommendation": ["redis", "cache", "add an index"]
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "app/controllers/articles_controller.rb",
+        "line": 13
+      },
+      "category": "data-access",
+      "mechanism": "articles#index and #feed accept a caller-supplied limit with no enforced maximum (params[:limit] || 20 — a default applied only when absent, not a clamp), and comments#index applies no pagination at all. Verified verbatim against the controller source: `.limit(params[:limit] || 20)`.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["clamp", "enforce a maximum", "cap the limit"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-003",
+      "location": {
+        "file": "config/database.yml",
+        "line": 7
+      },
+      "category": "concurrency",
+      "mechanism": "SQLite is configured for production with a 5-connection pool, but SQLite allows exactly one writer to the database file at a time — the connection pool does not deliver the write concurrency its size implies, and with no WAL mode configured, writes also block concurrent reads. The same SQLite-single-writer-versus-pool-size mismatch found in spring-boot-realworld.json and gin-realworld.json, now confirmed in a third, independent stack.",
+      "severity": "Critical",
+      "max_confidence": "Medium",
+      "expected_recommendation": ["WAL", "single writer", "connection pool"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-004",
+      "location": {
+        "file": "config/environments/production.rb",
+        "line": 49
+      },
+      "category": "observability",
+      "mechanism": "config.log_level = :debug is set for the production environment — the most verbose Rails log level, applied unconditionally on every request rather than the common :info/:warn default for production.",
+      "severity": "Low",
+      "max_confidence": "High",
+      "expected_recommendation": [":info", ":warn", "log level"],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": []
+}

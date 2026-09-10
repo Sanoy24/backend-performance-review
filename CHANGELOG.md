@@ -37,6 +37,81 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added — the first real validation run, and two harness bugs it found
+
+The measurement system's first genuine end-to-end test against real, live data rather than
+retro-annotated prose or synthetic fixtures. Two fresh `general-purpose` agents, each with no
+memory of this project's own findings and explicitly forbidden from reading
+`docs/evaluation.md`, `docs/review-response.md`, or `benchmark/ground-truth/`, were given only
+`SKILL.md` and a freshly cloned repository, and produced a full review — Markdown report and
+schema-valid JSON — against the complete, post-1.0.0 skill.
+
+- **Two independent reviews of `gin-realworld`**, run specifically to get a real `score.py
+  stability` measurement rather than the hand-diffed one `docs/evaluation.md` §3.18/§3.21
+  describe. Both reproduced the dominant N+1 finding; once `gin-realworld.json`'s ground
+  truth was corrected (below) to reflect what both runs actually found, each scored
+  **precision 1.0 / recall 1.0** against it.
+- **One review of `rails-realworld.json`** (Ruby on Rails, a stack never independently
+  blind-passed before this) as an E4 attempt. It did not succeed — four real findings were
+  produced, two spot-verified directly against the source before being accepted (a
+  self-referential `has_many` correctness bug verified verbatim in `app/models/article.rb`;
+  an unclamped `params[:limit]` verified verbatim in the controller) — consistent with
+  `docs/evaluation.md` §3.7: no repository reviewed in this project's history has yet
+  produced a literal zero-finding result.
+- **A real harness bug, found and fixed: location matching was too brittle for a mechanism
+  spanning a call chain.** Both `gin-realworld` runs found the identical N+1 and cited
+  *opposite ends* of the same call chain — one the query-issuing method's definition, the
+  other the call site that would actually need to change. Neither is more correct; scoring
+  one as canonical and the other a miss would have scored the harness's own convention, not
+  the reviews. `schemas/ground-truth.schema.json` gains `also_locations` — alternative
+  locations a ground-truth item accepts alongside its primary `location` — and
+  `benchmark/scoring/score.py`'s matcher checks all of them. New tests in
+  `tests/test_scoring_harness.py`.
+- **A real specification gap, found and then fixed with a mechanical algorithm rather than
+  patched around: `stable_id` could not support cross-review comparison as originally
+  specified.** The two `gin-realworld` runs agreed on the dominant finding's location (once
+  fixed above), severity within one level, and recommendation — and still had 0% `stable_id`
+  agreement, because `SKILL.md`/the schema described it as "derived from root cause, file,
+  symbol, and mechanism" without mandating an actual algorithm, so two independently-run
+  agents each invented their own hash by reasoning and were never going to agree.
+  **`skills/backend-performance-review/scripts/compute_stable_id.py`** is the fix: a
+  stdlib-only, mechanical accelerator over `location.file` + `location.symbol` + `category` —
+  the same way `detect_stack.py` is a mechanical accelerator rather than something an agent
+  reasons its way to. Freeform mechanism text is deliberately excluded from the hash inputs,
+  since two honest paraphrases of the same bug must still produce the same id, which hashing
+  prose would have broken. `SKILL.md` Phase 7 now instructs running the script rather than
+  computing a value by reasoning; `scripts/validate_review.py` and
+  `scripts/check_repo_invariants.py` both recompute the expected id from a finding's own
+  fields and reject a mismatch (mutation-tested: a hand-altered `stable_id` on the committed
+  example is caught by both). A known, accepted limitation, stated rather than hidden: two
+  distinct findings sharing a file, symbol, and category collide, and it still cannot resolve
+  two reviews citing one bug at different points in a call chain — that needs a
+  human-curated `also_locations` entry or is reported via `score.py stability`'s `caveats`
+  field, which stays in place. Sixteen new tests in `tests/test_compute_stable_id.py`
+  (determinism, normalization, and — explicitly — that the function's signature has no
+  `mechanism` parameter at all, since that omission is the point) plus three in
+  `tests/test_sarif_and_verdict.py` for the new validation checks.
+- **A real `forbidden`-trap false alarm, found and fixed with a new `acceptable` item rather
+  than by loosening the trap.** One run's finding (SQLite's single-writer lock causing
+  `SQLITE_BUSY` with no `busy_timeout`) shared a file with an existing `forbidden` trap (a
+  pool-*size*/exhaustion claim the original evaluation had already ruled out) and was
+  incorrectly caught by category+location matching alone, despite being a genuinely different
+  and valid claim. `gin-realworld.json` now carries 8 `acceptable` items (up from 0), each
+  traced to a specific verified claim, ordered so specific symbol-bearing items are tried
+  before the broad, symbol-less missing-indexes item — preventing the same class of
+  ordering-driven mismatch this run also surfaced.
+- **A live GitHub Actions dry run of `action.yml`, both halves.** The one item this run left
+  open is now closed. A permanent job, `action-self-test` in `.github/workflows/checks.yml`,
+  runs `action.yml` itself via `uses: ./` on every push and PR (not just its constituent
+  scripts individually) and asserts the SARIF and outputs it produces are correct; it runs
+  with `comment`/`upload-sarif` off by default so it stays silent. The outward-facing half —
+  actually posting a comment and uploading SARIF — was then exercised once, deliberately,
+  against this repository's own PR #54 (flip the two inputs to `true`, push, confirm, revert),
+  rather than left as an unverified code path: a real comment from `github-actions[bot]`
+  landed on the PR with the actual review body, and a real code-scanning alert (rule
+  `perf/data-access`, tool `backend-performance-review v0.6.0`) was created from the uploaded
+  SARIF.
+
 ### Added — infrastructure batch, completing the 1.0.0 milestone
 
 - **`kubernetes`, `docker`, `serverless`, and `terraform` promoted to `deep` tier — the last

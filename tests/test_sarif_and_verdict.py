@@ -299,6 +299,33 @@ class ReviewValidationTests(unittest.TestCase):
         problems = validate_review.validate(review, self.SCHEMAS)
         self.assertTrue(any("duplicate finding id" in p for p in problems), problems)
 
+    def test_a_hand_invented_stable_id_is_caught(self):
+        # The exact failure the first real independent blind-pass run found: an agent
+        # inventing a hash by reasoning rather than running the canonical algorithm.
+        review = self.valid()
+        review["findings"][0]["stable_id"] = "deadbeefdeadbeef"
+        problems = validate_review.validate(review, self.SCHEMAS)
+        self.assertTrue(any("canonical algorithm" in p for p in problems), problems)
+
+    def test_a_correctly_computed_stable_id_is_not_flagged(self):
+        review = self.valid()
+        finding = review["findings"][0]
+        sys.path.insert(0, str(ROOT / "skills" / "backend-performance-review" / "scripts"))
+        import compute_stable_id as sid
+        finding["stable_id"] = sid.compute_for_finding(finding)
+        problems = validate_review.validate(review, self.SCHEMAS)
+        self.assertEqual([p for p in problems if "canonical algorithm" in p], [])
+
+    def test_two_findings_sharing_a_stable_id_are_flagged_for_a_human_glance(self):
+        review = self.valid()
+        second = json.loads(json.dumps(review["findings"][0]))
+        second["id"] = "PERF-002"
+        # Distinct root cause so this doesn't also trip the dangling-reference check.
+        review["root_causes"][0]["findings"].append("PERF-002")
+        review["findings"].append(second)
+        problems = validate_review.validate(review, self.SCHEMAS)
+        self.assertTrue(any("share stable_id" in p for p in problems), problems)
+
     def test_a_schema_violation_is_caught(self):
         review = self.valid()
         del review["findings"][0]["counter_evidence"]

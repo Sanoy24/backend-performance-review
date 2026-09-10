@@ -129,16 +129,72 @@ In priority order, and the first one is not a tie:
    corpus exists to hold reviews to. A thinner `forbidden` list is a more honest annotation
    than a fabricated one.
 
-   Still to retro-annotate: the second independent pass used for stability measurement
-   (§3.18, §3.21) — that one needs a second, distinct `review.json` scored with
-   `score.py stability` against the first, not a second ground-truth file for the same
-   repository.
+   The second independent pass used for stability measurement (§3.18, §3.21 in prose form)
+   now has a real, live counterpart: see "The first real validation run" below.
 
 3. **Repositories with misleading signals** — an obvious smell that is harmless, a real
    problem somewhere unexpected, a technology named in a manifest but never used.
 
 4. **Repositories with interacting bottlenecks**, where each issue is moderate alone and
    severe combined.
+
+## The first real validation run
+
+Everything above this section, until this point, was retro-annotated from
+`docs/evaluation.md`'s prose — real evidence, but written before this schema existed and
+before the harness could score anything. The measurement system's first genuine end-to-end
+test came after the 1.0.0 milestone landed: two fresh `general-purpose` agents, each with no
+memory of this project's own findings and explicitly forbidden from reading
+`docs/evaluation.md`, `docs/review-response.md`, or `benchmark/ground-truth/`, were each given
+only `SKILL.md` and a freshly cloned target repository, and asked to produce a full review —
+Markdown report and schema-valid JSON — against the complete, updated skill.
+
+**Two independent reviews of `gin-realworld`.** The dominant finding (the per-article
+follow-status N+1) was reproduced by both, matching the location/mechanism reproducibility
+`docs/evaluation.md` §3.9 and §3.18 already established by hand. Once `gin-realworld.json`'s
+ground truth was expanded to cover what both runs actually found (see below), each run scored
+**precision 1.0, recall 1.0** against it.
+
+**One fresh review of `rails-realworld`** — Ruby on Rails, a stack never independently
+blind-passed in this project's history — as an E4 (zero-findings repository) attempt. It did
+not succeed: four real findings were produced, two of them spot-verified directly against the
+source before being accepted into `rails-realworld.json` (a self-referential `has_many`
+correctness bug confirmed verbatim in `app/models/article.rb`; an unclamped `params[:limit]`
+confirmed verbatim in the controller). Consistent with `docs/evaluation.md` §3.7 — no
+repository reviewed in this project's history has yet produced a literal zero-finding result.
+
+**Two real problems in the harness were found and fixed by this run, not hypothesized in
+advance:**
+
+- **Location matching was too brittle for a mechanism spanning a call chain.** Both
+  `gin-realworld` runs found the identical N+1 bug and cited *opposite ends* of the same call
+  chain — one the query-issuing method's definition, the other the call site that would
+  actually need to change to fix it. Neither citation is more correct. Scoring one as
+  canonical and the other as a miss would have been scoring the harness's location
+  convention, not the reviews. Fixed generally: `ground-truth.schema.json` gained
+  `also_locations` (a list of alternative locations a ground-truth item accepts, alongside
+  its primary `location`), and `score.py`'s matcher checks all of them. Covered by
+  `tests/test_scoring_harness.py`.
+- **`stable_id_agreement` is not yet a reliable signal.** The two `gin-realworld` runs agreed
+  on the dominant finding's location (once fixed above), severity within one level, and
+  recommendation — and still had **0% `stable_id` agreement**, because `SKILL.md`/the schema
+  describe `stable_id` as "derived from root cause, file, symbol, and mechanism" without
+  mandating a canonical hashing algorithm. Two independently-run agents computing "a hash"
+  from the same inputs are not guaranteed to produce the same bytes. `score.py stability` now
+  documents this explicitly (a `caveats` field in its output, not just a docstring) rather
+  than silently reporting a number that looks meaningful and isn't yet. Specifying a canonical
+  algorithm is open work — see `docs/roadmap.md`.
+
+Also real, and instructive on its own: a third finding legitimately different from what a
+`forbidden` trap ruled out (SQLite's single-writer lock causing `SQLITE_BUSY` without
+`busy_timeout`, distinct from the pool-*size*/exhaustion framing the trap's `why_not`
+actually addresses) was incorrectly caught as a restraint failure by category+location
+matching alone. Fixed by adding the correct `acceptable` item rather than by loosening the
+trap — the trap's original claim is still correctly ruled out; a different, real claim at the
+same file just needed its own entry. `gin-realworld.json` now carries 8 `acceptable` items,
+each traced to a specific, verified claim from one of the two runs, in a deliberate order
+(specific, symbol-bearing items before the broad, symbol-less missing-indexes item) so a
+specific finding at a shared location is not accidentally absorbed by a broader one first.
 
 ## Adding a case
 
