@@ -393,15 +393,15 @@ version: 1
 
 - signal: php
   kind: runtime
-  match: ["composer.json", "artisan"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  match: ["composer.json", "composer.lock", "artisan"]
+  load: [runtimes/universal.md, technology/php.md]
+  tier: deep
 
 - signal: ruby
   kind: runtime
-  match: ["Gemfile", "config.ru"]
-  load: [runtimes/universal.md]
-  tier: conceptual
+  match: ["Gemfile", "Gemfile.lock", "config.ru"]
+  load: [runtimes/universal.md, technology/ruby.md]
+  tier: deep
 
 # ---------------------------------------------------------------------------
 # API surfaces

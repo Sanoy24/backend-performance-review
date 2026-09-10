@@ -37,18 +37,18 @@ that would most benefit from a `deep`-tier reference file. See
 and [docs/supported-technologies.md](supported-technologies.md) for the full current tier
 table.
 
-**The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore engine is now
-there — including both multi-vendor umbrellas: the six originally on this list
-(Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite),
-then Oracle, then CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, and now
-`vector-store` (`technology/vector-stores.md`) and `object-storage`
-(`technology/object-storage.md`). See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
+**The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore engine and every
+runtime is now there. Datastores: the six originally on this list (Elasticsearch/OpenSearch,
+Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite), then Oracle, then
+CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, and then `vector-store`
+(`technology/vector-stores.md`) and `object-storage` (`technology/object-storage.md`).
+Runtimes: `php` (`technology/php.md`) and `ruby` (`technology/ruby.md`) — the last two of
+eight. See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
 Remaining for 1.0.0, in planned batch order:
 
 | Batch | Signals | Note |
 |:--|:--|:--|
-| Runtimes | `php`, `ruby` | The last two of eight runtimes still `conceptual` |
 | Brokers | `sqs`, `task-queue` | The only two `generic`-tier signals left; `task-queue` is an umbrella |
 | Frameworks | `graphql`, `grpc`, `rest` | `rest` spans 15 web frameworks |
 | Infrastructure | `kubernetes`, `docker`, `serverless`, `terraform` | `serverless` is an umbrella |
