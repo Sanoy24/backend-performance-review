@@ -390,5 +390,86 @@ class DriverCoverageTests(unittest.TestCase):
                               f"{description} did not match the {signal} signal")
 
 
+class OrmConfigFileTests(unittest.TestCase):
+    """Regression for a distinct false negative shape from DriverCoverageTests above:
+    Sequelize and Knex, Node.js's two most common ORM/query-builder packages, name no
+    specific datastore in package.json at all — the dialect lives only in a separate
+    config file detect_stack.py did not read (docs/roadmap.md's former "Detection gaps"
+    entry, found by the same audit that produced DriverCoverageTests). Prisma's
+    schema.prisma was the same shape of problem, already solved (PrismaSchemaFileTests
+    above); this closes the Sequelize/Knex instances of it the same way — by reading the
+    one file that actually names the engine, rather than by adding a registry token.
+
+    Sequelize's CLI-scaffolded config/config.json spells its dialect out in full
+    ("postgres", "mysql", "mssql", "mariadb") except sqlite, which the registry's sqlite
+    signal did not previously carry as a bare token — added alongside this fix. Knex's
+    knexfile.js instead uses the client id, abbreviated for Postgres ("pg") in a way no
+    existing token covered.
+    """
+
+    def setUp(self):
+        self.entries, warnings = detect.parse_registry(REGISTRY)
+        self.assertEqual(warnings, [])
+
+    def test_config_json_outside_a_config_directory_is_not_read(self):
+        # config.json is too generic a bare filename to read unconditionally — scoped to
+        # the conventional config/config.json path Sequelize's CLI actually scaffolds.
+        self.assertIsNone(detect.content_kind("config.json", "config.json"))
+        self.assertIsNone(detect.content_kind("config.json", "app/settings/config.json"))
+
+    def test_sequelize_config_json_path_is_read(self):
+        self.assertEqual(
+            detect.content_kind("config.json", "config/config.json"), "manifest")
+        self.assertEqual(
+            detect.content_kind("config.json", "server/config/config.json"), "manifest")
+
+    def test_sequelize_postgres_dialect_matches_postgres_signal(self):
+        corpus = (
+            "config/config.json",
+            '{\n  "development": {\n    "dialect": "postgres",\n'
+            '    "host": "127.0.0.1"\n  }\n}\n',
+            "manifest",
+        )
+        self.assertIn("postgres", matched_signals([corpus], self.entries))
+
+    def test_sequelize_sqlite_dialect_matches_sqlite_signal(self):
+        corpus = (
+            "config/config.json",
+            '{\n  "development": {\n    "dialect": "sqlite",\n'
+            '    "storage": "dev.sqlite3"\n  }\n}\n',
+            "manifest",
+        )
+        self.assertIn("sqlite", matched_signals([corpus], self.entries))
+
+    def test_knexfile_js_is_read(self):
+        self.assertEqual(detect.content_kind("knexfile.js", "knexfile.js"), "manifest")
+
+    def test_knex_pg_client_single_quoted_matches_postgres_signal(self):
+        corpus = (
+            "knexfile.js",
+            "module.exports = {\n"
+            "  development: { client: 'pg', connection: { database: 'app' } }\n"
+            "};\n",
+            "manifest",
+        )
+        self.assertIn("postgres", matched_signals([corpus], self.entries))
+
+    def test_knex_pg_client_double_quoted_matches_postgres_signal(self):
+        corpus = (
+            "knexfile.js",
+            'module.exports = {\n  development: { client: "pg" }\n};\n',
+            "manifest",
+        )
+        self.assertIn("postgres", matched_signals([corpus], self.entries))
+
+    def test_pipfile_content_is_now_read(self):
+        # Separately found while fixing the above: CONTENT_FILES stored "Pipfile" and
+        # "Pipfile.lock" capitalized, but every lookup lowercases the filename first, so a
+        # real Pipfile's content was silently never read at all, since project creation.
+        self.assertEqual(detect.content_kind("Pipfile", "Pipfile"), "manifest")
+        corpus = ("Pipfile", 'psycopg2 = "*"\n', "manifest")
+        self.assertIn("postgres", matched_signals([corpus], self.entries))
+
+
 if __name__ == "__main__":
     unittest.main()

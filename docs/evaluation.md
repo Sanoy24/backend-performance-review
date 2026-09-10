@@ -1363,6 +1363,13 @@ the triggering code shape to a fixture set and confirm the skill no longer repor
    supported runtimes found six more at once; this fixture is that audit, committed so a
    future promotion missing its dominant driver in some runtime fails in CI instead of
    waiting to be found the same way again.
+5. Sequelize's `config/config.json` and Knex's `knexfile.js` must be read for content, and
+   the dialect each names (`"dialect": "sqlite"`, `client: 'pg'`) must match the right
+   signal (`OrmConfigFileTests`) — the same audit that produced item 4 found these two ORMs
+   name no datastore in `package.json` at all, the same shape of gap Prisma's
+   `schema.prisma` already covered (§3.16). A generic bare `config.json` must *not* be read
+   outside the conventional `config/` path, to avoid treating an arbitrary project config
+   file as manifest evidence.
 
 Each fixture was verified to actually fail against the pre-fix code (`detect_stack.py` and
 `registry.yaml` as they stood before §3.3's fixes) before being accepted as a real regression

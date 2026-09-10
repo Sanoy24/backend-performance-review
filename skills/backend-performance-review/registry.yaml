@@ -32,7 +32,7 @@ version: 1
   category: relational
   match: [psycopg, psycopg2, asyncpg, "pg8000", postgresql, postgres, "jackc/pgx", npgsql,
           "org.postgresql", "postgres://", "postgresql://", pg_dump, timescale, "lib/pq",
-          "\"pg\":"]
+          "\"pg\":", "'pg'", "\"pg\""]
   load: [databases/universal.md, databases/relational.md, technology/postgres.md]
   tier: deep
   notes: >
@@ -43,7 +43,11 @@ version: 1
     short and common a substring to add unquoted (it would fire on "pgx", "pgadmin", or any
     word containing "pg"), so it is matched via the same quoted-literal technique already
     used for the node signal's `"node":` token: `"pg":` as it appears in a real
-    package.json, not the bare substring.
+    package.json, not the bare substring. A separate audit found Knex names Postgres the
+    same abbreviated way — `client: 'pg'` or `client: "pg"` in knexfile.js, never the full
+    word — so the quoted-literal tokens `'pg'` and `"pg"` (quotes included) catch that too,
+    now that detect_stack.py reads knexfile.js content, scoped the same way rather than a
+    bare unquoted "pg" that would fire on "pgx"/"pgadmin" everywhere else scanned.
 
 - signal: mysql
   kind: datastore
@@ -85,9 +89,16 @@ version: 1
   category: relational
   match: [sqlite3, "better-sqlite3", "mattn/go-sqlite3", "sqlite://", libsql,
           "sqlite-jdbc", "org.xerial", "jdbc:sqlite:", rusqlite,
-          "Microsoft.EntityFrameworkCore.Sqlite"]
+          "Microsoft.EntityFrameworkCore.Sqlite", sqlite]
   load: [databases/universal.md, databases/relational.md, technology/sqlite.md]
   tier: deep
+  notes: >
+    Sequelize's CLI-scaffolded config.json spells its dialect field as the bare word
+    "sqlite" — never "sqlite3" or any other already-covered token — so detecting it needs
+    the bare word itself, same accepted trade-off already made for postgres/mysql/redis/
+    kafka/cassandra's own bare-name tokens: real but occasional false-positive risk from an
+    unrelated mention, softened by the weak_evidence grading for anything outside a real
+    manifest.
 
 - signal: cockroachdb
   kind: datastore

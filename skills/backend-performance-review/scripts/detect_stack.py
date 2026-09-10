@@ -69,7 +69,11 @@ SECRET_PATTERNS = [
 CONTENT_FILES = {
     "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
     "requirements.txt", "requirements-dev.txt", "pyproject.toml", "poetry.lock",
-    "Pipfile", "Pipfile.lock", "setup.py", "setup.cfg", "uv.lock", "constraints.txt",
+    # Fixed alongside the knexfile/config.json additions below: these two were stored
+    # capitalized while every lookup lowercases the filename first (content_kind() checks
+    # `lowered in CONTENT_FILES`), so a real "Pipfile"/"Pipfile.lock" never matched this
+    # set at all — its content was silently never read, since project creation.
+    "pipfile", "pipfile.lock", "setup.py", "setup.cfg", "uv.lock", "constraints.txt",
     "go.mod", "go.sum",
     "cargo.toml", "cargo.lock",
     "pom.xml", "build.gradle", "build.gradle.kts", "gradle.lockfile",
@@ -81,6 +85,12 @@ CONTENT_FILES = {
     "chart.yaml", "values.yaml", "serverless.yml", "serverless.yaml",
     "template.yaml", "template.yml", "netlify.toml", "vercel.json",
     "packages.lock.json",
+    # Knex's config file (conventionally knexfile.js, or .ts/.cjs/.mjs) is, like Prisma's
+    # schema.prisma, the only place a Knex-based project names its actual datastore — the
+    # `client` key ("pg", "mysql2", "sqlite3", "mssql", ...). package.json names only
+    # "knex" itself, not a datastore. See docs/roadmap.md's former "Detection gaps" entry
+    # for the audit that found this.
+    "knexfile.js", "knexfile.ts", "knexfile.cjs", "knexfile.mjs",
 }
 
 CONTENT_SUFFIXES = (
@@ -248,6 +258,15 @@ def content_kind(name, rel_path):
         return "manifest"
     if "migration" in rel_path.lower() and lowered.endswith((".sql", ".py", ".js", ".ts")):
         return "migration"
+    # Sequelize's CLI-scaffolded config file (conventionally config/config.json, the
+    # sequelize-cli init default) names the actual dialect — "postgres", "mysql", "mssql",
+    # "mariadb", or "sqlite" — under a "dialect" key. package.json names only "sequelize"
+    # itself, not a datastore, so without reading this file a Sequelize project's datastore
+    # signal never fires. Scoped to the conventional config/config.json path rather than
+    # any file named config.json, which is too generic a filename to read unconditionally.
+    if lowered == "config.json" and rel_path.lower().replace(os.sep, "/").endswith(
+            "config/config.json"):
+        return "manifest"
     if lowered.endswith(YAML_SUFFIXES):
         return "yaml"
     return None
