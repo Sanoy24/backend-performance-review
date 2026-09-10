@@ -79,3 +79,38 @@ jobs:
             --strict-verdict > /tmp/review.sarif
           python -c "import json; d=json.load(open('/tmp/review.sarif')); assert d['version']=='2.1.0'; assert d['runs']"
           python scripts/pr_comment.py --review docs/examples/review.example.json > /dev/null
+
+  action-self-test:
+    name: action.yml runs as an actual composite action (docs/roadmap.md — live Action dry run)
+    runs-on: ubuntu-latest
+    # This is the gap the first real validation run named explicitly: every script action.yml
+    # calls is exercised above, but the composite action file itself — its step sequencing,
+    # its `with:`/`env:` wiring, whether GitHub actually resolves `uses: ./` correctly — had
+    # never executed on a real runner. `comment` and `upload-sarif` stay off here on purpose:
+    # this job runs on every push and PR, and posting a real comment or a real code-scanning
+    # upload on every one of those would be noise, not a test. It still exercises every other
+    # step, including schema validation, SARIF generation, and verdict derivation, against the
+    # actual action.yml file rather than only its constituent scripts run directly.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run this repository's own action against its own example review
+        id: self_test
+        uses: ./
+        with:
+          review: docs/examples/review.example.json
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: never
+
+      - name: Confirm the action's own outputs are wired correctly
+        run: |
+          test -f "${{ steps.self_test.outputs.sarif-file }}"
+          python -c "
+          import json
+          d = json.load(open('${{ steps.self_test.outputs.sarif-file }}'))
+          assert d['version'] == '2.1.0', 'action.yml produced non-SARIF-2.1.0 output'
+          assert d['runs'], 'action.yml produced a SARIF file with no runs'
+          "
+          echo "action.yml outputs: verdict='${{ steps.self_test.outputs.verdict }}' findings='${{ steps.self_test.outputs.findings }}'"
+          test "${{ steps.self_test.outputs.findings }}" = "1"
