@@ -83,6 +83,19 @@ async support. If you cannot determine a version, say so rather than assuming th
 
 You need enough structure to answer "where does a request go", not a full design doc.
 
+**Establish first whether this is one service or several.** A workspace marker
+(`pnpm-workspace.yaml`, `lerna.json`, `turbo.json`, `nx.json`, `go.work`, a Cargo or Gradle
+workspace) or a runtime manifest in more than one subdirectory means it is several — and
+`apps/api` on one runtime beside `services/payments` on another is ordinary. The accelerator
+reports these in `services[]`.
+
+This matters before anything else, because a repository-wide stack list is the union across
+every service and therefore describes none of them. Detect, route references, and scope
+findings **per service**; a finding that says "this repository issues a query per row" when
+only one of five services does is not actionable. Where services share a datastore, a cache,
+or a connection pool, say so explicitly — that shared resource is where one service's
+problem becomes another's.
+
 **Find the entry points.** Search for route registration, HTTP handler decorators, gRPC
 service implementations, GraphQL resolvers, message consumers, scheduled jobs, and CLI
 commands. These are the roots of every path you will analyze.
@@ -168,7 +181,52 @@ its touched paths call into.
 
 ---
 
-## 5. What discovery must not do
+## 5. Investigation economy — how much to spend, and when to stop
+
+Attention is finite, and spending it evenly across a repository is the same as spending it
+badly. Two failure modes sit on either side: reading three files and calling it a review, or
+reading everything and running out of budget before any hypothesis is tested properly.
+
+**Spend proportionally to what a candidate could be worth.**
+
+| Candidate looks like | How much to spend |
+|:--|:--|
+| Possible saturation of a shared resource on a critical path | Follow it all the way — callers, configuration, limits, and the counter-evidence search in full |
+| A per-request cost on a user-blocking path | Read the call chain and whatever bounds it |
+| Bounded work off the critical path | Confirm it is bounded, then stop |
+| A style preference with no workload story | Do not open the file |
+
+**Expand on evidence, not on suspicion.** Start from entry points and follow what the code
+actually does. When a file turns up something real, widen to its callers, its configuration,
+and the queries it issues — let a finding pull you outward. A fixed plan to "inspect the
+hundred largest files" spends the same effort on a vendored library as on the request path.
+
+For a change-scoped review this is the whole method: start at the diff, expand to callers,
+then to the data access it reaches, then to the configuration that bounds it. Stop when the
+expansion stops touching the change.
+
+**Ask before running anything expensive.** Some diagnostics cost real money or real load —
+`EXPLAIN ANALYZE` on a large table, a load test, a profiler on a production process, a full
+table statistics refresh. These are recommendations in the validation plan, never something
+this review executes, and where one is expensive enough to matter the report says so rather
+than presenting it as free.
+
+**Know when to stop.** Any of these is a legitimate, complete ending:
+
+- No candidate remains that could plausibly reach `Medium` severity or above.
+- The remaining questions cannot be answered without runtime evidence that does not exist —
+  more reading will not improve confidence, only its appearance.
+- The scope agreed in Phase 0 has been covered.
+- The workload is unknown and every remaining candidate depends on it, so everything left
+  would cap at `Medium` anyway.
+
+Stopping and saying what was not examined is honest. Continuing until something turns up is
+how a review manufactures findings — and §"What discovery must not do" below is the same rule
+applied one phase earlier.
+
+---
+
+## 6. What discovery must not do
 
 - Do not form conclusions. A dependency on Redis is not a finding.
 - Do not assume a dependency is used because it is declared. Grep for actual use.

@@ -1,0 +1,76 @@
+{
+  "repository": {
+    "name": "gothinkster/aspnetcore-realworld-example-app",
+    "commit": "a397d119",
+    "url": "https://github.com/gothinkster/aspnetcore-realworld-example-app",
+    "language": "C#",
+    "framework": "ASP.NET Core 10 / Mediator / EF Core",
+    "datastore": "SQLite by default, Microsoft.EntityFrameworkCore.SqlServer also wired in",
+    "workload": "Not supplied — a public RealWorld reference implementation with no stated production traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.15, an independent blind pass with no memory of this project's own findings — the third of three untested deep-tier runtime references (JVM, Rust, .NET) closed by this round, and the only one of the four second-batch repositories with a pinned commit in the source record. A hardcoded JWT signing key committed to source (SEC-001, Confirmed/High risk) was also found and filed under Kind: Security, out of the performance rubric per SKILL.md Hard Rule 8 — not encoded here, since this schema's category enum has no security axis. `forbidden` is intentionally empty: §3.15 notes the review correctly did NOT explain PERF-001/PERF-003 as a sync-over-async deadlock (ASP.NET Core installs no request SynchronizationContext, ruling that mechanism out) — but this is a mechanism-attribution nuance on a real finding, not a separately-located candidate that should not be reported, so it does not fit this schema's forbidden-item shape without fabricating a location for it."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "src/Conduit/Infrastructure/DBContextTransactionPipelineBehavior.cs",
+        "line": 27,
+        "symbol": "DBContextTransactionPipelineBehavior<TRequest,TResponse>.Handle"
+      },
+      "category": "concurrency",
+      "also_acceptable_categories": ["data-access"],
+      "mechanism": "Every request, read or write, is wrapped by this pipeline behavior in a call to ConduitContext.BeginTransaction()/CommitTransaction() (src/Conduit/Infrastructure/ConduitContext.cs:94-133), which invoke the SYNCHRONOUS Database.BeginTransaction()/.Commit()/.Rollback() -- not their *Async equivalents -- from inside an async ValueTask<TResponse> Handle(...) method. Applied globally: two genuinely blocking DB round trips on literally every endpoint, including plain GET reads that need no transaction at all, each occupying a thread-pool thread for the round-trip duration and holding a pooled connection open for the full handler.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["async", "BeginTransactionAsync", "await"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "src/Conduit/Features/Articles/ArticleExtensions.cs",
+        "line": 9,
+        "symbol": "ArticleExtensions.GetAllData"
+      },
+      "category": "data-access",
+      "mechanism": "Unconditionally .Include(x => x.ArticleFavorites)s the full favoriting-user join table for every article returned by the list and detail endpoints, only to discard every row but a count -- Article.FavoritesCount/Favorited read ArticleFavorites.Count off the materialized in-memory collection instead of a count query. Cost scales with how many people ever favorited an article, not with page size, so it grows without bound as the app is used, on the two most-hit reads in the service.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["count query", "aggregate", "remove the Include"],
+      "forbidden_recommendation": ["redis", "cache"]
+    },
+    {
+      "id": "GT-003",
+      "location": {
+        "file": "src/Conduit/Features/Articles/List.cs",
+        "line": 133
+      },
+      "category": "concurrency",
+      "also_acceptable_categories": ["data-access"],
+      "mechanism": "Calls the synchronous queryable.Count() (not CountAsync) inside the same async handler, on the already-filtered IQueryable, to compute ArticlesCount for pagination -- a second blocking DB round trip re-executing every WHERE clause already applied to the page query.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["CountAsync", "async"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-004",
+      "location": {
+        "file": "src/Conduit/Features/Articles/Create.cs",
+        "line": 58
+      },
+      "category": "data-access",
+      "mechanism": "Loops over the caller-supplied TagList and, for each unrecognized tag, issues FindAsync then an immediate SaveChangesAsync -- a round-trip pair per new tag, per article creation. TagList has no length validation in ArticleDataValidator, so the round-trip count is attacker-controlled, not merely inefficient.",
+      "severity": "Medium",
+      "max_confidence": "High",
+      "expected_recommendation": ["batch", "bound", "length validation"],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": []
+}

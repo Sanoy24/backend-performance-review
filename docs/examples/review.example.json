@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-09-10T00:00:00Z",
+    "skill_version": "0.6.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "0.6.0",
+    "model": "<agent and model that produced this review>",
+    "repository": {
+      "name": "example-orders-service",
+      "commit": "0000000000000000000000000000000000000000"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "Typical and maximum number of orders returned by GET /orders",
+        "answer": "Not answered",
+        "source": "user"
+      }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "critical_paths_identified": 4,
+    "critical_paths_analyzed": 4,
+    "technology_support": [
+      { "technology": "postgres", "tier": "deep", "detection_confidence": 0.98 }
+    ],
+    "unknowns": [
+      {
+        "subject": "Production request rate for GET /orders",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "Request-rate metric or access-log sample for the route"
+      },
+      {
+        "subject": "Maximum rows returned per request",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "A row-count distribution for the orders table per user"
+      }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "The datastore is PostgreSQL, declared in the ORM schema file.",
+      "A per-row query is issued inside the loop building the response."
+    ],
+    "unknown": [
+      "Production request rate for the route.",
+      "Typical and maximum result-set size."
+    ],
+    "assumed": [
+      "The route is production-facing, since it is registered on the public router with no internal-only guard."
+    ],
+    "derived": [
+      "Query count for the route grows linearly with the number of rows returned, because the query is issued once per row of the outer result."
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "What is the maximum number of orders one request can return?",
+      "what_it_would_change": "A hard upper bound in the low tens would bound the amplification and reduce this finding's severity; an unbounded result set raises it.",
+      "affects": ["PERF-001"]
+    }
+  ],
+  "root_causes": [
+    {
+      "id": "ROOT-001",
+      "description": "Per-row datastore access in the orders listing path: the response is assembled by querying once per row rather than once per request.",
+      "findings": ["PERF-001"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "c542cc3a16a939db",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": {
+        "file": "src/orders/service.py",
+        "line": 84,
+        "symbol": "OrderService.list"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Building the order list issues one datastore query per order rather than one query for all of them.",
+      "performance_principle": "Work that repeats per item on a request path makes the request's cost a function of result-set size rather than a constant, so latency degrades exactly as the data grows.",
+      "evidence": [
+        {
+          "statement": "The lookup is issued inside the loop over the outer result set, so it executes once per row.",
+          "kind": "static",
+          "file": "src/orders/service.py",
+          "line": 84
+        },
+        {
+          "statement": "The route is registered on the public router with no pagination parameter, so the outer result set is not bounded by the caller.",
+          "kind": "static",
+          "file": "src/orders/routes.py",
+          "line": 22
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters where a single request returns more than a handful of orders. Request rate is unknown, so this is scored on growth rather than on measured load; if the result set is bounded in the low tens in practice, the effect is small.",
+      "counter_evidence": [
+        {
+          "statement": "No caching decorator or memoization wraps the per-row lookup, so repeated calls are not absorbed upstream.",
+          "effect": "no-effect",
+          "file": "src/orders/service.py",
+          "line": 80
+        },
+        {
+          "statement": "No LIMIT or pagination is applied by the route, so a bound that would cap the amplification does not exist in the code path examined.",
+          "effect": "no-effect",
+          "file": "src/orders/routes.py",
+          "line": 22
+        },
+        {
+          "statement": "The ORM is not configured with eager loading for this relation, which would have made the per-row access a single join at the driver level.",
+          "effect": "no-effect",
+          "file": "src/orders/models.py",
+          "line": 31
+        }
+      ],
+      "why_this_might_not_matter": "If orders per user are bounded in the low tens by a product constraint not visible in this code, the extra round trips are small and constant in practice. The route may also be called rarely; no request-rate evidence exists either way. Confirming either would reduce this to an advisory finding.",
+      "recommendation": "Fetch the related rows for the whole result set in one query and assemble the response in memory, so query count becomes constant per request instead of linear in rows returned.",
+      "alternatives": [
+        {
+          "option": "Batch the related lookup into a single query keyed by the outer result's identifiers.",
+          "preferred": true,
+          "why": "It removes the repeated datastore work rather than hiding it, so the improvement holds on a cold cache and under a changing access pattern."
+        },
+        {
+          "option": "Cache the per-row lookup.",
+          "preferred": false
+        },
+        {
+          "option": "Paginate the route so the result set is bounded.",
+          "preferred": false
+        }
+      ],
+      "trade_offs": "The batched query holds more rows in memory at once, which matters if the result set is large. Assembling the response in application code is slightly more complex than the current per-row access, and the batch query needs a bounded identifier list so it does not itself become an unbounded IN clause.",
+      "validation": {
+        "metric": "Number of datastore queries executed per request to the orders listing route",
+        "expectation": "Query count should fall from one-per-row to a constant small number. Latency should improve where the path is query-bound; the size of that improvement is unknown until measured.",
+        "falsifier": "If query count drops but latency does not change, this path was not query-bound and this finding's impact was overstated — reprioritize it.",
+        "safety": "safe-on-production",
+        "guard": "A test asserting the query count for this route does not scale with the number of rows in the fixture."
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "The response serializer rebuilds a formatting helper on every call rather than reusing one instance.",
+      "why_discarded": "Bounded, local, and small relative to the datastore work on the same path. Reporting it alongside a data-access finding would misrepresent its importance.",
+      "location": "src/orders/serializers.py"
+    },
+    {
+      "observation": "An index could be added to the orders table's status column.",
+      "why_discarded": "No query in the reviewed code filters on that column, so the index would add write cost with no read benefit. This is the kind of recommendation that looks productive and is not."
+    }
+  ],
+  "adjacent_findings": []
+}

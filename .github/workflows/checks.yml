@@ -2,7 +2,7 @@ name: checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -57,5 +57,60 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run the false-positive/false-negative fixture corpus
+      # Covers the detection false-positive/false-negative corpus, the secret-safety and
+      # hostile-repository fixtures, and the benchmark scoring harness. No pip install step
+      # exists here either: every script under test is standard-library only.
+      - name: Run the fixture corpus and the scoring harness tests
         run: python -m unittest discover -s tests -v
+
+      - name: Verify the scoring harness runs on the committed example review
+        run: |
+          python benchmark/scoring/score.py score \
+            --truth tests/fixtures/example-ground-truth.json \
+            --review docs/examples/review.example.json \
+            --json > /dev/null
+
+      # The publishing path runs on every pull request once the action is in use, so a
+      # break here is seen by users before it is seen by us.
+      - name: Verify the publishing path end to end
+        run: |
+          python scripts/validate_review.py --review docs/examples/review.example.json
+          python scripts/to_sarif.py --review docs/examples/review.example.json \
+            --strict-verdict > /tmp/review.sarif
+          python -c "import json; d=json.load(open('/tmp/review.sarif')); assert d['version']=='2.1.0'; assert d['runs']"
+          python scripts/pr_comment.py --review docs/examples/review.example.json > /dev/null
+
+  action-self-test:
+    name: action.yml runs as an actual composite action (docs/roadmap.md — live Action dry run)
+    runs-on: ubuntu-latest
+    # This is the gap the first real validation run named explicitly: every script action.yml
+    # calls is exercised above, but the composite action file itself — its step sequencing,
+    # its `with:`/`env:` wiring, whether GitHub actually resolves `uses: ./` correctly — had
+    # never executed on a real runner. `comment` and `upload-sarif` stay off here on purpose:
+    # this job runs on every push and PR, and posting a real comment or a real code-scanning
+    # upload on every one of those would be noise, not a test. It still exercises every other
+    # step, including schema validation, SARIF generation, and verdict derivation, against the
+    # actual action.yml file rather than only its constituent scripts run directly.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run this repository's own action against its own example review
+        id: self_test
+        uses: ./
+        with:
+          review: docs/examples/review.example.json
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: never
+
+      - name: Confirm the action's own outputs are wired correctly
+        run: |
+          test -f "${{ steps.self_test.outputs.sarif-file }}"
+          python -c "
+          import json
+          d = json.load(open('${{ steps.self_test.outputs.sarif-file }}'))
+          assert d['version'] == '2.1.0', 'action.yml produced non-SARIF-2.1.0 output'
+          assert d['runs'], 'action.yml produced a SARIF file with no runs'
+          "
+          echo "action.yml outputs: verdict='${{ steps.self_test.outputs.verdict }}' findings='${{ steps.self_test.outputs.findings }}'"
+          test "${{ steps.self_test.outputs.findings }}" = "1"

@@ -1,0 +1,319 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/finding.schema.json",
+  "title": "Backend performance review — finding",
+  "description": "One finding from a backend performance review. Mirrors the finding format in SKILL.md; the Markdown report remains the primary human artifact and this is the machine-readable form of the same content. Priority must match the matrix published in SKILL.md — that cross-field rule is enforced by scripts/check_repo_invariants.py against the matrix as published, so the matrix is not duplicated here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "stable_id",
+    "root_cause_id",
+    "state",
+    "severity",
+    "confidence",
+    "priority",
+    "category",
+    "location",
+    "problem",
+    "performance_principle",
+    "evidence",
+    "evidence_quality",
+    "impact",
+    "conditions",
+    "counter_evidence",
+    "recommendation",
+    "trade_offs",
+    "validation"
+  ],
+  "properties": {
+    "id": {
+      "description": "Report-local identifier. Not stable across reviews — see stable_id.",
+      "type": "string",
+      "pattern": "^PERF-[0-9]{3,}$"
+    },
+    "stable_id": {
+      "description": "Identity that survives line-number changes, computed mechanically — never invented by the reviewing agent. Run `scripts/compute_stable_id.py` (or its algorithm: normalize location.file and location.symbol, join with category, SHA-256, truncate) against this finding's own location and category; do not hand-compute a hash. Deliberately excludes freeform mechanism text: two agents describing the identical bug in different words must still get the same id, which hashing prose would break. Known limitation, accepted rather than hidden: two distinct findings sharing a file, symbol, and category collide. This is what makes exact-location fix verification and historical comparison mechanically checkable — it does not make two reviews that cite one bug at different points in a call chain resolve to the same id; that needs a human-curated `also_locations` entry (schemas/ground-truth.schema.json) or is reported as a known gap by `benchmark/scoring/score.py stability`'s `caveats` field, not silently assumed away.",
+      "type": "string",
+      "pattern": "^[a-z0-9]{8,64}$"
+    },
+    "root_cause_id": {
+      "description": "Findings that are symptoms of one underlying constraint share a root_cause_id. Merging is mandatory (methodology/bottleneck-analysis.md §2); this field is how a merge is recorded rather than merely performed.",
+      "type": "string",
+      "pattern": "^ROOT-[0-9]{3,}$"
+    },
+    "state": {
+      "description": "Lifecycle state. A first review emits OPEN for everything; later states arrive from re-review or from the consuming team.",
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "RESOLVED",
+        "WONT_FIX",
+        "FALSE_POSITIVE",
+        "RETEST_REQUIRED"
+      ]
+    },
+    "severity": {
+      "description": "Impact if real. Derived from the four factors in `impact`, per SKILL.md §Severity.",
+      "type": "string",
+      "enum": ["Critical", "High", "Medium", "Low", "Informational"]
+    },
+    "confidence": {
+      "description": "An evidence grade — how sure you are this is real, not how much it matters. `Confirmed` requires a cited runtime artifact; uncited Confirmed is a violation.",
+      "type": "string",
+      "enum": ["Confirmed", "High", "Medium", "Low"]
+    },
+    "priority": {
+      "description": "Derived from the severity/confidence matrix in SKILL.md. Never chosen directly, and never influenced by how cheap the fix is.",
+      "type": "string",
+      "enum": ["P0", "P1", "P2", "P3"]
+    },
+    "category": {
+      "description": "Kept in exact agreement with the Category enum in SKILL.md; check_repo_invariants.py enforces both directions.",
+      "type": "string",
+      "enum": [
+        "data-access",
+        "concurrency",
+        "serialization",
+        "io",
+        "memory",
+        "networking",
+        "infrastructure",
+        "observability",
+        "cost"
+      ]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file"],
+      "properties": {
+        "service": {
+          "description": "Which service this belongs to, for a monorepo. Matches a name in the review envelope's services[].",
+          "type": "string"
+        },
+        "file": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "symbol": {
+          "description": "Enclosing function, method, or class. Part of stable_id, and more durable than a line number.",
+          "type": "string"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["quick-win", "scalability-risk", "needs-measurement"]
+      }
+    },
+    "problem": { "type": "string", "minLength": 1 },
+    "performance_principle": {
+      "description": "The universal principle violated, stated without reference to the technology. Reasoning that starts at the technology produces advice that is true in general and useless here.",
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "description": "What in the repository or in supplied runtime artifacts supports this. Every entry carries its provenance, so a reader can tell a line of code from a production trace.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/evidenceItem" }
+    },
+    "evidence_quality": {
+      "description": "How good the evidence is, as distinct from how sure the conclusion is. A production trace is Strong; a plausible reading of one file is Weak. Confidence may not exceed what evidence quality supports.",
+      "type": "string",
+      "enum": ["Strong", "Moderate", "Weak"]
+    },
+    "impact": {
+      "description": "The four severity factors, made explicit rather than summarized. SKILL.md requires all four for every finding.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "frequency", "growth", "blast_radius"],
+      "properties": {
+        "position": {
+          "type": "string",
+          "enum": ["critical-path", "async", "offline"]
+        },
+        "frequency": {
+          "type": "string",
+          "enum": ["per-request", "per-item", "per-batch", "rare"]
+        },
+        "growth": {
+          "description": "Growth in data or traffic. `unknown` is a legitimate answer and is preferred over an invented complexity — derive it only where the code supports the derivation.",
+          "type": "string",
+          "enum": ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n^2)+", "unknown"]
+        },
+        "blast_radius": {
+          "type": "string",
+          "enum": ["endpoint", "service", "system-wide"]
+        },
+        "amplification": {
+          "description": "Work multiplier from fan-out, retries, N+1, pagination loops, or cache misses. A numeric factor only where it is derivable from the code; otherwise `Nx` or `unknown`. Never estimated.",
+          "type": "string",
+          "pattern": "^([0-9]+(\\.[0-9]+)?x|Nx|unknown)$"
+        }
+      }
+    },
+    "conditions": {
+      "description": "The workload under which this matters. May never be empty — a finding that cannot state its conditions does not ship. Where workload is unknown, the assumption is stated here and confidence caps at Medium.",
+      "type": "string",
+      "minLength": 1
+    },
+    "counter_evidence": {
+      "description": "Evidence sought against this finding, not for it. Required, and an empty array is a positive assertion that a search was made and nothing was found — not that none was attempted. Anything found here must be reflected in `confidence`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/counterEvidenceItem" }
+    },
+    "why_this_might_not_matter": {
+      "description": "The strongest honest case that this finding is not worth acting on. Required at Medium severity and above, where the cost of a false positive is highest.",
+      "type": "string",
+      "minLength": 1
+    },
+    "recommendation": {
+      "description": "What to change, and why it addresses the principle rather than the symptom.",
+      "type": "string",
+      "minLength": 1
+    },
+    "alternatives": {
+      "description": "Options considered, with the preferred one named and justified. Guards against the failure where the first plausible fix is the only one examined — usually the one that masks work rather than removing it.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/alternative" }
+    },
+    "trade_offs": {
+      "description": "Complexity, memory, consistency, operational burden, new failure modes. A recommendation that states no cost has not been thought through.",
+      "type": "string",
+      "minLength": 1
+    },
+    "validation": {
+      "description": "How to prove the change worked, structured so it can be checked mechanically rather than only read.",
+      "$ref": "#/$defs/validation"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "severity": { "enum": ["Critical", "High", "Medium"] }
+        },
+        "required": ["severity"]
+      },
+      "then": { "required": ["why_this_might_not_matter", "alternatives"] }
+    },
+    {
+      "if": {
+        "properties": { "confidence": { "const": "Confirmed" } },
+        "required": ["confidence"]
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "contains": {
+              "properties": { "kind": { "const": "runtime" } },
+              "required": ["kind"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "confidence": { "const": "Low" } },
+        "required": ["confidence"]
+      },
+      "then": {
+        "properties": { "priority": { "enum": ["P2", "P3"] } }
+      }
+    }
+  ],
+  "$defs": {
+    "evidenceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "kind"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1 },
+        "kind": {
+          "description": "static: read from the repository. runtime: a measurement artifact. user-provided: stated by the user. derived: computed from other evidence, with its inputs shown in `statement`.",
+          "type": "string",
+          "enum": ["static", "runtime", "user-provided", "derived"]
+        },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "tool": {
+          "description": "For runtime evidence, what produced it — EXPLAIN, a profiler, a load test, a trace exporter.",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "When the runtime artifact was captured. A six-month-old trace is weaker evidence than a fresh one, and the reader cannot tell without this.",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "counterEvidenceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "effect"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1 },
+        "effect": {
+          "description": "What this did to the finding. `lowers-confidence` and `bounds-impact` must be visible in the scores above; `refutes` means the candidate should not have become a finding at all.",
+          "type": "string",
+          "enum": ["lowers-confidence", "bounds-impact", "refutes", "no-effect"]
+        },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option", "preferred"],
+      "properties": {
+        "option": { "type": "string", "minLength": 1 },
+        "preferred": { "type": "boolean" },
+        "why": {
+          "description": "Required on the preferred option — why this one rather than the others.",
+          "type": "string"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "expectation", "falsifier", "safety"],
+      "properties": {
+        "metric": {
+          "description": "What to measure. Specific enough to act on: \"query count on GET /orders\", not \"performance\".",
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline": {
+          "description": "The current value, only where it was actually measured. Omit rather than estimate — an invented baseline is a fabricated number.",
+          "type": "string"
+        },
+        "expectation": {
+          "description": "A prediction, not a promise. Direction of change is always assertable; magnitude only where derivable from the code.",
+          "type": "string",
+          "minLength": 1
+        },
+        "falsifier": {
+          "description": "What observation would mean this finding was wrong. If no observation could refute it, it is not an engineering claim.",
+          "type": "string",
+          "minLength": 1
+        },
+        "safety": {
+          "type": "string",
+          "enum": ["safe-on-production", "not-safe-on-production"]
+        },
+        "guard": {
+          "description": "A test, metric, or alert that stops the problem recurring once fixed.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

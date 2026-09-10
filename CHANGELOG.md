@@ -23,9 +23,553 @@ change scoring are **patch**.
 
 Breaking changes carry a migration note in the entry.
 
+## Release cadence
+
+What a change *is* (major/minor/patch, above) is separate from *when it ships*. From v0.6.0
+onward, work accumulates on `develop` and a release is cut deliberately, at a milestone, rather
+than every time `main` moves — see [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests).
+Patch and minor releases still happen when something genuinely warrants shipping sooner (a
+detection bug that silently drops a signal, for instance); they are just no longer the default
+response to a batch of merges. Between releases, version numbers stay at the last released
+value and `[Unreleased]` accumulates.
+
 ---
 
 ## [Unreleased]
+
+## [1.0.0] — 2026-09-10
+
+The 1.0.0 milestone: every detection signal at `deep` tier, and the measurement system this
+project's methodology needed to be more than an unverified pile of advice — a machine-readable
+finding schema, a scoring harness, ground truth from real independently-run reviews, and a
+GitHub Action exercised end to end against real infrastructure rather than asserted.
+
+### Added — the first real validation run, and two harness bugs it found
+
+The measurement system's first genuine end-to-end test against real, live data rather than
+retro-annotated prose or synthetic fixtures. Two fresh `general-purpose` agents, each with no
+memory of this project's own findings and explicitly forbidden from reading
+`docs/evaluation.md`, `docs/review-response.md`, or `benchmark/ground-truth/`, were given only
+`SKILL.md` and a freshly cloned repository, and produced a full review — Markdown report and
+schema-valid JSON — against the complete, post-1.0.0 skill.
+
+- **Two independent reviews of `gin-realworld`**, run specifically to get a real `score.py
+  stability` measurement rather than the hand-diffed one `docs/evaluation.md` §3.18/§3.21
+  describe. Both reproduced the dominant N+1 finding; once `gin-realworld.json`'s ground
+  truth was corrected (below) to reflect what both runs actually found, each scored
+  **precision 1.0 / recall 1.0** against it.
+- **One review of `rails-realworld.json`** (Ruby on Rails, a stack never independently
+  blind-passed before this) as an E4 attempt. It did not succeed — four real findings were
+  produced, two spot-verified directly against the source before being accepted (a
+  self-referential `has_many` correctness bug verified verbatim in `app/models/article.rb`;
+  an unclamped `params[:limit]` verified verbatim in the controller) — consistent with
+  `docs/evaluation.md` §3.7: no repository reviewed in this project's history has yet
+  produced a literal zero-finding result.
+- **A real harness bug, found and fixed: location matching was too brittle for a mechanism
+  spanning a call chain.** Both `gin-realworld` runs found the identical N+1 and cited
+  *opposite ends* of the same call chain — one the query-issuing method's definition, the
+  other the call site that would actually need to change. Neither is more correct; scoring
+  one as canonical and the other a miss would have scored the harness's own convention, not
+  the reviews. `schemas/ground-truth.schema.json` gains `also_locations` — alternative
+  locations a ground-truth item accepts alongside its primary `location` — and
+  `benchmark/scoring/score.py`'s matcher checks all of them. New tests in
+  `tests/test_scoring_harness.py`.
+- **A real specification gap, found and then fixed with a mechanical algorithm rather than
+  patched around: `stable_id` could not support cross-review comparison as originally
+  specified.** The two `gin-realworld` runs agreed on the dominant finding's location (once
+  fixed above), severity within one level, and recommendation — and still had 0% `stable_id`
+  agreement, because `SKILL.md`/the schema described it as "derived from root cause, file,
+  symbol, and mechanism" without mandating an actual algorithm, so two independently-run
+  agents each invented their own hash by reasoning and were never going to agree.
+  **`skills/backend-performance-review/scripts/compute_stable_id.py`** is the fix: a
+  stdlib-only, mechanical accelerator over `location.file` + `location.symbol` + `category` —
+  the same way `detect_stack.py` is a mechanical accelerator rather than something an agent
+  reasons its way to. Freeform mechanism text is deliberately excluded from the hash inputs,
+  since two honest paraphrases of the same bug must still produce the same id, which hashing
+  prose would have broken. `SKILL.md` Phase 7 now instructs running the script rather than
+  computing a value by reasoning; `scripts/validate_review.py` and
+  `scripts/check_repo_invariants.py` both recompute the expected id from a finding's own
+  fields and reject a mismatch (mutation-tested: a hand-altered `stable_id` on the committed
+  example is caught by both). A known, accepted limitation, stated rather than hidden: two
+  distinct findings sharing a file, symbol, and category collide, and it still cannot resolve
+  two reviews citing one bug at different points in a call chain — that needs a
+  human-curated `also_locations` entry or is reported via `score.py stability`'s `caveats`
+  field, which stays in place. Sixteen new tests in `tests/test_compute_stable_id.py`
+  (determinism, normalization, and — explicitly — that the function's signature has no
+  `mechanism` parameter at all, since that omission is the point) plus three in
+  `tests/test_sarif_and_verdict.py` for the new validation checks.
+- **A real `forbidden`-trap false alarm, found and fixed with a new `acceptable` item rather
+  than by loosening the trap.** One run's finding (SQLite's single-writer lock causing
+  `SQLITE_BUSY` with no `busy_timeout`) shared a file with an existing `forbidden` trap (a
+  pool-*size*/exhaustion claim the original evaluation had already ruled out) and was
+  incorrectly caught by category+location matching alone, despite being a genuinely different
+  and valid claim. `gin-realworld.json` now carries 8 `acceptable` items (up from 0), each
+  traced to a specific verified claim, ordered so specific symbol-bearing items are tried
+  before the broad, symbol-less missing-indexes item — preventing the same class of
+  ordering-driven mismatch this run also surfaced.
+- **A live GitHub Actions dry run of `action.yml`, both halves.** The one item this run left
+  open is now closed. A permanent job, `action-self-test` in `.github/workflows/checks.yml`,
+  runs `action.yml` itself via `uses: ./` on every push and PR (not just its constituent
+  scripts individually) and asserts the SARIF and outputs it produces are correct; it runs
+  with `comment`/`upload-sarif` off by default so it stays silent. The outward-facing half —
+  actually posting a comment and uploading SARIF — was then exercised once, deliberately,
+  against this repository's own PR #54 (flip the two inputs to `true`, push, confirm, revert),
+  rather than left as an unverified code path: a real comment from `github-actions[bot]`
+  landed on the PR with the actual review body, and a real code-scanning alert (rule
+  `perf/data-access`, tool `backend-performance-review v0.6.0`) was created from the uploaded
+  SARIF.
+
+### Added — infrastructure batch, completing the 1.0.0 milestone
+
+- **`kubernetes`, `docker`, `serverless`, and `terraform` promoted to `deep` tier — the last
+  batch.** All 39 detection signals are now `deep`. No signal in `registry.yaml` is
+  `conceptual` or `generic` any more.
+  - **`technology/kubernetes.md`** — the CFS-quota accounting-period mechanism specifically
+    behind CPU throttling (a container can be throttled within a single ~100ms period even
+    while the node has spare capacity, which is why bursty multi-threaded workloads are
+    disproportionately affected relative to their average CPU usage), QoS-class-driven
+    eviction order under memory pressure, HPA's metrics-polling lag and deliberate
+    scale-down stabilization window, `startupProbe` as the specific fix for a slow-starting
+    container (rather than loosening `livenessProbe`), and namespace-level `ResourceQuota`/
+    `LimitRange` as a ceiling above an individual pod's own limits.
+  - **`technology/docker.md`** — PID 1 signal-handling as the specific, checkable reason
+    graceful shutdown can silently not happen despite being implemented in application code
+    (no init process, or a shell-wrapped `CMD` absorbing `SIGTERM`), the related zombie-
+    process-reaping gap, layer-caching and image size as a startup-latency (not request-time)
+    cost, copy-on-write cost on first write to a file inherited from an image layer, and
+    `HEALTHCHECK` as a mechanism independent of — and easy to double-count against — an
+    orchestrator's own probes.
+  - **`technology/serverless.md`** — a deliberately comparative file across five platforms
+    (AWS Lambda, Google Cloud Functions, Azure Functions, Vercel, Netlify), the fifth
+    umbrella technology file after vector stores, object storage, task queues, and REST
+    frameworks. Covers per-platform warm-instance mitigation levers (provisioned/reserved
+    concurrency on Lambda are two different knobs solving two different problems, easy to
+    conflate), Lambda VPC-attachment's distinct ENI-provisioning cold-start cost, invocation-
+    duration ceilings that vary by an order of magnitude or more across platforms, and the
+    module-scope/handler split's per-platform and per-language expression.
+  - **`technology/terraform.md`** — not a runtime, so this file is shaped differently from
+    every other technology file in this project: a map from provider resource types (across
+    AWS, GCP, and Azure) to the exact arguments `infrastructure/resources.md`'s arithmetic
+    needs (container memory/CPU, replica bounds, connection ceilings, concurrency limits,
+    timeouts), plus how `count`/`for_each` versus autoscaling arguments, module layering, and
+    per-environment `.tfvars` can hide or redirect which value is actually live.
+  - `docs/supported-technologies.md`, README.md, and `docs/roadmap.md` updated: coverage is
+    now 39 deep / 0 conceptual / 0 generic, and the "Technology promotion candidates" section
+    is retained empty (rather than removed) as the eventual home for a genuinely new engine,
+    framework, or platform, with the umbrella-file precedent documented for reuse.
+
+### Added — frameworks batch (1.0.0 milestone)
+
+- **`graphql`, `grpc`, and `rest` promoted to `deep` tier** — the frameworks batch of the
+  1.0.0 "leave nothing below deep" milestone. Only the infrastructure batch (`kubernetes`,
+  `docker`, `serverless`, `terraform`) remains below `deep`.
+  - **`technology/graphql.md`** — the resolver-tree execution model that makes GraphQL's
+    N+1 structural rather than incidental (every field in a selection set resolves
+    independently; there is no "forgot to join" version of this), DataLoader's
+    request-scoped batching mechanism (collapses sibling resolver calls within one tick, not
+    within a single resolver), the caller-controlled-query-shape risk (unbounded nesting and
+    alias-multiplied breadth) that has no REST equivalent, and federation's per-subgraph
+    fan-out.
+  - **`technology/grpc.md`** — HTTP/2 stream multiplexing inverting ordinary
+    connection-pool-sizing reasoning (one connection now often serves many concurrent calls,
+    which means an L4 load balancer sees one flow rather than N requests and can pin all of a
+    client's traffic to one backend), Protobuf message-shape cost (nesting and field
+    cardinality, not wire size alone, dominate (de)serialization CPU), streaming-call state
+    lifetime, and automatic deadline propagation.
+  - **`technology/rest.md`** — a deliberately comparative file across all fifteen frameworks
+    the `rest` signal matches (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo,
+    Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core), following the umbrella
+    precedent `technology/vector-stores.md`/`object-storage.md`/`task-queues.md` set. Names
+    which concurrency model each framework actually uses (single event loop vs.
+    thread/process/goroutine-per-request vs. async-task-based) rather than writing generic
+    concurrency advice true of none of them specifically — the same bar
+    `docs/roadmap.md` sets for every umbrella file. Also covers Fiber's non-`net/http`
+    foundation (a real correctness footgun from request-object reuse, not just a performance
+    note), PHP-FPM's process-per-request model, and Rails' app-server-dependent concurrency.
+  - `docs/supported-technologies.md`, README.md, and `docs/roadmap.md` updated to match;
+    coverage is now 35 deep / 4 conceptual / 0 generic.
+
+### Changed — BREAKING
+
+- **The finding format gains four required fields, and the report gains a machine-readable
+  form.** Both are breaking under this project's own definition: the finding schema changes,
+  and the report's section structure changes. A report issued before this change is still
+  readable, but it is not comparable field-by-field against one issued after it, and it
+  cannot be scored by the tooling this unlocks.
+
+  New required fields on every finding:
+
+  | Field | Why it is required rather than optional |
+  |:--|:--|
+  | `Root cause` | Merging symptoms into one finding was already mandatory (`methodology/bottleneck-analysis.md` §2). Recording *which* cause makes the merge auditable instead of merely asserted, and makes "three symptoms, one problem" legible in the output |
+  | `Counter-evidence` | The review already applied an alternative-explanation test and an intent test while discarding candidates, but left no trace of either, so a reader could not tell a candidate that survived scrutiny from one that was never scrutinized. An empty list now positively asserts that a search happened and found nothing |
+  | `Why this might not matter` | Required at Medium severity and above, where a false positive costs the most. Stating the strongest case against a finding is the cheapest defense against manufacturing one |
+  | `Alternatives` | Required at Medium severity and above. Guards the failure where the first plausible fix is the only one considered — usually the one that masks work rather than removing it |
+
+  Migration: reports produced under the previous format remain valid as documents; re-run
+  the review to produce a comparable one. Findings carried forward by hand need the four
+  fields added, and `Counter-evidence` should be filled in honestly rather than backfilled
+  as empty.
+
+### Added
+
+- **`schemas/finding.schema.json` and `schemas/review.schema.json`** — the report's
+  machine-readable form. The Markdown report stays the primary artifact and stays
+  authoritative; the JSON is the same content in a shape that can be diffed, scored, and
+  compared across runs. Almost every measurement this project wants — precision and recall,
+  severity and confidence calibration, run-to-run stability, historical comparison,
+  cross-model comparison — was blocked on having a stable record to compare, which is why
+  this landed before the benchmark corpus rather than after it.
+  - Carries reproducibility metadata (commit, skill version, detector version, model), a
+    completeness block, an assumption ledger, and root-cause grouping.
+  - `stable_id` is derived from root cause, file, enclosing symbol, and mechanism — never
+    from a line number — so the same unfixed problem keeps its identity across a refactor.
+  - The severity/confidence → priority matrix is deliberately **not** duplicated into the
+    schema. It stays published in `SKILL.md` alone and is enforced from there, so the matrix
+    exists in one authoritative place rather than three.
+- **`scripts/json_schema_lite.py`** — a small standard-library JSON Schema validator
+  covering only the subset these schemas use. Chosen over a `jsonschema` dependency so that
+  `python scripts/check_repo_invariants.py` still works on a clean checkout with nothing
+  installed, matching the constraint the bundled detector already lives under. Extending the
+  schemas may mean extending this reader — the same trade `detect_stack.py` documents for
+  its YAML subset.
+- **`docs/examples/review.example.json`** — a worked, schema-valid review. It lives in
+  `docs/examples/` so it can never be loaded as a reference (`docs/architecture.md` §9), and
+  it contains no invented runtime numbers: the finding is scored on growth derived from the
+  code, its validation states a direction rather than a magnitude, and one of its
+  discarded candidates is an index that would have added write cost for no read benefit.
+- **`docs/review-response.md`** — a disposition for each of the 140 recommendations in an
+  external review of this project: adopted, already present, reframed, deferred, or
+  declined, each with a reason. The largest category is work that already existed under
+  another name, which is itself worth recording.
+- **Counter-evidence is now a named, recorded step** (`methodology/bottleneck-analysis.md`
+  §4). The discipline partly existed already — §3's "alternative-explanation test" and
+  "intent test" are counter-evidence search — but it happened invisibly and left no trace,
+  so a reader could not distinguish a finding that survived scrutiny from one that was never
+  scrutinized. It is now explicit about what to look for per hypothesis type, and about what
+  must change when something turns up: counter-evidence that *bounds* a problem reduces
+  **Severity**, while counter-evidence that *obscures* it reduces **Confidence**. The two
+  are not interchangeable, and collapsing them loses the distinction the whole two-axis
+  rubric rests on.
+- **Detection and recommendation are now explicitly separated**
+  (`methodology/bottleneck-analysis.md` §5). Deciding the answer is a cache makes
+  cache-shaped evidence easier to find, and quietly relaxes the counter-evidence search
+  because the conclusion is already comfortable. Naming a technology while establishing a
+  mechanism is now called out as a recommendation wearing a finding's clothes.
+- **Findings that interact are scored on the combination**
+  (`methodology/bottleneck-analysis.md` §2). Three independently moderate issues sharing one
+  constrained resource can be severe together. Guarded against inflation: the interaction has
+  to be mechanical and stateable, not "both are about the database."
+- **The workload model gains `DERIVED` and `MEASURED`** (`methodology/workload.md` §3),
+  completing the assumption ledger. It already separated known from assumed from unknown;
+  arithmetic previously had nowhere to go and could pass for a fact. `DERIVED` must show its
+  inputs, and an empty `MEASURED` list is now stated rather than implied — it is the line
+  that explains why almost nothing in a static review is `Confirmed`.
+- **The workload interview is now adaptive** (`methodology/workload.md` §2). The
+  seven-question cap stays; *which* seven is now driven by where Phase 1 found risk, and
+  ranked by how much the answer would move the ranking rather than by how natural the
+  question is to ask. Reviews now also close with the specific unanswered questions that
+  would change the result, which is more useful than "more information is needed".
+- **Review completeness** (report template §2). Repository coverage, critical paths analyzed
+  against identified, technology support, runtime evidence, and an overall **review
+  confidence that is explicitly not finding confidence** — every finding can be `High` while
+  the review is `Low`, which means "what I looked at, I am sure about; I did not look at
+  much." Unknowns are now split by cause: no evidence existing is a gap the user can close,
+  an unsupported technology is a gap in this skill, and presenting them identically misleads.
+  Without this block, a zero-finding result reads as "everything is healthy" — a much
+  stronger claim than the one the review is entitled to make.
+- **Investigation economy** (`methodology/discovery.md` §5). How much to spend on a candidate
+  by what it could be worth, expanding on evidence rather than on a fixed file budget, asking
+  before recommending an expensive diagnostic, and — the part most often missing — explicit
+  conditions under which stopping is correct and complete. Continuing until something turns
+  up is how a review manufactures findings.
+- **Precision and recall are traded off per priority band** (`rubrics.md` §5). High precision
+  at P0/P1, where a wrong finding costs a team a day and costs the review its credibility for
+  everything after it; recall acceptable at P3. Uncertainty now explicitly pushes a candidate
+  *down* a band, never up, and inflating severity to get something read is named as
+  destroying the only thing that makes the scale useful.
+
+### Added — change-scoped review as the flagship
+
+- **A derived verdict** — `PASS` / `WARN` / `FAIL` / `UNKNOWN` — and
+  `methodology/change-scoped.md`, which the mode previously lacked entirely despite the
+  README calling it the mode most worth running continuously. Like priority, the verdict is
+  read off a table rather than chosen: `FAIL` requires a `High`/`Critical`-severity finding
+  at `High` or `Confirmed` confidence, so a hypothesis cannot block a merge.
+  - **`UNKNOWN` never collapses into `PASS`.** They are different claims — "I looked and
+    found nothing" versus "I could not look" — and conflating them converts a gap in the
+    review into a false assurance the reader has no way to detect. `UNKNOWN` outranks
+    findings, and never fails a job under any setting, because a change the review could not
+    analyze is not the author's fault.
+  - The file also covers the expansion boundary (stop when expansion stops touching the
+    change), and **crediting fixes rather than re-flagging them** — a diff that removes an
+    N+1 still contains the N+1 in its removed lines, and reading direction before scoring is
+    the difference between a useful check and one teams route around.
+- **Repository performance policy** (`.performance-policy.yml`), with one rule kept
+  deliberately load-bearing: **a policy violation is not a measured performance problem**,
+  and the two are never reported as the same thing. One is a fact about a limit the team
+  chose; the other is a claim about production behavior. Conflating them lets an arbitrary
+  threshold read as a measurement. A budget expressed against a baseline nobody measured is
+  reported as `not-evaluable` — never as met. SLOs and business criticality enter here too,
+  affecting sequencing only, never severity.
+- **`scripts/to_sarif.py`** — SARIF 2.1.0 output, with three deliberate mappings:
+  - **`level` comes from priority, not severity**, because SARIF has one axis and this
+    methodology has two. Mapping severity alone would render a `High`/`Low`-confidence
+    hypothesis as an `error` beside a confirmed regression.
+  - **`stable_id` becomes `partialFingerprints`**, so a GitHub alert survives the code moving.
+    A line-number fingerprint produces a fresh alert every time someone adds an import above.
+  - **Adjacent `SEC-`/`COR-`/`MAINT-` findings are excluded by default.** This project has no
+    security methodology, and publishing them into code scanning would present them as the
+    output of a scanner it is not — a team could read a clean dashboard as evidence of a
+    security review that never happened. `--include-adjacent` exists, and still emits them at
+    `note` regardless of stated risk.
+- **`scripts/validate_review.py`** — schema validation plus the cross-field rules a schema
+  cannot express: priority against the published matrix, root-cause references, duplicate
+  ids, and the rule that `Confirmed` confidence requires cited runtime evidence a review
+  claiming none cannot have.
+- **`scripts/pr_comment.py`** — a compact comment that keeps what compression usually loses:
+  each finding's `Conditions`, its "why this might not matter", a coverage table so a `PASS`
+  can be read for what it is, and policy violations visually separated from findings. Zero
+  findings renders as "nothing material was found in what was reviewed" rather than as a
+  clean bill of health.
+- **`action.yml`** — a composite GitHub Action, plus [docs/github-action.md](docs/github-action.md).
+  It does the deterministic half — validate, convert, comment, surface the verdict — and
+  deliberately **does not run the review**, which needs a model, credentials, and a budget
+  that belong to the caller. `fail-on` defaults to `never`: a static review with no runtime
+  evidence is advice, and a check that blocks a release on its first false positive gets
+  marked non-required and then deleted. The documented path is to earn the gate.
+  - Two bugs were found and fixed before this shipped, both from GitHub running `shell: bash`
+    with `set -e`: a `[ test ] && append` argument builder aborted the step whenever the flag
+    was off, and the verdict gate failed the job precisely when the verdict was *acceptable*.
+    The second is the kind of bug that looks like the check working.
+- **Sixteen tests for the publishing path**, covering the ways a verdict can lie, fingerprint
+  stability across a moved finding, zero findings producing valid empty SARIF, and adjacent
+  findings staying out of the security dashboard.
+
+### Added — measurement
+
+- **`benchmark/scoring/score.py`** — scores a machine-readable review against expert ground
+  truth. Standard library only. It reports precision, recall, and F1 **per category** (a
+  single blended number hides "good at N+1, poor at concurrency"), severity calibration as
+  exact / within-one / large disagreement, confidence calibration as claimed-versus-actually-
+  correct, confidence-ceiling violations, recommendation accuracy **tracked separately from
+  finding accuracy**, and restraint failures. A `stability` subcommand turns the hand-diffing
+  in `docs/evaluation.md` §3.18 and §3.21 into a computed overlap figure, so the remaining
+  six repositories can be checked cheaply rather than by eye.
+- **`schemas/ground-truth.schema.json`** — the annotation format, with **three buckets rather
+  than one list**, which is the part that matters:
+  - `expected` — must be found; a miss is a false negative.
+  - `acceptable` — real but not required; scored neither way. Without this, a review would be
+    penalized for finding something real the annotator overlooked, which would train the
+    corpus toward the annotator's blind spots.
+  - `forbidden` — must **not** be reported, each with a required `why_not` stated as a fact
+    about the code. This is where precision is actually measured, and **an empty `expected`
+    with a populated `forbidden` is how a healthy repository gets written down** — the case
+    `docs/evaluation.md` §3.7 records as never cleanly obtained across four repositories, and
+    the one this project's central claim rests on.
+- **`benchmark/README.md`** — what to annotate first and why, in priority order. The
+  zero-findings repository is first. `benchmark/ground-truth/` ships empty on purpose:
+  annotations are the expensive part, and committing placeholder ones would put fabricated
+  truth into a repository whose first rule is not to fabricate.
+- **Twenty-nine tests for the harness**, built the way the invariant checker was — by trying
+  to fool it. They cover a review that misses everything, one that manufactures a finding on
+  a healthy repository, one that finds the right problem and recommends Redis anyway, one
+  that calls a Medium issue Critical, and one that claims `Confirmed` with no runtime
+  artifact. One of them found a real bug in the matcher before it was ever used: a basename
+  fallback matched `orders/service.py` against `users/service.py`. Matching is now
+  suffix-only, because a wrong match is silent while an unmatched annotation prints a MISSED
+  line somebody can correct.
+- **The ground-truth corpus, seeded from all eight independently blind-passed repositories
+  recorded in `docs/evaluation.md`**, plus one change-scoped case, nine files total:
+  `gin-realworld.json` (the N+1 traced through the serializer chain, §3.1/§3.9/§3.18),
+  `fastapi-full-stack-template.json` (unbounded pagination, §3.2/§3.10), `urlshortener.json`
+  (the one repository with real `Confirmed`-grade runtime evidence — the benchmarks were
+  actually run, §3.5/§3.11), `github-signature-verifier.json` (a severity corrected from
+  `Medium` to `High` between two independent passes on evidence the first pass had already
+  read and set aside, §3.7 → §3.8 — itself a worked example of what severity calibration
+  exists to catch), `spring-boot-realworld.json` (JVM — an unbatched GraphQL N+1 with a
+  working REST counter-example in the same codebase, §3.13), `realworld-axum-sqlx.json`
+  (Rust — five findings including a full-table scan the codebase's own source comment calls
+  a DoS vector, and a `spawn_blocking` offload correctly *not* flagged as blocking, §3.14),
+  `aspnetcore-realworld.json` (.NET — a synchronous EF Core transaction wrapping every
+  request inside an `async` handler, §3.15), `node-express-realworld-prisma-postgres.json`
+  (Node.js/Prisma — an unbounded relation fetch where the already-computed efficient form is
+  silently discarded in favor of the expensive one, §3.16), and
+  `gin-realworld-pr49-change-scoped.json` (ground truth for a real, merged PR, testing that a
+  review credits a genuine fix while still catching the untouched half of the same problem
+  one call deeper, §3.6).
+  - Every `forbidden` trap is a false positive the underlying blind pass actually encountered
+    and rejected, not a hypothetical one; four files carry a thin or empty `forbidden` list
+    rather than one, because their source write-ups describe what was correctly declined
+    only in prose without pinning an exact file:line — inventing a location to fill the field
+    would violate the same no-invented-facts discipline this corpus exists to hold reviews to.
+  - Scored end-to-end against hand-constructed reviews to confirm the harness works on real
+    corpus data: a manufactured false positive on one `forbidden` trap correctly halves
+    precision and is named in the restraint report; a partial review covering 3 of the
+    5-finding Rust file correctly scores 0.6 recall with a per-category breakdown that
+    separates a 0.0-recall category from a 1.0-recall one in the same result.
+  - Case 2 (a repository whose correct answer is zero findings) remains open: none of the
+    nine files satisfy it, consistent with `docs/evaluation.md` §3.7's finding that no
+    repository reviewed so far has produced a literal zero-finding result.
+  - `benchmark/ground-truth/.gitkeep` removed — the directory documented as "empty on
+    purpose" no longer is.
+  - Not yet annotated: the second independent pass used for stability measurement (§3.18,
+    §3.21) — that needs a second, distinct `review.json` scored with `score.py stability`
+    against the first, not a ground-truth file.
+
+### Added — detection
+
+- **Four-level evidence strength on every detection** (`detect_stack.py`). The script already
+  graded evidence two ways; `direct` / `indirect` / `weak` / `ambiguous` makes the
+  distinction that actually matters visible: a file that *declares* an engine
+  (`schema.prisma`'s `provider`, `knexfile.js`'s `client`, a connection scheme in a manifest)
+  versus a dependency that merely *implies* one. A declared driver is not proof the datastore
+  is reached at runtime, and the review should confirm an indirect match against a real
+  import before believing it. Each signal also carries a deterministic `confidence`, capped
+  below 1.0 — detection is evidence for a human to verify, not a conclusion.
+  - `ambiguous` covers the specific class of bug behavioral evaluation found twice: a short,
+    collision-prone token matching only inside a lockfile, where base64 hashes live.
+  - The older `weak_evidence` boolean is unchanged and still emitted, so nothing consuming
+    it breaks.
+  - One bug in the grading was caught by running the detector against this repository: a
+    connection-scheme token was graded `direct` even when its only match was in an arbitrary
+    YAML file, promoting a documentation mention to the grade of a real datasource
+    declaration. Fixed, with a regression test.
+- **Service topology for monorepos** (`detect_stack.py`, `methodology/discovery.md` §2). A
+  repository with a runtime manifest in more than one subdirectory is not one stack, and the
+  flattened union across all of them describes no single service accurately — it routes
+  reference files for engines half the services never touch, and scopes findings to "the
+  repository" when the reader needs to know which service to fix. `services[]` now carries
+  per-service detection and its own `references_to_load`; `workspace_markers` reports
+  `pnpm-workspace.yaml`, `lerna.json`, `turbo.json`, `nx.json`, `go.work`, and `rush.json`.
+  Nested manifests collapse into their parent service rather than becoming peers.
+- **Nineteen new regression tests**, extending the existing corpus rather than starting a
+  parallel one:
+  - the evidence grades, including the grading bug above;
+  - service topology, including nesting and the single-service case;
+  - **secret safety, now automated** — `docs/evaluation.md` §2 calls this the check worth
+    re-running on every scanner change, and it was previously manual. A real `.env`
+    containing a real connection string is scanned, reported present, and proven never read;
+  - **hostile repository content** — a README carrying prompt-injection text must produce
+    byte-identical detection to one without it, an injected manifest comment must not
+    suppress a signal, and a planted `registry.yaml` must not reroute reference loading.
+    Repository content is data, never instructions; for a skill pointed at arbitrary
+    third-party code, that is a security property and now has tests.
+- Three new repository invariants, all mutation-tested before being trusted, per the
+  practice `docs/evaluation.md` §1 sets:
+  - the schema's `severity`, `confidence`, `priority`, and `category` enums must match
+    `SKILL.md` in both directions, so a rubric edit cannot silently leave the schema behind;
+  - the worked example must validate against the schema, and every finding in it must carry
+    the priority the published matrix derives;
+  - the report template must reference the schema, since a schema nothing points at is one
+    nobody will keep current.
+- `sqs` and `task-queue` promoted to `deep` tier — the fourth batch of the 1.0.0 goal, and
+  the point at which **no signal in the registry is `generic` tier any more**:
+  - **`technology/sqs.md`** — visibility timeout as the specific lease mechanism behind
+    redelivery, Standard's documented at-least-once/best-effort-ordering behavior as
+    correctness-relevant rather than a bug, FIFO's per-message-group-ID throughput ceiling,
+    and long polling as both a cost and a message-completeness question (short polling can
+    under-report what's actually on the queue, not just waste requests).
+  - **`technology/task-queues.md`** — a comparative file across Celery, Sidekiq, BullMQ,
+    RQ, Dramatiq, Hangfire, Temporal, and Asynq. Leads with backing store as the throughput/
+    failure-mode determinant (Hangfire's SQL-backed default sharing the application's own
+    database and connection pool, unlike every Redis/broker-backed alternative), and a
+    table of default retry behavior that varies enormously and counterintuitively across
+    libraries (Sidekiq retries up to 25 times over ~21 days by default; BullMQ/RQ don't
+    retry at all unless configured). Flags Temporal explicitly as a durable-execution engine
+    rather than a simple job queue, rather than forcing it into the same comparison table.
+  - Detection audit found `sqs` had never matched the boto3 Python client, AWSSDK.SQS
+    (.NET), or the AWS SDK v2 Java/Gradle coordinate at all — fixed with tokens quoted the
+    same way the Node.js `pg` fix was, since bare `sqs` was already known to collide with
+    base64 lockfile hashes (the same class the `task-queue` signal's own `rq` removal
+    documents).
+- PHP and Ruby promoted to `deep` tier — the third batch of the 1.0.0 goal, and the point
+  at which **every runtime signal in the registry is `deep`**:
+  - **`technology/php.md`** — the shared-nothing, tear-down-per-request execution model as
+    the fact that changes what "startup cost" means for this runtime (in-process caches
+    don't survive between requests; persistent DB connections trade that cost against a
+    real state-leakage risk), OPcache as the single most consequential and most overlooked
+    setting, Composer's autoloader production mode, PHP-FPM worker-pool sizing as a direct
+    analogue of connection-pool sizing, and the state-leakage risk newer persistent-process
+    runtimes (Swoole, RoadRunner, FrankenPHP) reintroduce by inverting that model.
+  - **`technology/ruby.md`** — the GVL as the fact determining whether threads or processes
+    actually fix a given bottleneck (I/O concurrency vs. CPU parallelism), copy-on-write
+    memory sharing across forked workers and how Ruby's own GC has historically undermined
+    it, GC heap-growth tuning after boot, Sidekiq concurrency's same GVL constraint applied
+    to background jobs, and YJIT's default-on status as of Ruby 3.3.
+- `vector-store` and `object-storage` promoted to `deep` tier — the second batch of the
+  1.0.0 goal, and the point at which **every datastore signal in the registry is `deep`**,
+  including both multi-vendor umbrellas:
+  - **`technology/vector-stores.md`** — a comparative file across Pinecone, Weaviate,
+    Qdrant, Milvus, Chroma, pgvector, FAISS, and LanceDB. Leads with the table
+    `docs/supported-technologies.md` named as the actual gap: what the search-breadth
+    parameter is really called in each engine (`ef`, `ef_search`, `nprobe`, `efSearch`,
+    `search_ef`, `hnsw.ef_search`...). Also covers per-engine filter-integration mitigations,
+    and deployment model as a first-class axis — FAISS as an in-process library with no
+    network round trip and no built-in filtering, LanceDB as disk-first by design rather
+    than assuming memory residency, and pgvector inheriting the Postgres query planner.
+  - **`technology/object-storage.md`** — a comparative file across S3-compatible services,
+    GCS, Azure Blob, and MinIO. Resolves the read-after-write consistency question the
+    category file deliberately declines to answer, per provider (S3: strong since December
+    2020; GCS and Azure: strong since launch; MinIO: depends entirely on the self-hosted
+    deployment). Also covers multipart/block/compose mechanics and their real limits per
+    provider, archive-tier retrieval as an availability trap rather than only a cost one,
+    and MinIO as the one provider where underlying infrastructure is a legitimate review
+    question at all.
+  - Detection audit found `object-storage` had never been checked per-runtime at all (it
+    was `conceptual` tier since inception): all 9 cases tested across Go/.NET/JVM/Node for
+    S3/GCS/Azure Blob failed before this promotion. Fixed with 9 new tokens.
+  - Also fixed: `pgvector`'s `CREATE EXTENSION vector` detection (a bare migration with no
+    package-manifest dependency at all) and LanceDB's renamed Node.js package
+    (`@lancedb/lancedb`, formerly `vectordb`).
+- Six datastore engines promoted to `deep` tier — the first batch of the 1.0.0 goal of
+  leaving no signal below `deep`, and the point at which **every datastore engine in the
+  registry is `deep`**:
+  - **CockroachDB** (`technology/cockroachdb.md`) — application-visible serializable retry
+    errors as required handling rather than an error path, sequential-key hot ranges, the
+    Raft consensus floor under write latency, distributed execution, and follower reads.
+    Also records the discovery trap that it speaks the PostgreSQL wire protocol, so a repo
+    using it names only Postgres drivers and fires the `postgres` signal instead.
+  - **Couchbase** (`technology/couchbase.md`) — the KV-versus-N1QL cost gap, resident ratio
+    and cache-miss ratio as the health metric, primary indexes masking missing indexes as
+    silent full scans, vBucket distribution, and per-operation durability levels.
+  - **Cloud Firestore** (`technology/firestore.md`) — per-document read billing as the
+    binding constraint rather than latency, mandatory composite indexes alongside
+    write-amplifying automatic single-field indexing, the ~1 sustained write/second
+    per-document ceiling, monotonic-key hotspots, and security rules incurring billed reads.
+  - **Neo4j** (`technology/neo4j.md`) — page cache versus heap as the split that decides
+    whether index-free adjacency is actually fast, indexes anchoring a query rather than
+    accelerating traversal, the `Eager` and `CartesianProduct` plan hazards, dense-node
+    thresholds, and `neo4j://` versus `bolt://` routing.
+  - **Amazon Neptune** (`technology/neptune.md`) — three query languages over two data
+    models, cluster/reader/instance endpoint routing (and reader-endpoint DNS pinning), the
+    instance class as the only memory lever, the bulk loader versus per-row inserts, and
+    query timeouts turning unbounded traversals into errors.
+  - **InfluxDB** (`technology/influxdb.md`) — the 1.x/2.x/3.x generational split as the fact
+    that precedes every other claim (3.x substantially removes the cardinality wall that
+    dominates 1.x/2.x reasoning), `inmem` versus TSI deciding whether cardinality growth OOMs
+    or merely degrades, shard-duration/retention alignment, and unbatched line-protocol
+    writes.
+
+### Fixed
+
+- Detection tokens widened for four of the six engines above, audited per-runtime before
+  promoting rather than after: `cockroachdb` (`cockroachlabs`, `crdb_internal`), `couchbase`
+  (`gocb`, `com.couchbase`, `CouchbaseNetClient`, `couchbases://`), `firestore`
+  (`firestore.indexes.json`), `neo4j` (`Neo4j.Driver`), and `influxdb` (`influxd`,
+  `org.influxdb`, `com.influxdb`). The `neptune` entry gained a note that its `gremlin`,
+  `sparql`, and `opencypher` tokens name query languages rather than the engine.
+
+### Changed
+
+- Branching model: trunk-based development replaced by a two-branch model — `develop` (the new
+  default branch, where work lands) and `main` (the last released state, and the only branch
+  tags are cut from), with `hotfix/` branches from `main` back-merged into `develop`. The
+  previous model named the exact condition for revisiting it — shipping versioned releases that
+  need work to continue independently of them — and that condition now holds: six releases
+  landed in the project's first weeks, several cutting a version for what was really one
+  afternoon's work. See [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests) and
+  the release-cadence note above.
 
 ## [0.6.0] — 2026-09-10
 

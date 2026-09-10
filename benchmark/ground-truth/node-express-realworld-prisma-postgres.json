@@ -1,0 +1,81 @@
+{
+  "repository": {
+    "name": "gothinkster/node-express-realworld-example-app",
+    "commit": "unpinned-at-review-time",
+    "url": "https://github.com/gothinkster/node-express-realworld-example-app",
+    "language": "TypeScript",
+    "framework": "Express",
+    "datastore": "PostgreSQL (via Prisma)",
+    "workload": "An actively maintained (3.8k stars, still merged into in 2026) RealWorld reference implementation. No stated production traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.16, an independent blind pass with no memory of this project's own findings — closing the last of the deep-tier runtimes (Node.js) never independently blind-passed despite being deep-tier since before v0.2.0. Two security findings (a hardcoded JWT fallback secret; an unbounded relation include that pulls the password column into memory, though never serialized into a response) were also found and filed under Kind: Security, out of the performance rubric per SKILL.md Hard Rule 8 — not encoded here. Two real detector bugs were also found and fixed during this pass (a `sqs`/`pgx` lockfile-hash collision producing one false-positive broker signal and one accidentally-correct datastore match; and `.prisma` schema files never being scanned at all, a genuine false negative for any Prisma project with no `pg`/`postgres` token in its manifest) — both are detect_stack.py regressions, already covered by tests/test_detect_stack_regressions.py's LockfileHashCollisionTests and PrismaSchemaFileTests, not finding-content questions this schema models. `forbidden` includes the one item §3.16 documents with enough specificity to encode without inventing a location: the review correctly declined to recommend clustering/worker_threads for single-process Node.js, because no infrastructure-as-code or replica count anywhere in the repository would make a core-count claim anything but invented."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "article.service.ts",
+        "line": 82
+      },
+      "category": "data-access",
+      "mechanism": "GET /articles and GET /articles/feed pass the client-supplied limit query parameter straight into Prisma's take with only a default-if-absent (Number(query.limit) || 10), never an enforced maximum. GET /articles/:slug/comments (article.service.ts:433-458) has no page bound at all. Combined with the unbounded relation fetch below, a single crafted request has no ceiling on the data it forces the service to materialize and serialize.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["enforce a maximum", "cap the limit", "clamp"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "article.service.ts",
+        "line": 90
+      },
+      "category": "data-access",
+      "mechanism": "Every article, profile, and comment-author read fetches the ENTIRE favoritedBy and/or followedBy relation with no select, where, or take, then reduces it to a boolean in JavaScript (article.mapper.ts:11). The query already computes the efficient form in parallel -- _count: { select: { favoritedBy: true } } is present in every article query -- but articleMapper uses article.favoritedBy.length instead of the already-fetched article._count.favoritedBy: the cheap primitive is fetched and silently discarded next to the expensive one actually used.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["_count", "use the count field", "remove the unbounded include"],
+      "forbidden_recommendation": ["redis", "cache"]
+    },
+    {
+      "id": "GT-003",
+      "location": {
+        "file": "src/prisma/migrations"
+      },
+      "category": "data-access",
+      "mechanism": "No index on Article.authorId, Comment.articleId, or Comment.authorId anywhere in the migration history (checked in full, four files); the only non-PK/unique indexes created are on the implicit many-to-many join tables' second column. Both are on the critical-path filter/join in getArticles/getFeed/getCommentsByArticle.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["index"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-004",
+      "location": {
+        "file": "auth.service.ts",
+        "line": 10,
+        "symbol": "checkUserUniqueness"
+      },
+      "category": "concurrency",
+      "mechanism": "Awaits two independent, unrelated findUnique calls sequentially rather than concurrently.",
+      "severity": "Low",
+      "max_confidence": "High",
+      "expected_recommendation": ["Promise.all", "concurrently"],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "package.json"
+      },
+      "category": "concurrency",
+      "why_not": "technology/node.md's single-process/no-cluster/no-worker_threads guidance is explicit that under-utilized parallelism is checkable only \"on a host with multiple cores available,\" and this repository defines no infrastructure-as-code, replica count, or host spec anywhere. Asserting the host's core count to justify a clustering recommendation would be an invented fact, not evidence -- the correct response is to decline the finding, not to report it."
+    }
+  ]
+}

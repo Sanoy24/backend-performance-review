@@ -3,10 +3,10 @@ name: backend-performance-review
 description: Reviews backend codebases for performance bottlenecks using an evidence-first, workload-driven methodology. Use when investigating latency, throughput, slow endpoints, database or query performance, N+1 queries, connection pool exhaustion, event-loop blocking, lock contention, memory or CPU pressure, queue lag, or timeout and retry storms — and when asked to audit, review, or improve the performance or scalability of a backend service, API, worker, or data layer.
 when_to_use: Trigger phrases include "performance review", "why is this slow", "audit performance", "find bottlenecks", "will this scale", "review this service for performance", "perf review of this PR". Works on any language, framework, runtime, or datastore.
 license: MIT
-compatibility: Requires read access to the target repository. Optional accelerator script requires Python 3.8+ (standard library only). No network access required.
-allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *)
+compatibility: Requires read access to the target repository. Optional accelerator scripts require Python 3.8+ (standard library only). No network access required.
+allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *)
 metadata:
-  version: 0.6.0
+  version: 1.0.0
   spec: backend-performance-review/2.0
 ---
 
@@ -82,6 +82,12 @@ worsens, or sits directly adjacent to.
 Choose change-scoped when the user names a diff, branch, PR, or commit range, or asks
 "does this change hurt performance". Otherwise full. If ambiguous, ask once.
 
+Change-scoped reviews end in one derived verdict — `PASS`, `WARN`, `FAIL`, or `UNKNOWN`.
+`UNKNOWN` means the change could not be analyzed properly and **never collapses into
+`PASS`**: one says "I looked and found nothing", the other says "I could not look".
+Load `methodology/change-scoped.md` for the verdict rules, the expansion boundary, and
+how to handle a repository's `.performance-policy.yml`.
+
 ## Workflow
 
 ### Phase 0 — Scope and safety
@@ -98,6 +104,14 @@ It emits JSON with detected languages, frameworks, datastores, caches, brokers,
 infrastructure, and a `references_to_load` list. It is an accelerator, never a
 dependency — if it is missing or errors, inspect manifests manually (see
 `methodology/discovery.md`).
+
+Two fields change how you read it. **`evidence_strength`** grades each detection —
+`direct` (a file that declares the engine), `indirect` (a declared dependency implying it),
+`weak` (an incidental YAML mention), `ambiguous` (a likely token collision). Anything below
+`direct` is a lead to confirm against an actual import or client call, not a fact. And when
+**`services`** holds more than one entry, the repository is not one stack: scope findings to
+a service, load each service's own references, and disregard the top-level union — it
+describes no single service accurately.
 
 **`references_to_load` is necessarily partial — it is not the reading list, §Reference
 routing's table is.** The script's list is built entirely from `registry.yaml`'s
@@ -147,7 +161,14 @@ Load: `methodology/bottleneck-analysis.md`.
 
 ### Phase 7 — Report
 Produce the report using `templates/review-report.md`. Every significant recommendation
-needs a validation path.
+needs a validation path. Emit the machine-readable JSON alongside the Markdown (template
+§10, `schemas/review.schema.json`) — the Markdown is authoritative; the JSON is the same
+content in a form that can be diffed and scored. Compute each finding's `stable_id` by
+running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <location.file>
+--symbol <location.symbol> --category <category>` — never invent this value by reasoning.
+Two independently-run reviews were found to disagree completely on a hand-computed
+`stable_id` even when they agreed on everything else; the script exists so that stops being
+possible.
 
 Load: `methodology/validation.md`.
 
@@ -200,6 +221,7 @@ Expanded guidance and worked scoring examples: `rubrics.md`.
 
 ```
 ID:            PERF-001
+Root cause:    ROOT-001                 (findings sharing a cause share this id)
 Severity:      Critical | High | Medium | Low | Informational
 Confidence:    Confirmed | High | Medium | Low
 Priority:      P0 | P1 | P2 | P3      (must match the matrix)
@@ -216,8 +238,16 @@ Evidence:             What in the repo supports this — cite files and lines. I
 Impact:               Position, frequency, growth, blast radius — made explicit.
 Conditions:           The workload under which this matters. If workload is unknown,
                       state the assumption. This field may never be empty.
+Counter-evidence:     What you looked for that would refute this, and what you found.
+                      "Nothing found" is a valid answer; not looking is not. Anything
+                      found here must already be reflected in Confidence.
+Why this might not
+matter:               The strongest honest case against acting on this. Required at
+                      Medium severity and above.
 Recommendation:       What to change, and why it addresses the principle rather than
                       the symptom.
+Alternatives:         Other options considered, with the preferred one named and why.
+                      Required at Medium severity and above.
 Trade-offs:           Complexity, memory, consistency, operational burden, new failure
                       modes.
 Validation:           How to prove it worked. Specific measurements, each labelled

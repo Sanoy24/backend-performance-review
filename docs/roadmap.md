@@ -6,6 +6,38 @@ you're looking for somewhere to start, this is the list — see
 
 ---
 
+## Measurement programme
+
+An external review of this project produced 140 recommendations; every one has a recorded
+disposition in [review-response.md](review-response.md), so a proposal already considered can
+be answered with a link rather than re-argued. Its central point — that the next stage is
+measuring this system rather than adding more references to it — is accepted, with one
+correction to the ordering: the machine-readable finding schema is upstream of every metric
+worth having, so it shipped first (see [architecture.md §11](architecture.md)).
+
+What that unlocked, and what remains:
+
+| Step | Status |
+|:--|:--|
+| Machine-readable finding and review schema | **Done** — `schemas/`, validated in CI |
+| Counter-evidence as a recorded, scoring-relevant step | **Done** — `methodology/bottleneck-analysis.md` §4 |
+| Review completeness and coverage confidence | **Done** — report template §2 |
+| Structured detection evidence, service topology | **Done** — `detect_stack.py` |
+| Ground-truth format and a scoring harness | **Done** — `schemas/ground-truth.schema.json`, `benchmark/scoring/score.py`, tested in CI |
+| Ground truth seeded from the historically-recorded blind passes | **Done** — all eight independently blind-passed repositories annotated, plus one change-scoped case, in `benchmark/ground-truth/*.json` |
+| A corpus repository whose correct answer is **zero findings** | **Attempted, not yet obtained.** A fresh blind pass against `rails-realworld` (a stack never previously blind-passed) was run specifically as an E4 attempt and produced four real findings instead — consistent with `docs/evaluation.md` §3.7's finding that no repository reviewed in this project's history has produced a literal zero-finding result. Still expressible (an empty `expected` with a populated `forbidden`) whenever a genuinely clean candidate is found |
+| Run-to-run stability as a computed metric, run for real | **Done, for the first time on live data.** Two fresh, independent agents (no memory of this project's findings, forbidden from reading `docs/evaluation.md`/`benchmark/ground-truth/`) reviewed `gin-realworld` against the complete, updated skill. Both reproduced the dominant N+1 finding. This run found two real harness gaps and fixed both: **(1)** location-only matching was too brittle across a call-chain citation choice — both runs cited the identical bug at opposite ends of one call chain, neither more correct — fixed with `ground-truth.schema.json`'s new `also_locations`; **(2)** `stable_id_agreement` is not a reliable signal as specified — the two runs agreed on location/severity/recommendation and still had 0% `stable_id` agreement, because no canonical hashing algorithm is mandated. `score.py stability`'s output now says so explicitly (a `caveats` field) rather than silently reporting a number that looks meaningful and isn't. See `benchmark/README.md` "The first real validation run" for the full account, including a third real finding a `forbidden` trap incorrectly caught (a different, valid SQLite claim sharing a file with a ruled-out one) |
+| Change-scoped verdict model, policy file, SARIF, GitHub Action | **Done** — `methodology/change-scoped.md`, `action.yml`, [github-action.md](github-action.md). Advisory by default; `UNKNOWN` never reads as `PASS`. Exercised end to end in a live GitHub Actions run — see below |
+| A canonical `stable_id` hashing algorithm | **Done** — `skills/backend-performance-review/scripts/compute_stable_id.py`, a mechanical, stdlib accelerator over `location.file` + `location.symbol` + `category` (never freeform mechanism text, and never an agent-invented hash). `SKILL.md` Phase 7 now instructs running it rather than reasoning one out; `validate_review.py` and `check_repo_invariants.py` both recompute and reject a mismatch. Known, accepted limitation: two distinct findings sharing a file, symbol, and category collide, and it does not resolve two reviews citing one bug at different points in a call chain — that still needs a human-curated `also_locations` entry or `score.py stability`'s `caveats` field |
+| A live GitHub Actions dry run of `action.yml` | **Done, both halves.** A permanent CI job (`.github/workflows/checks.yml`, `action-self-test`) runs `action.yml` itself via `uses: ./` against the committed example on every push and PR — not a one-off manual check — and asserts the produced SARIF and outputs are correct; it runs with `comment: false` / `upload-sarif: false` since posting a real PR comment or code-scanning upload on every push would be noise. The outward-facing half — actually posting and uploading — was then exercised once, deliberately, against this repository's own PR #54: the job was temporarily flipped to `comment: true` / `upload-sarif: true`, pushed, and reverted immediately after confirming success. Verified against real GitHub state, not a green checkmark: a comment from `github-actions[bot]` starting `<!-- backend-performance-review -->` landed on the PR with the actual review body, and code-scanning alert #1 (rule `perf/data-access`, tool `backend-performance-review v0.6.0`, scoped to `refs/pull/54/merge`) was created from the uploaded SARIF |
+
+Deliberately deferred, with reasons in [review-response.md](review-response.md): runtime
+evidence adapters, query-plan parsing, cross-model evaluation, synthetic bug generation, and
+performance debt tracking. Declined outright: human-feedback telemetry (this skill has no
+server and adding one would contradict its own privacy posture), and energy efficiency.
+
+---
+
 ## Evaluation gaps
 
 These are worth more than additional reference content — see
@@ -31,35 +63,59 @@ accident.
 
 ## Technology promotion candidates
 
-`conceptual`/`generic` signals in [`registry.yaml`](../skills/backend-performance-review/registry.yaml)
-that would most benefit from a `deep`-tier reference file. See
-[docs/extending.md](extending.md) for the seven-section structure a technology file needs,
-and [docs/supported-technologies.md](supported-technologies.md) for the full current tier
-table.
+**None. The 1.0.0 milestone — leave nothing below `deep` — is complete.** All 39 detection
+signals in [`registry.yaml`](../skills/backend-performance-review/registry.yaml) are `deep`
+tier: every datastore, cache, broker, runtime, API-surface framework, and infrastructure
+signal. No signal is `conceptual` or `generic` any more.
 
-Every engine originally named on this list — Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
-ClickHouse, SQL Server, Memcached, and SQLite — is now `deep`; see
-[CHANGELOG.md](../CHANGELOG.md) for each promotion.
+This section stays in place — empty of candidates — as where a future promotion candidate
+belongs if a genuinely new engine, framework, or platform emerges and is added at
+`conceptual` or `generic` tier first. See [docs/extending.md](extending.md) for the
+seven-section structure a technology file needs, and
+[docs/supported-technologies.md](supported-technologies.md) for the full current tier table.
 
-Oracle is now `deep` too (`technology/oracle.md`); see `CHANGELOG.md`.
+The complete promotion history, batch by batch: the six datastores originally on this list
+(Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite),
+then Oracle, CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, then the
+`vector-store` and `object-storage` umbrellas; all eight runtimes, `php` and `ruby` last;
+both remaining brokers, `sqs` and `task-queue`; the frameworks batch (`graphql`, `grpc`,
+`rest`); and finally the infrastructure batch (`kubernetes`, `docker`, `serverless`,
+`terraform`). See [CHANGELOG.md](../CHANGELOG.md) for each promotion's detail.
 
-The full remaining conceptual/generic list — CockroachDB, Couchbase, Firestore, Neo4j,
-Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC, REST,
-Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a valid
-contribution.
+### How an umbrella signal gets promoted, for the next one
 
-**Object storage needs a design decision before it can be promoted, not just a reference
-file.** `registry.yaml`'s single `object-storage` signal currently spans S3-compatible
-services, GCS, and Azure Blob under one `conceptual`-tier entry — unlike the
-`elasticsearch`/`redis` signals, which combine engines that really are API-compatible forks
-of each other, S3/GCS/Azure Blob are three independently-designed services with genuinely
-different consistency histories, multipart size limits, and request-rate partitioning
-behavior. A single combined technology file would either hedge every claim to the lowest
-common denominator (defeating the point of `deep` tier) or read as three files interleaved.
-The likely right shape is splitting the one `object-storage` signal into three
-(`s3`/`gcs`/`azure-blob`, each keeping its own subset of the existing match tokens), each
-independently promotable — a larger, structural change to decide deliberately before writing
-content, not a drop-in reference file the way the other promotions on this list were.
+Five of the promotions above were genuine multi-vendor umbrellas rather than one engine
+each: `vector-store` (eight engines), `object-storage` (four providers),
+`task-queue` (eight libraries), `rest` (fifteen frameworks), and `serverless` (five
+platforms). The precedent, should a new umbrella signal ever need it:
+
+Unlike the `elasticsearch`/`redis` signals — which combine engines that really are
+API-compatible forks — an umbrella signal spans independently designed systems whose limits
+and defaults genuinely differ. The decided approach is **one deliberately comparative
+technology file per umbrella**, not splitting the signal into per-vendor signals (which would
+have turned these five promotions into thirty-nine separate ones).
+`technology/vector-stores.md`, `technology/object-storage.md`, `technology/task-queues.md`,
+`technology/rest.md`, and `technology/serverless.md` are the precedent for this shape,
+alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
+`technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its Solr gaps).
+`technology/rest.md` additionally had to decide what to do with genuinely different
+concurrency models under one signal (Node's single event loop versus the JVM's
+thread-per-request Servlet stack versus Go's goroutine-per-request) — naming which model each
+framework actually uses, rather than writing generic "concurrency" advice true of none of
+them specifically, is what kept the file from collapsing into a restatement of
+`application/api.md`. `technology/terraform.md` had the opposite problem to solve: Terraform
+is not a runtime at all, so its file is a map from provider resource types to the specific
+arguments `infrastructure/resources.md`'s arithmetic needs, rather than a runtime-behavior
+comparison — the same non-derivable-content bar, met by a different shape of content.
+
+The bar such a file has to clear is the same as any other: per
+[CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-non-derivable-content-rule), it must carry what
+the category file cannot — for a comparative file, the concrete divergences (parameter
+names, documented limits, defaults) presented side by side, the same gap
+`docs/supported-technologies.md` named for the two datastore umbrellas before they were
+promoted: *"engine-specific parameter names and defaults not yet written."* A file that
+hedges every claim to the lowest common denominator would fail that bar and should not be
+merged.
 
 ---
 

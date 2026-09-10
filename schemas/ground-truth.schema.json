@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/ground-truth.schema.json",
+  "title": "Backend performance review — benchmark ground truth",
+  "description": "Expert-annotated truth for one benchmark repository at one commit. Three buckets, not one list: `expected` is what a competent review must find, `acceptable` is what it may find without penalty, and `forbidden` is what it must not report. The three-bucket shape is the point — scoring everything not in `expected` as a false positive would punish a review for finding something real that the annotator missed, and would make it impossible to express a healthy repository, whose correct answer is an empty `expected` and a populated `forbidden`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["repository", "expected", "acceptable", "forbidden"],
+  "properties": {
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "commit"],
+      "properties": {
+        "name": { "type": "string" },
+        "commit": {
+          "description": "Ground truth is only true at a commit. Annotations without one silently rot.",
+          "type": "string",
+          "minLength": 7
+        },
+        "url": { "type": "string" },
+        "language": { "type": "string" },
+        "framework": { "type": "string" },
+        "datastore": { "type": "string" },
+        "workload": {
+          "description": "The workload the annotation assumes. A finding's severity is only defensible relative to one.",
+          "type": "string"
+        }
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "annotated_by": { "type": "string" },
+        "annotated_at": { "type": "string" },
+        "method": {
+          "description": "How the truth was established. `blind-pass-derived` means it was retro-annotated from a recorded independent review rather than established first — weaker, and it must say so.",
+          "type": "string",
+          "enum": [
+            "expert-manual-review",
+            "documented-issue",
+            "injected-defect",
+            "blind-pass-derived"
+          ]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "expected": {
+      "description": "Findings a competent review must produce. Each miss is a false negative.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/groundTruthItem" }
+    },
+    "acceptable": {
+      "description": "Real issues that a review may report without penalty and is not required to find. Scored neither way. This is where a genuine finding the annotator did not consider important enough to require belongs.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/groundTruthItem" }
+    },
+    "forbidden": {
+      "description": "Things a review must NOT report — the false-positive traps. A pattern that looks like a problem and provably is not: a loop over a fixed configuration list, a query on a table bounded to a handful of rows, an unused code path. A healthy repository is expressed as an empty `expected` and a populated `forbidden`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/forbiddenItem" }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "symbol": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "groundTruthItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "location", "category", "mechanism"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" },
+        "also_locations": {
+          "description": "Other files a reasonable reviewer might cite as this finding's location instead of `location` — added after two independent real reviews of the identical bug (a per-item query reached through a call chain) legitimately cited opposite ends of the chain: one the query-issuing method's definition site, the other the call site that would actually need to change. Neither citation is more correct than the other, and picking a single canonical file as `location` makes the choice you did not pick score as a miss. A match against any entry here counts the same as a match against `location`.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/location" }
+        },
+        "category": {
+          "$ref": "finding.schema.json#/properties/category"
+        },
+        "also_acceptable_categories": {
+          "description": "Categories a reasonable reviewer might file this under instead. A pool-exhaustion finding filed as `concurrency` rather than `data-access` is not a miss.",
+          "type": "array",
+          "items": { "$ref": "finding.schema.json#/properties/category" }
+        },
+        "mechanism": {
+          "description": "What is actually wrong, in one line. Used by a human comparing results, not by the matcher.",
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "description": "Expert severity, for calibration scoring. Agreement is measured as exact, within one level, or a large disagreement.",
+          "$ref": "finding.schema.json#/properties/severity"
+        },
+        "max_confidence": {
+          "description": "The best grade the available evidence can support. A review claiming `Confirmed` where no runtime artifact exists is wrong however right the finding is.",
+          "$ref": "finding.schema.json#/properties/confidence"
+        },
+        "expected_recommendation": {
+          "description": "Keywords that a correct fix would mention. Crude on purpose — it catches recommending a cache where the work should have been removed, which is the failure worth catching.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbidden_recommendation": {
+          "description": "Keywords indicating a cargo-cult fix for this specific finding.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "forbiddenItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "location", "why_not"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" },
+        "category": { "$ref": "finding.schema.json#/properties/category" },
+        "why_not": {
+          "description": "Why reporting this would be wrong. Must be a fact about the code, not an opinion — the counter-evidence a review should have found.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

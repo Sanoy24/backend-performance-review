@@ -1,0 +1,52 @@
+{
+  "repository": {
+    "name": "fastapi/full-stack-fastapi-template",
+    "commit": "8063fe54f17d19f01720e055103af9cad3d8f55d",
+    "url": "https://github.com/fastapi/full-stack-fastapi-template",
+    "language": "Python",
+    "framework": "FastAPI",
+    "datastore": "PostgreSQL (via SQLModel)",
+    "workload": "Not supplied — a project scaffold/template, not a deployed service with known traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.2 (Round 1) and §3.10 (independent blind pass, same repository, same finding reproduced). Weaker evidence than an independently-established annotation — see benchmark/README.md."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "backend/app/api/routes/items.py",
+        "line": 13,
+        "symbol": "read_items"
+      },
+      "category": "data-access",
+      "also_acceptable_categories": ["networking"],
+      "mechanism": "GET /items declares `limit: int = 100` as a plain default with no Query(le=...) enforced upper bound. A default is not an enforced maximum: a caller can request an arbitrarily large page, and the query cost grows with the requested limit rather than a fixed cap. Independently confirms the identical pattern documented in docs/examples/fastapi-postgres.md and application/api.md §1, found here in a real, actively maintained template with no connection to this project.",
+      "severity": "Medium",
+      "max_confidence": "High",
+      "expected_recommendation": ["enforce a maximum", "cap the page size", "le=", "upper bound"],
+      "forbidden_recommendation": ["redis", "cache", "add an index"]
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "package.json"
+      },
+      "category": "infrastructure",
+      "why_not": "The `node` signal fires because this monorepo has a frontend/ directory with its own package.json and node_modules — those tokens cannot distinguish a Node.js backend runtime from front-end tooling sitting in the same repository. For a backend performance review this would be a false attribution of the backend runtime; the actual backend is Python/FastAPI. See docs/evaluation.md §3.2 and §3.3."
+    },
+    {
+      "id": "GT-F02",
+      "location": {
+        "file": "docker-compose.override.yml"
+      },
+      "category": "networking",
+      "why_not": "The `rest` signal's Go-framework tokens (gin, echo) matched only incidentally: `gin` inside the English word \"logging\" in compose.override.yml, and `echo` inside ordinary shell `echo` commands in CI workflow YAML. Neither Go web framework is present anywhere in this Python/TypeScript repository. See docs/evaluation.md §3.2 and §3.3, and tests/test_detect_stack_regressions.py's LockfileHashCollisionTests for the fixed regression."
+    }
+  ]
+}

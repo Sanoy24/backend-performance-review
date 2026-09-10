@@ -62,6 +62,37 @@ ceiling on confidence for everything below.]`
 the registry tier. e.g. "MySQL analysis uses relational category principles only; no
 engine-specific reference exists in this version."]`
 
+### Review completeness
+
+`[How much of the system this review actually saw. Without this, "no findings" reads as
+"everything is healthy" — and those are very different claims.]`
+
+| | |
+|:--|:--|
+| **Repository coverage** | `[What was examined. State it honestly or omit it — an estimated percentage is an invented number]` |
+| **Critical paths** | `[analyzed] / [identified]` |
+| **Technology support** | `[Deep / Conceptual / Generic, per technology]` |
+| **Runtime evidence** | `[What was supplied, or None]` |
+| **Overall review confidence** | **High / Medium / Low** |
+
+**Review confidence is not finding confidence.** Every finding here can be `High` while this
+review is `Low` — that combination means "what I looked at, I am sure about; I did not look
+at much." Both numbers are needed to read the report correctly.
+
+### What this review could not determine
+
+`[Two different kinds of unknown, kept apart because the reader can act on one and not the
+other:]`
+
+| Unknown | Why | What would resolve it |
+|:--|:--|:--|
+| `[subject]` | `No evidence exists` | `[the measurement or artifact that would settle it]` |
+| `[subject]` | `Technology unsupported` | `[what depth of analysis is missing, and what tool would provide it]` |
+
+`[An unknown because no evidence exists is a gap the user can close. An unknown because this
+skill does not support the technology is a gap in the skill. Do not present them as the
+same thing.]`
+
 ---
 
 ## 3. Architecture overview
@@ -89,6 +120,24 @@ resources named explicitly — they determine blast radius throughout the report
 **Unknown** `[would change conclusions if answered]`
 
 - <unknown>
+
+**Derived** `[computed from the entries above — show the inputs, per Hard Rule 1]`
+
+- <conclusion> — from: <the known or assumed entries it was computed from>
+
+**Measured** `[from a real runtime artifact, cited. Often empty — say so rather than omitting
+the heading, because an empty Measured list is why almost nothing here is `Confirmed`]`
+
+- <measurement> — source: <artifact>
+
+### Questions that would change the ranking
+
+`[Unanswered questions worth asking, most valuable first. More useful than "more information
+is needed", and it turns an unanswered interview into a cheap, specific next step.]`
+
+| # | Question | What it would change |
+|:--|:--|:--|
+| 1 | `[question]` | `[which findings move, and where to]` |
 
 ---
 
@@ -133,6 +182,7 @@ root cause are one finding.]`
 
 | | |
 |:--|:--|
+| **Root cause** | `ROOT-001` `[findings sharing a cause share this id — see §7 heading]` |
 | **Severity** | Critical / High / Medium / Low / Informational |
 | **Confidence** | Confirmed / High / Medium / Low |
 | **Priority** | P0 / P1 / P2 / P3 `[must match the matrix]` |
@@ -158,8 +208,28 @@ any arithmetic and label it a derivation.]`
 `[The workload under which this matters. If workload is unknown, state the assumption. This
 field may not be empty, and "under high load" is not a condition.]`
 
+**Counter-evidence**
+`[What you went looking for that would refute this, and what you found. "Searched, found
+nothing" is a complete answer; an empty section is not — it is indistinguishable from never
+having looked. Anything found here must already be reflected in Severity or Confidence
+above: see methodology/bottleneck-analysis.md §4 for which one moves and why.]`
+
+**Why this might not matter** `[required at Medium severity and above]`
+`[The strongest honest case against acting on this. If you cannot construct one, you may not
+understand the finding well enough to rank it.]`
+
 **Recommendation**
 `[What to change, and why it addresses the cause rather than the symptom.]`
+
+**Alternatives** `[required at Medium severity and above]`
+`[Options considered, with the preferred one marked and justified. The point is to catch the
+case where the first plausible fix was the only one examined — usually the one that masks the
+work rather than removing it.]`
+
+| Option | | Why |
+|:--|:--|:--|
+| `[A — remove the work]` | **preferred** | `[why this one]` |
+| `[B — cache the work]` | | |
 
 **Trade-offs**
 `[Complexity, memory, consistency, operational burden, new failure modes. Every optimization
@@ -261,7 +331,47 @@ unmeasured system produces changes nobody can justify later.]`
 
 ---
 
-## 10. Notes on this review
+## 10. Machine-readable output
+
+`[Emit this alongside the report above — never instead of it. The Markdown is the artifact a
+human reads and disagrees with; this is the same content in a form a script can compare,
+diff, and score. If the two ever disagree, the Markdown is authoritative and the JSON is
+wrong, because a claim that appears only in the JSON has escaped human review.]`
+
+Conforms to `schemas/review.schema.json`, whose findings conform to
+`schemas/finding.schema.json`. Emit it in a fenced `json` block:
+
+````
+```json
+{
+  "schema_version": "1.0",
+  "mode": "[full | change-scoped]",
+  "verdict": "[change-scoped only: PASS | WARN | FAIL | UNKNOWN]",
+  "reproducibility": { "...": "[commit, skill version, detector version, model]" },
+  "completeness": { "...": "[§2's figures, in machine form]" },
+  "assumptions": { "...": "[§4's ledger, in machine form]" },
+  "root_causes": [ "[one entry per underlying constraint]" ],
+  "findings": [ "[one entry per finding in §7 — may be empty]" ],
+  "considered_not_reported": [ "[§7's discarded candidates]" ],
+  "adjacent_findings": [ "[§7's SEC-/COR-/MAINT- items]" ]
+}
+```
+````
+
+Three rules this output must satisfy:
+
+- **`priority` must match the matrix.** It is derived from `severity` and `confidence`, never
+  chosen. The schema does not encode the matrix — `scripts/check_repo_invariants.py` checks it
+  against the copy published in `SKILL.md`, so there is exactly one authoritative matrix.
+- **`stable_id` must not depend on a line number.** Derive it from root cause, file, enclosing
+  symbol, and mechanism, so the same unfixed problem yields the same id after a refactor. This
+  is what makes "is this the finding we saw last month?" answerable.
+- **An empty `counter_evidence` array asserts that a search happened and found nothing.** It
+  does not mean the search was skipped. If you did not look, you are not finished.
+
+---
+
+## 11. Notes on this review
 
 - Findings are classified by evidence grade; `Confirmed` requires a cited runtime artifact.
 - No runtime metric in this report was estimated or assumed. `[If any number is a derivation,
