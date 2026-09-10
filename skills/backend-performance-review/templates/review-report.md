@@ -62,6 +62,37 @@ ceiling on confidence for everything below.]`
 the registry tier. e.g. "MySQL analysis uses relational category principles only; no
 engine-specific reference exists in this version."]`
 
+### Review completeness
+
+`[How much of the system this review actually saw. Without this, "no findings" reads as
+"everything is healthy" — and those are very different claims.]`
+
+| | |
+|:--|:--|
+| **Repository coverage** | `[What was examined. State it honestly or omit it — an estimated percentage is an invented number]` |
+| **Critical paths** | `[analyzed] / [identified]` |
+| **Technology support** | `[Deep / Conceptual / Generic, per technology]` |
+| **Runtime evidence** | `[What was supplied, or None]` |
+| **Overall review confidence** | **High / Medium / Low** |
+
+**Review confidence is not finding confidence.** Every finding here can be `High` while this
+review is `Low` — that combination means "what I looked at, I am sure about; I did not look
+at much." Both numbers are needed to read the report correctly.
+
+### What this review could not determine
+
+`[Two different kinds of unknown, kept apart because the reader can act on one and not the
+other:]`
+
+| Unknown | Why | What would resolve it |
+|:--|:--|:--|
+| `[subject]` | `No evidence exists` | `[the measurement or artifact that would settle it]` |
+| `[subject]` | `Technology unsupported` | `[what depth of analysis is missing, and what tool would provide it]` |
+
+`[An unknown because no evidence exists is a gap the user can close. An unknown because this
+skill does not support the technology is a gap in the skill. Do not present them as the
+same thing.]`
+
 ---
 
 ## 3. Architecture overview
@@ -89,6 +120,24 @@ resources named explicitly — they determine blast radius throughout the report
 **Unknown** `[would change conclusions if answered]`
 
 - <unknown>
+
+**Derived** `[computed from the entries above — show the inputs, per Hard Rule 1]`
+
+- <conclusion> — from: <the known or assumed entries it was computed from>
+
+**Measured** `[from a real runtime artifact, cited. Often empty — say so rather than omitting
+the heading, because an empty Measured list is why almost nothing here is `Confirmed`]`
+
+- <measurement> — source: <artifact>
+
+### Questions that would change the ranking
+
+`[Unanswered questions worth asking, most valuable first. More useful than "more information
+is needed", and it turns an unanswered interview into a cheap, specific next step.]`
+
+| # | Question | What it would change |
+|:--|:--|:--|
+| 1 | `[question]` | `[which findings move, and where to]` |
 
 ---
 

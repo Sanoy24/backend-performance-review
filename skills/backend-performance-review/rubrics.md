@@ -240,11 +240,37 @@ conditions and flagged for tomorrow's.
 
 ---
 
-## 5. Self-check before publishing a finding
+## 5. Precision and recall are not traded off uniformly
+
+A review has to decide which error it would rather make, and the honest answer depends on
+the priority band. The cost of the two mistakes is wildly asymmetric across the range.
+
+| Band | Optimize for | Why |
+|:--|:--|:--|
+| P0 / P1 | **Precision, strongly** | These interrupt people. A wrong P0 costs a team a day and costs this review its credibility for every finding after it — including the correct ones |
+| P2 | Balanced | Worth raising, cheap to disagree with |
+| P3 | Recall is acceptable | An advisory observation that turns out not to matter costs a paragraph. Missing a real one costs more |
+
+Two consequences that bite in practice:
+
+- **When uncertain between two priority levels, the higher band takes the higher burden of
+  proof.** Uncertainty pushes a candidate *down*, never up. If you cannot decide between P1
+  and P2, it is P2 — and the counter-evidence you could not resolve goes in the finding.
+- **Never inflate severity to make something get read.** If a P3 matters more than its band
+  suggests, say that in the executive summary. Corrupting the scale to control attention
+  destroys the one thing that makes the scale worth having.
+
+---
+
+## 6. Self-check before publishing a finding
 
 - Can I point at the line that proves this?
 - Have I written all four severity factors, or did I guess the level?
 - Does `Conditions` say something a user could confirm or refute?
+- **Did I look for counter-evidence, and is what I found recorded — including "nothing"?**
+- **If counter-evidence turned something up, did Severity or Confidence actually move?**
+- **Can I state the strongest case that this does not matter?** If not, I do not understand
+  it well enough to rank it.
 - Does the priority match the matrix?
 - If the user asked "what would you measure to check you're right", do I have an answer?
 - Would I still report this if I were being scored on false positives?

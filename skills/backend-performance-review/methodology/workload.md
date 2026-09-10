@@ -86,6 +86,32 @@ Question 7 is the highest-value one. If the user has a specific complaint, the r
 should be organized around confirming or refuting it, and everything else becomes
 secondary.
 
+### Spend the seven on what would actually change the ranking
+
+The cap is seven. *Which* seven is not fixed — the list above is the default for a review
+with no strong prior, and you should replace items in it once Phase 1 tells you where the
+risk is. A question whose answer cannot move any finding is a wasted question, and you only
+get seven.
+
+Rank candidates by how much the answer would change the review, not by how natural they are
+to ask. "Is this endpoint called ten times a day or ten thousand times a second?" can move a
+finding across three priority levels. "What is your average payload size?" usually moves
+nothing. Ask the first.
+
+Swap in the questions the detected risk calls for:
+
+| If the dominant risk is | Ask instead about |
+|:--|:--|
+| Datastore access | Typical and maximum rows per request; row counts on the largest tables; current query latency if known |
+| A queue or broker | Arrival rate, consumer count, current lag, and what happens to a message that fails |
+| A cache | Hit rate, TTL, key cardinality, and behavior on a cold start |
+| Connection pools | Pool size against the datastore's connection limit, and instance count |
+| Background jobs | Schedule, runtime, and whether runs can overlap |
+| A specific reported incident | What changed immediately before it, and what the symptom actually was |
+
+Keep the generic questions that nothing has displaced — a review with no workload context at
+all is the worst case, and the defaults are chosen to cover the widest ground.
+
 ### If the user does not answer
 
 **Proceed.** Do not block, do not re-ask, do not stall the review. Instead:
@@ -120,10 +146,48 @@ UNKNOWN (would change conclusions)
   - Current p95/p99 latency
   - Row counts for `events` and `orders`
   - Whether the SLO is currently met
+
+DERIVED (computed from the above — inputs shown)
+  - Peak concurrent DB connections needed = 4 workers × 3 replicas = 12,
+    against a pool of 10 per instance and the server's max_connections
+  - Query count for the orders listing grows linearly with rows returned,
+    because the lookup is issued once per row of the outer result
+
+MEASURED (from a real runtime artifact, cited)
+  - (none — no benchmark, trace, or query plan was supplied)
 ```
+
+Five buckets, because they carry different weight and are easy to blur together. `DERIVED`
+is where arithmetic goes, and it must show its inputs — a derived number with no visible
+derivation is indistinguishable from an invented one, which is the failure Hard Rule 1
+exists to prevent. `MEASURED` is usually empty for a static review, and saying so plainly is
+more useful than leaving the distinction implicit: it is the line that tells a reader why
+almost nothing here is `Confirmed`.
 
 Every finding must be traceable to this model. If a finding does not depend on any line of
 it, ask whether it is a real performance finding or a style preference.
+
+### Carry the ledger into the report
+
+The ledger is not scratch work. It is reported (report template §4), and it is what lets a
+reader disagree with one specific step instead of with the conclusion as a whole. A reader
+who thinks the `events` table is not the largest can say so, and you both know exactly which
+findings that changes.
+
+### Name the questions that would change the ranking
+
+Close the review with the unanswered questions that would actually move something, most
+valuable first, each with what it would change:
+
+```
+1. Production request rate for the orders listing route.
+   → Would move PERF-001 between P1 and P3.
+2. Maximum rows one request can return.
+   → A bound in the low tens would cut PERF-001's severity.
+```
+
+This is more useful than "more information is needed", and it converts the interview the
+user did not answer into a specific, cheap next step.
 
 ---
 
