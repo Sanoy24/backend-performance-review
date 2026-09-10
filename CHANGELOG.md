@@ -37,6 +37,46 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- Six datastore engines promoted to `deep` tier — the first batch of the 1.0.0 goal of
+  leaving no signal below `deep`, and the point at which **every datastore engine in the
+  registry is `deep`**:
+  - **CockroachDB** (`technology/cockroachdb.md`) — application-visible serializable retry
+    errors as required handling rather than an error path, sequential-key hot ranges, the
+    Raft consensus floor under write latency, distributed execution, and follower reads.
+    Also records the discovery trap that it speaks the PostgreSQL wire protocol, so a repo
+    using it names only Postgres drivers and fires the `postgres` signal instead.
+  - **Couchbase** (`technology/couchbase.md`) — the KV-versus-N1QL cost gap, resident ratio
+    and cache-miss ratio as the health metric, primary indexes masking missing indexes as
+    silent full scans, vBucket distribution, and per-operation durability levels.
+  - **Cloud Firestore** (`technology/firestore.md`) — per-document read billing as the
+    binding constraint rather than latency, mandatory composite indexes alongside
+    write-amplifying automatic single-field indexing, the ~1 sustained write/second
+    per-document ceiling, monotonic-key hotspots, and security rules incurring billed reads.
+  - **Neo4j** (`technology/neo4j.md`) — page cache versus heap as the split that decides
+    whether index-free adjacency is actually fast, indexes anchoring a query rather than
+    accelerating traversal, the `Eager` and `CartesianProduct` plan hazards, dense-node
+    thresholds, and `neo4j://` versus `bolt://` routing.
+  - **Amazon Neptune** (`technology/neptune.md`) — three query languages over two data
+    models, cluster/reader/instance endpoint routing (and reader-endpoint DNS pinning), the
+    instance class as the only memory lever, the bulk loader versus per-row inserts, and
+    query timeouts turning unbounded traversals into errors.
+  - **InfluxDB** (`technology/influxdb.md`) — the 1.x/2.x/3.x generational split as the fact
+    that precedes every other claim (3.x substantially removes the cardinality wall that
+    dominates 1.x/2.x reasoning), `inmem` versus TSI deciding whether cardinality growth OOMs
+    or merely degrades, shard-duration/retention alignment, and unbatched line-protocol
+    writes.
+
+### Fixed
+
+- Detection tokens widened for four of the six engines above, audited per-runtime before
+  promoting rather than after: `cockroachdb` (`cockroachlabs`, `crdb_internal`), `couchbase`
+  (`gocb`, `com.couchbase`, `CouchbaseNetClient`, `couchbases://`), `firestore`
+  (`firestore.indexes.json`), `neo4j` (`Neo4j.Driver`), and `influxdb` (`influxd`,
+  `org.influxdb`, `com.influxdb`). The `neptune` entry gained a note that its `gremlin`,
+  `sparql`, and `opencypher` tokens name query languages rather than the engine.
+
 ### Changed
 
 - Branching model: trunk-based development replaced by a two-branch model — `develop` (the new
