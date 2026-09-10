@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 26 deep · 11 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 28 deep · 9 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -44,8 +44,8 @@ more careful section — not a guessed one.
 | **ClickHouse** | wide-column | **deep** | MergeTree engine-variant correctness trade-offs, `ORDER BY`-vs-`PARTITION BY`, sparse-index granularity, async mutations, "too many parts," and in-memory join limits |
 | **Elasticsearch / OpenSearch** | search | **deep** | Circuit breakers, heap-vs-page-cache sizing, `_source`/doc-values/stored-field layers, scroll/search_after/PIT trade-offs, bulk-queue rejection. Solr specifics (ZooKeeper/SolrCloud, `solrconfig.xml`) remain unknowns |
 | **InfluxDB** | time-series | **deep** | The 1.x/2.x/3.x split as the dominant fact (3.x largely removes the cardinality wall), `inmem` versus TSI deciding whether cardinality growth OOMs or degrades, shard-duration/retention alignment, and unbatched line-protocol writes |
-| Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | conceptual | Recall/latency/memory trade-offs, the search-breadth parameter, and filter/search-order interaction apply in full; engine-specific parameter names and defaults not yet written |
-| S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual | Request-count-dominated cost, key/prefix-only access, immutable full-object writes, multipart size limits, and egress cost apply in full; provider-specific size limits, consistency guarantees, and tier pricing not yet written |
+| **Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB** | vector | **deep** | Comparative: the search-breadth parameter's real name in each engine, filter-integration differences, deployment model (managed service vs. self-hosted server vs. in-process library vs. disk-first), and Milvus's explicit index-type choice |
+| **S3-compatible / GCS / Azure Blob / MinIO** | object-store | **deep** | Comparative: read-after-write consistency resolved per provider, multipart/block/compose mechanics and limits, archive-tier retrieval as an availability trap, and MinIO's self-hosted infrastructure as a real review question |
 
 ## Caches
 
@@ -158,13 +158,15 @@ RabbitMQ, MySQL/MariaDB and DynamoDB, and all six planned per-runtime references
 Python, JVM, Go, .NET, Rust). Every datastore category, including object storage, now has a
 category file.
 
-1. Promote any `conceptual` engine to `deep` by writing its technology reference — the largest
-   remaining gap, and a bounded, well-defined contribution (see below). The object-storage
-   engines (S3-compatible, GCS, Azure Blob) are a reasonable starting point, though note that
-   `registry.yaml`'s single `object-storage` signal currently spans all three under one
-   category-level entry — promoting it well may mean splitting it into per-vendor signals
-   first, since their consistency guarantees, size limits, and request-partitioning behavior
-   genuinely differ (see `docs/roadmap.md`).
+Every datastore engine is now `deep`, including both multi-vendor umbrellas (vector stores,
+object storage), each covered by a deliberately comparative technology file rather than a
+per-vendor split — see `docs/roadmap.md` for the reasoning.
+
+1. Promote any remaining `conceptual`/`generic` engine to `deep` by writing its technology
+   reference — the largest remaining gap toward the 1.0.0 milestone, and a bounded,
+   well-defined contribution (see below). `docs/roadmap.md` tracks the remaining batches:
+   runtimes (PHP, Ruby), brokers (SQS, task queues), frameworks (GraphQL, gRPC, REST), and
+   infrastructure (Kubernetes, Docker, Serverless, Terraform).
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 

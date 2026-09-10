@@ -38,42 +38,45 @@ and [docs/supported-technologies.md](supported-technologies.md) for the full cur
 table.
 
 **The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore engine is now
-there: the six originally on this list (Elasticsearch/OpenSearch, Cassandra/ScyllaDB,
-ClickHouse, SQL Server, Memcached, SQLite), then Oracle, and now CockroachDB, Couchbase,
-Firestore, Neo4j, Neptune, and InfluxDB. See [CHANGELOG.md](../CHANGELOG.md) for each
-promotion.
+there — including both multi-vendor umbrellas: the six originally on this list
+(Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite),
+then Oracle, then CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, and now
+`vector-store` (`technology/vector-stores.md`) and `object-storage`
+(`technology/object-storage.md`). See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
 Remaining for 1.0.0, in planned batch order:
 
 | Batch | Signals | Note |
 |:--|:--|:--|
-| Datastores — comparative | `vector-store`, `object-storage` | Multi-vendor umbrellas; see below |
 | Runtimes | `php`, `ruby` | The last two of eight runtimes still `conceptual` |
 | Brokers | `sqs`, `task-queue` | The only two `generic`-tier signals left; `task-queue` is an umbrella |
 | Frameworks | `graphql`, `grpc`, `rest` | `rest` spans 15 web frameworks |
 | Infrastructure | `kubernetes`, `docker`, `serverless`, `terraform` | `serverless` is an umbrella |
 
-### The umbrella signals, and how they get promoted
+### The remaining umbrella signals, and how they get promoted
 
-Five of the remaining signals are not one engine each. `object-storage` spans S3-compatible
-services, GCS, and Azure Blob; `vector-store` spans eight engines; `task-queue` spans ten
-queue libraries; `serverless` spans five platforms; `rest` spans fifteen web frameworks.
+Three of the remaining signals are not one engine each: `task-queue` spans ten queue
+libraries, `serverless` spans five platforms, and `rest` spans fifteen web frameworks. The
+same approach already applied to `vector-store` and `object-storage` (below) is the plan for
+these too.
 
 Unlike the `elasticsearch`/`redis` signals — which combine engines that really are
 API-compatible forks — these span independently designed systems whose limits and defaults
 genuinely differ. The decided approach is **one deliberately comparative technology file per
-umbrella**, not splitting each signal into per-vendor signals (which would turn the remaining
-work into roughly 35 promotions). Precedent exists: `technology/cassandra.md` covers
-Cassandra *and* ScyllaDB's divergence, and `technology/elasticsearch.md` covers Elasticsearch
-*and* OpenSearch while naming its Solr gaps.
+umbrella**, not splitting each signal into per-vendor signals (which would have turned the
+datastore umbrellas alone into ten separate promotions). `technology/vector-stores.md` and
+`technology/object-storage.md` are now the precedent for this shape, alongside
+`technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
+`technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its Solr gaps).
 
 The bar such a file has to clear is the same as any other: per
 [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-non-derivable-content-rule), it must carry what
 the category file cannot — for these, that is the concrete divergences (parameter names,
-documented limits, defaults) presented side by side. `docs/supported-technologies.md` already
-names exactly this as the gap for both datastore umbrellas: *"engine-specific parameter names
-and defaults not yet written."* A file that hedges every claim to the lowest common
-denominator would fail that bar and should not be merged.
+documented limits, defaults) presented side by side, the same gap
+`docs/supported-technologies.md` named for the two datastore umbrellas before they were
+promoted: *"engine-specific parameter names and defaults not yet written."* A file that
+hedges every claim to the lowest common denominator would fail that bar and should not be
+merged.
 
 ---
 
