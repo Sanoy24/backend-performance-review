@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 35 deep · 4 conceptual · 0 generic (39 detection signals).
+**Current coverage:** 39 deep · 0 conceptual · 0 generic (39 detection signals). Every detection signal now has a dedicated technology reference.
 
 ---
 
@@ -119,12 +119,12 @@ planned for this coverage push.
 
 ## Infrastructure
 
-| Technology | Tier |
-|:--|:--|
-| Docker | conceptual |
-| Kubernetes / Helm | conceptual |
-| Serverless (Lambda, Cloud Functions, Azure Functions, Vercel, Netlify) | conceptual |
-| Terraform | conceptual |
+| Technology | Tier | Notes |
+|:--|:--|:--|
+| Docker | **deep** | PID 1 signal-handling and zombie-reaping gaps, layer-caching/pull-time effects on scale-up latency, copy-on-write cost on the writable layer, and `HEALTHCHECK` as a mechanism distinct from an orchestrator's own probes |
+| Kubernetes / Helm | **deep** | The CFS-quota mechanism behind CPU throttling, QoS-class-driven eviction order, HPA's polling lag and scale-down stabilization window, `startupProbe` as the fix for slow-starting containers, and namespace-level `ResourceQuota`/`LimitRange` as a ceiling above a pod's own limits |
+| Serverless (Lambda, Cloud Functions, Azure Functions, Vercel, Netlify) | **deep** | Comparative: warm-instance mitigation levers per platform, Lambda VPC-attachment's ENI cold-start cost, wildly differing invocation-duration ceilings, and the module-scope/handler split expressed differently per platform and language |
+| Terraform | **deep** | Not a runtime — a map from provider resource types (`aws_ecs_task_definition`, `google_cloud_run_service`, `azurerm_linux_function_app`, and others) to the exact arguments `infrastructure/resources.md`'s arithmetic needs, plus how modules and per-environment `.tfvars` can hide or redirect those values |
 
 Serverless gets specific treatment in `infrastructure/resources.md`, because standard
 connection-pooling advice inverts under a per-invocation model.
@@ -148,25 +148,14 @@ more hedged section — which is the correct output, not a degraded one.
 
 ## Roadmap
 
-Ordered by expected value, not by ease:
+**The 1.0.0 milestone — leave nothing below `deep` — is complete.** All 39 detection signals
+are now `deep`: every datastore, cache, broker, runtime, API-surface framework, and
+infrastructure signal. No signal in `registry.yaml` is `conceptual` or `generic` any more.
+The multi-vendor umbrellas (vector stores, object storage, task queues, REST frameworks, and
+now serverless) are each covered by a deliberately comparative technology file rather than a
+per-vendor split — see `docs/roadmap.md` for the reasoning, and for what the project measures
+and works on next now that this milestone is closed.
 
-All engines originally targeted for promotion in this coverage push are now `deep`: Kafka and
-RabbitMQ, MySQL/MariaDB and DynamoDB, and all six planned per-runtime references (Node.js,
-Python, JVM, Go, .NET, Rust). Every datastore category, including object storage, now has a
-category file.
-
-Every datastore engine, every runtime, and every broker is now `deep` — no signal is
-`generic` any more. The multi-vendor umbrellas (vector stores, object storage, task queues,
-and now REST frameworks) are each covered by a deliberately comparative technology file
-rather than a per-vendor split — see `docs/roadmap.md` for the reasoning.
-
-The frameworks batch is done: GraphQL, gRPC, and REST are all `deep`.
-
-1. Promote the remaining infrastructure signals (Kubernetes, Docker, Serverless, Terraform)
-   to `deep` — the last batch toward the 1.0.0 milestone, and a bounded, well-defined
-   contribution (see below). `docs/roadmap.md` tracks it.
-
-Contributions in this area are welcome; see [extending.md](extending.md).
-
-**Promoting a technology is a bounded, well-defined contribution:** one reference file, one
-registry line, one README row.
+Adding a new technology remains a bounded, well-defined contribution once a genuinely new
+engine, framework, or platform emerges: one reference file, one registry line, one README
+row. See [extending.md](extending.md).

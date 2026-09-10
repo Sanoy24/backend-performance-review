@@ -454,27 +454,25 @@ version: 1
 - signal: kubernetes
   kind: infrastructure
   match: ["kind: Deployment", "kind: StatefulSet", "apiVersion: apps/v1", helm, "Chart.yaml"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/kubernetes.md]
+  tier: deep
 
 - signal: docker
   kind: infrastructure
   match: [Dockerfile, "docker-compose.yml", "compose.yaml"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/docker.md]
+  tier: deep
 
 - signal: serverless
   kind: infrastructure
   match: ["serverless.yml", "template.yaml", "AWS::Serverless", lambda_handler,
           "func.HttpTrigger", "cloud-functions", vercel, "netlify.toml"]
-  load: [infrastructure/resources.md, application/connection-pools.md]
-  tier: conceptual
-  notes: >
-    Cold starts, per-invocation connection setup, and concurrency limits dominate.
-    Connection pooling advice inverts under serverless — see infrastructure/resources.md.
+  load: [infrastructure/resources.md, application/connection-pools.md,
+         technology/serverless.md]
+  tier: deep
 
 - signal: terraform
   kind: infrastructure
   match: [".tf", "terraform"]
-  load: [infrastructure/resources.md]
-  tier: conceptual
+  load: [infrastructure/resources.md, technology/terraform.md]
+  tier: deep

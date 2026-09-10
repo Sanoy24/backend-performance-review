@@ -199,9 +199,9 @@ More: **[docs/architecture.md](docs/architecture.md)**.
 
 ## Supported technologies
 
-Support is tiered honestly. Most engines are now `deep`, but a `conceptual` or `generic`
-one still gets a real review — the methodology still applies, and the report says so in its
-scope section.
+Support is tiered honestly. Every engine this skill detects is now `deep` tier — an
+unrecognized one still gets a real review — the methodology still applies, and the report
+says so in its scope section.
 
 | Tier | Meaning |
 |:--|:--|
@@ -253,7 +253,7 @@ scope section.
 | **REST (FastAPI, Flask, Django, Express, NestJS, Koa, Gin, Echo, Fiber, Spring Boot, Actix, Axum, Laravel, Rails, ASP.NET Core)** | **deep** |
 | **GraphQL** | **deep** |
 | **gRPC** | **deep** |
-| Docker · Kubernetes · Serverless · Terraform | conceptual |
+| **Docker · Kubernetes · Serverless (Lambda, Cloud Functions, Azure Functions, Vercel, Netlify) · Terraform** | **deep** |
 
 An unrecognized technology is not a failure: the skill classifies it by category, applies
 universal principles, and states plainly what it cannot determine.

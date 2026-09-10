@@ -37,6 +37,45 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added — infrastructure batch, completing the 1.0.0 milestone
+
+- **`kubernetes`, `docker`, `serverless`, and `terraform` promoted to `deep` tier — the last
+  batch.** All 39 detection signals are now `deep`. No signal in `registry.yaml` is
+  `conceptual` or `generic` any more.
+  - **`technology/kubernetes.md`** — the CFS-quota accounting-period mechanism specifically
+    behind CPU throttling (a container can be throttled within a single ~100ms period even
+    while the node has spare capacity, which is why bursty multi-threaded workloads are
+    disproportionately affected relative to their average CPU usage), QoS-class-driven
+    eviction order under memory pressure, HPA's metrics-polling lag and deliberate
+    scale-down stabilization window, `startupProbe` as the specific fix for a slow-starting
+    container (rather than loosening `livenessProbe`), and namespace-level `ResourceQuota`/
+    `LimitRange` as a ceiling above an individual pod's own limits.
+  - **`technology/docker.md`** — PID 1 signal-handling as the specific, checkable reason
+    graceful shutdown can silently not happen despite being implemented in application code
+    (no init process, or a shell-wrapped `CMD` absorbing `SIGTERM`), the related zombie-
+    process-reaping gap, layer-caching and image size as a startup-latency (not request-time)
+    cost, copy-on-write cost on first write to a file inherited from an image layer, and
+    `HEALTHCHECK` as a mechanism independent of — and easy to double-count against — an
+    orchestrator's own probes.
+  - **`technology/serverless.md`** — a deliberately comparative file across five platforms
+    (AWS Lambda, Google Cloud Functions, Azure Functions, Vercel, Netlify), the fifth
+    umbrella technology file after vector stores, object storage, task queues, and REST
+    frameworks. Covers per-platform warm-instance mitigation levers (provisioned/reserved
+    concurrency on Lambda are two different knobs solving two different problems, easy to
+    conflate), Lambda VPC-attachment's distinct ENI-provisioning cold-start cost, invocation-
+    duration ceilings that vary by an order of magnitude or more across platforms, and the
+    module-scope/handler split's per-platform and per-language expression.
+  - **`technology/terraform.md`** — not a runtime, so this file is shaped differently from
+    every other technology file in this project: a map from provider resource types (across
+    AWS, GCP, and Azure) to the exact arguments `infrastructure/resources.md`'s arithmetic
+    needs (container memory/CPU, replica bounds, connection ceilings, concurrency limits,
+    timeouts), plus how `count`/`for_each` versus autoscaling arguments, module layering, and
+    per-environment `.tfvars` can hide or redirect which value is actually live.
+  - `docs/supported-technologies.md`, README.md, and `docs/roadmap.md` updated: coverage is
+    now 39 deep / 0 conceptual / 0 generic, and the "Technology promotion candidates" section
+    is retained empty (rather than removed) as the eventual home for a genuinely new engine,
+    framework, or platform, with the umbrella-file precedent documented for reuse.
+
 ### Added — frameworks batch (1.0.0 milestone)
 
 - **`graphql`, `grpc`, and `rest` promoted to `deep` tier** — the frameworks batch of the
