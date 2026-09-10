@@ -27,33 +27,73 @@ In rough order:
 
 ## 2. Branching and pull requests
 
-This project uses trunk-based development with short-lived feature branches — not GitFlow.
-There is no `develop` branch and no release branches; `main` is always the current state, and
-every change reaches it through a pull request.
+This project uses a two-branch model: **`develop` is where work lands, `main` is what has
+been released.** Both are protected; every change reaches either one through a pull request.
+
+| Branch | What it holds | What targets it |
+|:--|:--|:--|
+| `develop` | Current state of work. The default branch — always green, not necessarily released | Every `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, `test/` branch |
+| `main` | The last released state, and nothing else. Every tag is cut from here | A release PR from `develop`, or a `hotfix/` branch |
 
 ### The model
 
-1. Branch from `main`: `<type>/<short-description>`, matching the commit-prefix convention
+1. Branch from `develop`: `<type>/<short-description>`, matching the commit-prefix convention
    below — `feat/graph-category`, `fix/registry-collision`, `docs/branching-workflow`.
 2. Commit there. Prefixes follow [Conventional Commits](https://www.conventionalcommits.org/):
    `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`. Keep the first line under about 70
    characters; put the "why," not just the "what," in the body.
-3. Open a pull request into `main`. Use the PR template — it mirrors §6's review gates as
-   checkboxes, so filling it in honestly is most of the review.
-4. `main` is a **protected branch**: no direct pushes, including from repository admins.
-   Both CI jobs in `.github/workflows/checks.yml` must pass before a PR can merge, the branch
-   must be up to date with `main` first (GitHub will prompt to update it), and history stays
-   linear — merges are squashed or rebased, not merge-commits.
+3. Open a pull request into `develop` (the default target). Use the PR template — it mirrors
+   §6's review gates as checkboxes, so filling it in honestly is most of the review.
+4. Both `develop` and `main` are **protected branches**: no direct pushes, including from
+   repository admins. All five CI jobs in `.github/workflows/checks.yml` must pass before a PR
+   can merge, the branch must be up to date with its target first (GitHub will prompt to update
+   it), and history stays linear — merges are squashed or rebased, not merge-commits.
 5. Delete the branch after merging. A merged feature branch has no further purpose, and letting
    branches accumulate makes it harder to tell what's actually in flight.
 
-### Why trunk-based, and why not stricter
+### Releasing
 
-A content-and-methodology skill repository with no versioned hotfix branches to maintain gets
-little from GitFlow's extra branch types — they exist to solve problems (parallel release
-trains, hotfixes to an older version while `develop` moves on) this project doesn't have yet.
-If that changes — for instance, if this skill starts shipping versioned releases that need
-backporting — revisit this section rather than assuming trunk-based is permanent.
+A release is a deliberate milestone, not an automatic consequence of merging:
+
+1. Open a `chore/release-vX.Y.Z` PR **from `develop` into `main`**, moving `CHANGELOG.md`'s
+   `[Unreleased]` section under a dated version heading and bumping the version in all five
+   places the version-coherence invariant checks (`.claude-plugin/plugin.json`,
+   `.claude-plugin/marketplace.json`, `skills/backend-performance-review/SKILL.md`, README's
+   badge, `CITATION.cff`).
+2. Merge it, then tag `main` — `.github/workflows/release.yml` publishes the GitHub release
+   from that version's CHANGELOG section on any `v*.*.*` tag push.
+3. Merge `main` back into `develop` (or rebase `develop` onto it) so the two do not diverge.
+
+Between releases, version numbers do not move: files stay at the last released version and
+`[Unreleased]` accumulates. **Patch and minor releases still happen when something genuinely
+warrants shipping sooner** — a detection bug that silently drops a signal, say — but the default
+is to let work accumulate toward a substantial milestone rather than tagging every batch of
+merges.
+
+### Hotfixes
+
+When something on `main` needs fixing before `develop` is ready to release:
+
+1. Branch `hotfix/<short-description>` **from `main`**, not `develop`.
+2. PR it into `main`, tag the patch release from `main`.
+3. **Merge it into `develop` as well**, so the next release does not silently revert the fix.
+   This back-merge is the step that gets forgotten; treat it as part of the hotfix, not as
+   follow-up work.
+
+### Why this model, and why not trunk-based any more
+
+The earlier trunk-based model said GitFlow's extra branch types "exist to solve problems this
+project doesn't have yet," and named the condition for revisiting: shipping versioned releases
+that need work to continue independently of them. That condition now holds. Six releases landed
+in the project's first weeks, several of them cutting a version for what was really a single
+afternoon's work — the cadence was driven by "`main` moved" rather than by "there is something
+worth releasing." Separating the two branches makes that distinction structural instead of a
+matter of restraint: merging to `develop` no longer implies a release, so a release can be a
+decision about readiness rather than a bookkeeping step.
+
+The cost is real and worth naming: two branches can diverge, and the hotfix back-merge above is
+a genuine footgun. That trade is worth it here specifically because `main` now means something
+checkable — "the code behind the latest tag" — which it did not before.
 
 There is currently no required-approval count on `main` (`required_approving_review_count: 0`)
 — every change still goes through a PR and both CI checks, but a solo maintainer isn't blocked

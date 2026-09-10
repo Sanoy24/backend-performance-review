@@ -23,9 +23,30 @@ change scoring are **patch**.
 
 Breaking changes carry a migration note in the entry.
 
+## Release cadence
+
+What a change *is* (major/minor/patch, above) is separate from *when it ships*. From v0.6.0
+onward, work accumulates on `develop` and a release is cut deliberately, at a milestone, rather
+than every time `main` moves — see [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests).
+Patch and minor releases still happen when something genuinely warrants shipping sooner (a
+detection bug that silently drops a signal, for instance); they are just no longer the default
+response to a batch of merges. Between releases, version numbers stay at the last released
+value and `[Unreleased]` accumulates.
+
 ---
 
 ## [Unreleased]
+
+### Changed
+
+- Branching model: trunk-based development replaced by a two-branch model — `develop` (the new
+  default branch, where work lands) and `main` (the last released state, and the only branch
+  tags are cut from), with `hotfix/` branches from `main` back-merged into `develop`. The
+  previous model named the exact condition for revisiting it — shipping versioned releases that
+  need work to continue independently of them — and that condition now holds: six releases
+  landed in the project's first weeks, several cutting a version for what was really one
+  afternoon's work. See [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests) and
+  the release-cadence note above.
 
 ## [0.6.0] — 2026-09-10
 
