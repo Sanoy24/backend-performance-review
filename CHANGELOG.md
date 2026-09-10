@@ -51,10 +51,17 @@ Breaking changes carry a migration note in the entry.
   itself is now a committed regression fixture
   (`tests/test_detect_stack_regressions.py::DriverCoverageTests`) run in CI, so a future
   promotion missing its dominant driver in some runtime fails the same way rather than
-  waiting to be found by accident during an unrelated evaluation pass. Two cases the same
-  audit found — Node.js's Sequelize and Knex, whose package.json entries name no specific
-  engine at all — are a distinct, undecided design question and remain open; see the
-  roadmap.
+  waiting to be found by accident during an unrelated evaluation pass.
+- The same audit found two cases of a different shape: Node.js's Sequelize and Knex name no
+  specific engine in `package.json` at all — the dialect lives only in a separate config
+  file (`config/config.json`, `knexfile.js`). `detect_stack.py` now reads both, the same way
+  it already reads Prisma's `schema.prisma`: Sequelize's dialect field spells most engines
+  out in full (already-covered tokens) except `sqlite`, added as a bare token; Knex's
+  abbreviated Postgres client id (`client: 'pg'`) is caught via quoted-literal tokens, the
+  same technique used for the Node.js `pg` package fix above.
+- `Pipfile`/`Pipfile.lock`, found incidentally while making the fix above: stored
+  capitalized in `CONTENT_FILES` while every lookup lowercases the filename first, so a
+  real Pipfile's content was silently never read at all, since project creation.
 
 ## [0.5.0] — 2026-09-09
 
