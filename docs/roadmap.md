@@ -17,6 +17,21 @@ These are worth more than additional reference content — see
 | Context cost measured with a real tokenizer, but not from a live instrumented run (§3.20) | §3.20 replaced the byte proxy with real token counts across four stack breadths; a live, API-metered review's actual context consumption — which also includes the target repo's source and the growing conversation — is still unmeasured | Hard — needs an actual dispatched review with token usage recorded, not an offline reference-file count |
 | No human-expert baseline comparison | Would tell us how the skill's findings compare to a senior engineer's manual review of the same repository | Hard — needs a willing reviewer and a repository neither has seen |
 
+## Detection gaps
+
+- **Dialect-agnostic Node.js ORMs (Sequelize, Knex) name no specific datastore in
+  `package.json`.** A driver-coverage audit (`DriverCoverageTests`, CHANGELOG `[Unreleased]`)
+  found both alongside the nine token gaps it fixed, but neither is a missing token — the
+  actual dialect lives in separate runtime config (`config/config.json`, a `knexfile.js`)
+  that `detect_stack.py` does not read. Prisma's `schema.prisma` was the same shape of
+  problem, already solved by reading that one additional content file
+  (`docs/evaluation.md`, the Node.js blind pass). Fixing this needs a design decision, not a
+  registry edit: either extend content-file reading to cover Sequelize/Knex's config
+  formats the same way, or accept the gap and instead emit a "relational, engine
+  unspecified" conceptual-tier signal so a review at least loads `databases/relational.md`
+  rather than nothing. Whichever direction, it needs its own regression fixture per
+  CONTRIBUTING.md §10 before landing.
+
 ## Technology promotion candidates
 
 `conceptual`/`generic` signals in [`registry.yaml`](../skills/backend-performance-review/registry.yaml)

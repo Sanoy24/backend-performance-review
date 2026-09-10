@@ -321,5 +321,74 @@ class WeakEvidenceProvenanceTests(unittest.TestCase):
         return None
 
 
+class DriverCoverageTests(unittest.TestCase):
+    """Regression for a class of false negatives, not one instance of it.
+
+    sqlite-jdbc (§3.13), EF Core SqlServer (.NET blind pass), and the Node.js `pg` package
+    (#40, docs/evaluation.md §3.20) were each found separately, one deep-tier promotion or
+    evaluation pass at a time: a signal's `match:` list covering the driver the author
+    happened to test against, but not the dominant driver in every runtime that signal
+    claims deep-tier support for. An audit built after the third occurrence — one real
+    dependency declaration per (signal, runtime) combination the signal's own `match:` list
+    already implies it should cover, exactly as it appears in that runtime's actual
+    manifest format — found six more of the same shape at once: github.com/lib/pq (Go
+    postgres), Pomelo.EntityFrameworkCore.MySql (.NET mysql), Microsoft.EntityFrameworkCore
+    .Sqlite and rusqlite (.NET and Rust sqlite), io.lettuce (JVM redis, Spring Boot's
+    default client), spring-boot-starter-amqp and lapin (JVM and Rust rabbitmq), and
+    pylibmc (Python memcached).
+
+    Each case here is a minimal, real-shaped manifest snippet for one (signal, runtime)
+    pair — not a synthetic worst case, the actual declaration form a real project in that
+    runtime would commit. Two cases found by the same audit are deliberately absent:
+    Sequelize and Knex (Node.js) name no specific engine in package.json at all — the
+    dialect lives in separate runtime config the manifest-only scan does not read, a
+    design question distinct from a missing token, tracked separately.
+    """
+
+    def setUp(self):
+        self.entries, warnings = detect.parse_registry(REGISTRY)
+        self.assertEqual(warnings, [])
+
+    # (signal, description, manifest path, manifest content)
+    CASES = [
+        ("postgres", "Go lib/pq driver in go.mod",
+         "go.mod", "require github.com/lib/pq v1.10.9\n"),
+        ("postgres", "Node.js pg driver in package.json (#40)",
+         "package.json", '{\n  "dependencies": {\n    "pg": "^8.11.0"\n  }\n}\n'),
+        ("mysql", ".NET Pomelo EF Core provider in .csproj",
+         "app.csproj",
+         '<ItemGroup>\n'
+         '  <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />\n'
+         '</ItemGroup>\n'),
+        ("sqlite", ".NET EF Core Sqlite provider in .csproj",
+         "app.csproj",
+         '<ItemGroup>\n'
+         '  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" '
+         'Version="8.0.0" />\n'
+         '</ItemGroup>\n'),
+        ("sqlite", "Rust rusqlite crate in Cargo.toml",
+         "Cargo.toml", 'rusqlite = "0.30"\n'),
+        ("redis", "JVM Lettuce client, Spring Boot's default Redis client, in build.gradle",
+         "build.gradle", 'implementation "io.lettuce:lettuce-core:6.3.0"\n'),
+        ("rabbitmq", "JVM Spring AMQP starter in pom.xml",
+         "pom.xml",
+         "<dependency>\n"
+         "  <artifactId>spring-boot-starter-amqp</artifactId>\n"
+         "</dependency>\n"),
+        ("rabbitmq", "Rust lapin crate in Cargo.toml",
+         "Cargo.toml", 'lapin = "2.3"\n'),
+        ("memcached", "Python pylibmc client in requirements.txt",
+         "requirements.txt", "pylibmc==1.6.3\n"),
+    ]
+
+    def test_driver_coverage_cases_all_detect(self):
+        for signal, description, path, content in self.CASES:
+            with self.subTest(signal=signal, driver=description):
+                records = [(path, content, "manifest")]
+                detected = matched_signals(records, self.entries)
+                self.assertIn(signal, detected,
+                              f"{description} did not match the {signal} signal")
+
+
 if __name__ == "__main__":
     unittest.main()

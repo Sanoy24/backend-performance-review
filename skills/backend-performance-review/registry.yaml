@@ -31,15 +31,25 @@ version: 1
   kind: datastore
   category: relational
   match: [psycopg, psycopg2, asyncpg, "pg8000", postgresql, postgres, "jackc/pgx", npgsql,
-          "org.postgresql", "postgres://", "postgresql://", pg_dump, timescale]
+          "org.postgresql", "postgres://", "postgresql://", pg_dump, timescale, "lib/pq",
+          "\"pg\":"]
   load: [databases/universal.md, databases/relational.md, technology/postgres.md]
   tier: deep
+  notes: >
+    Two more driver gaps found by an audit of real dependency declarations per supported
+    ecosystem (docs/evaluation.md, following on from #40): github.com/lib/pq, the other
+    widely used Go Postgres driver alongside jackc/pgx, matched nothing; and node-postgres's
+    package.json entry — just `"pg": "^8.11.0"`, the bare two-letter package name — is too
+    short and common a substring to add unquoted (it would fire on "pgx", "pgadmin", or any
+    word containing "pg"), so it is matched via the same quoted-literal technique already
+    used for the node signal's `"node":` token: `"pg":` as it appears in a real
+    package.json, not the bare substring.
 
 - signal: mysql
   kind: datastore
   category: relational
   match: [mysqlclient, pymysql, aiomysql, mysql2, "mysql-connector", "go-sql-driver/mysql",
-          "mysql://", mariadb, "com.mysql"]
+          "mysql://", mariadb, "com.mysql", "pomelo.entityframeworkcore"]
   load: [databases/universal.md, databases/relational.md, technology/mysql.md]
   tier: deep
   notes: >
@@ -74,7 +84,8 @@ version: 1
   kind: datastore
   category: relational
   match: [sqlite3, "better-sqlite3", "mattn/go-sqlite3", "sqlite://", libsql,
-          "sqlite-jdbc", "org.xerial", "jdbc:sqlite:"]
+          "sqlite-jdbc", "org.xerial", "jdbc:sqlite:", rusqlite,
+          "Microsoft.EntityFrameworkCore.Sqlite"]
   load: [databases/universal.md, databases/relational.md, technology/sqlite.md]
   tier: deep
 
@@ -220,14 +231,14 @@ version: 1
 - signal: redis
   kind: cache
   match: [redis, ioredis, "go-redis", redis_py, aioredis, redisson, "redis://", "rediss://",
-          valkey, elasticache]
+          valkey, elasticache, "io.lettuce"]
   load: [databases/universal.md, databases/key-value.md, distributed/caching.md,
          technology/redis.md]
   tier: deep
 
 - signal: memcached
   kind: cache
-  match: [memcached, pymemcache, "gomemcache", memjs]
+  match: [memcached, pymemcache, "gomemcache", memjs, pylibmc]
   load: [databases/universal.md, databases/key-value.md, distributed/caching.md,
          technology/memcached.md]
   tier: deep
@@ -250,7 +261,8 @@ version: 1
 
 - signal: rabbitmq
   kind: broker
-  match: [rabbitmq, pika, amqplib, "amqp://", "streadway/amqp", kombu]
+  match: [rabbitmq, pika, amqplib, "amqp://", "streadway/amqp", kombu, lapin,
+          "starter-amqp"]
   load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md,
          technology/rabbitmq.md]
   tier: deep

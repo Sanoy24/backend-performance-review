@@ -39,9 +39,22 @@ Breaking changes carry a migration note in the entry.
 
 ### Fixed
 
-- Filed (not fixed in this change): the Node.js `pg` package — the most common Postgres
-  driver in that ecosystem — matches no token in the `postgres` signal's `match:` list,
-  discovered while building §3.20's maximal scenario. See #40.
+- Driver-coverage audit of every `deep`-tier signal against a real dependency declaration
+  per supported runtime (not a hand-picked sample) found nine false negatives of the same
+  shape as the already-fixed `sqlite-jdbc` and EF Core SqlServer gaps: a signal's
+  `match:` list covering the driver a promotion happened to be tested against, but not the
+  dominant driver in every runtime that signal claims to support. Fixed: `postgres` (Go
+  `lib/pq`; Node.js `pg`, closing #40), `mysql` (.NET `Pomelo.EntityFrameworkCore.MySql`),
+  `sqlite` (.NET `Microsoft.EntityFrameworkCore.Sqlite`; Rust `rusqlite`), `redis` (JVM
+  `io.lettuce`, Spring Boot's default Redis client), `rabbitmq` (JVM
+  `spring-boot-starter-amqp`; Rust `lapin`), `memcached` (Python `pylibmc`). The audit
+  itself is now a committed regression fixture
+  (`tests/test_detect_stack_regressions.py::DriverCoverageTests`) run in CI, so a future
+  promotion missing its dominant driver in some runtime fails the same way rather than
+  waiting to be found by accident during an unrelated evaluation pass. Two cases the same
+  audit found — Node.js's Sequelize and Knex, whose package.json entries name no specific
+  engine at all — are a distinct, undecided design question and remain open; see the
+  roadmap.
 
 ## [0.5.0] — 2026-09-09
 
