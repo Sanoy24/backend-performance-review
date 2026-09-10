@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 20 deep · 17 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 26 deep · 11 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -34,16 +34,16 @@ more careful section — not a guessed one.
 | **SQL Server** | relational | **deep** | Lock escalation, RCSI/snapshot-isolation opt-in, tempdb as a shared bottleneck, parameter sniffing, heap forwarding-pointer fragmentation, and `NOLOCK`'s correctness risk |
 | **Oracle Database** | relational | **deep** | Bind-variable/shared-pool hard-parse storms, undo-based read consistency and `ORA-01555`, PL/SQL context-switch cost, bitmap-index OLTP locking risk, and sequence-cache contention |
 | **SQLite** | relational | **deep** | Whole-file single-writer locking, WAL-mode checkpoint growth, connection pooling's write-throughput ceiling, network-filesystem locking hazards, and type-affinity index misses |
-| CockroachDB | relational | conceptual | Range distribution, transaction retries, and locality-aware placement not covered |
-| Couchbase | document | conceptual | |
-| Firestore | document | conceptual | Billing is per document read/write, so cost is often the binding constraint; the skill treats cost as a first-class axis here |
+| **CockroachDB** | relational | **deep** | Application-visible serializable retry errors, sequential-key hot ranges, the Raft consensus write-latency floor, and follower reads. **Speaks the Postgres wire protocol** — a repo using it looks like Postgres in every manifest |
+| **Couchbase** | document | **deep** | KV path versus N1QL/SQL++ cost gap, resident-ratio/cache-miss as the health metric, primary-index full scans, vBucket distribution, and per-operation durability levels |
+| **Cloud Firestore** | document | **deep** | Per-document read billing as the binding constraint, mandatory composite indexes and write-amplifying auto-indexing, the ~1 write/sec/document ceiling, and monotonic-key hotspots. Native versus Datastore mode changes the semantics |
 | **DynamoDB** | key-value | **deep** | Partition-key-driven hot partitions, `Scan`'s per-item-examined cost model, and GSI throttling propagating back to the base table |
-| Neo4j | graph | conceptual | Traversal-depth, index-free-adjacency, and supernode reasoning apply in full; engine-specific diagnostics not yet written |
-| Amazon Neptune | graph | conceptual | Same graph category reasoning; managed-service specifics (instance sizing, Gremlin vs openCypher) not yet written |
+| **Neo4j** | graph | **deep** | Page cache versus heap as the split that decides whether index-free adjacency is fast, indexes anchoring rather than accelerating traversal, `Eager`/`CartesianProduct` plan hazards, dense-node thresholds, and driver routing scheme |
+| **Amazon Neptune** | graph | **deep** | Three query languages over two data models, cluster/reader/instance endpoint routing (and reader-endpoint DNS pinning), instance class as the only memory lever, and the bulk loader versus per-row inserts |
 | **Cassandra / ScyllaDB** | wide-column | **deep** | Compaction-strategy trade-offs, tombstone thresholds, LWT/Paxos cost, `ALLOW FILTERING`/batch anti-patterns, and Cassandra-vs-Scylla (JVM GC vs shard-per-core) divergence |
 | **ClickHouse** | wide-column | **deep** | MergeTree engine-variant correctness trade-offs, `ORDER BY`-vs-`PARTITION BY`, sparse-index granularity, async mutations, "too many parts," and in-memory join limits |
 | **Elasticsearch / OpenSearch** | search | **deep** | Circuit breakers, heap-vs-page-cache sizing, `_source`/doc-values/stored-field layers, scroll/search_after/PIT trade-offs, bulk-queue rejection. Solr specifics (ZooKeeper/SolrCloud, `solrconfig.xml`) remain unknowns |
-| InfluxDB | time-series | conceptual | Series-cardinality, tag-vs-field, and retention/downsampling reasoning applies in full; engine-specific settings not yet written |
+| **InfluxDB** | time-series | **deep** | The 1.x/2.x/3.x split as the dominant fact (3.x largely removes the cardinality wall), `inmem` versus TSI deciding whether cardinality growth OOMs or degrades, shard-duration/retention alignment, and unbatched line-protocol writes |
 | Pinecone / Weaviate / Qdrant / Milvus / Chroma / pgvector / FAISS / LanceDB | vector | conceptual | Recall/latency/memory trade-offs, the search-breadth parameter, and filter/search-order interaction apply in full; engine-specific parameter names and defaults not yet written |
 | S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual | Request-count-dominated cost, key/prefix-only access, immutable full-object writes, multipart size limits, and egress cost apply in full; provider-specific size limits, consistency guarantees, and tier pricing not yet written |
 

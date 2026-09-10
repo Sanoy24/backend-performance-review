@@ -173,16 +173,16 @@ still applies, and the report says so in its scope section.
 | **SQL Server** | relational | **deep** |
 | **Oracle Database** | relational | **deep** |
 | **SQLite** | relational | **deep** |
-| CockroachDB | relational | conceptual |
-| Couchbase | document | conceptual |
-| Firestore | document | conceptual |
+| **CockroachDB** | relational | **deep** |
+| **Couchbase** | document | **deep** |
+| **Cloud Firestore** | document | **deep** |
 | **DynamoDB** | key-value | **deep** |
-| Neo4j | graph | conceptual |
-| Amazon Neptune | graph | conceptual |
+| **Neo4j** | graph | **deep** |
+| **Amazon Neptune** | graph | **deep** |
 | **Cassandra / ScyllaDB** | wide-column | **deep** |
 | **ClickHouse** | wide-column | **deep** |
 | **Elasticsearch / OpenSearch / Solr** | search | **deep** |
-| InfluxDB | time-series | conceptual |
+| **InfluxDB** | time-series | **deep** |
 | Pinecone / Weaviate / Qdrant / Milvus / pgvector | vector | conceptual |
 | S3-compatible / GCS / Azure Blob / MinIO | object-store | conceptual |
 
@@ -291,7 +291,7 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Twenty engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Twenty-six engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.

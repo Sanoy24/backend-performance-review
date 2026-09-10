@@ -104,12 +104,17 @@ version: 1
 - signal: cockroachdb
   kind: datastore
   category: relational
-  match: [cockroach, "cockroachdb"]
-  load: [databases/universal.md, databases/relational.md]
-  tier: conceptual
+  match: [cockroach, "cockroachdb", cockroachlabs, crdb_internal]
+  load: [databases/universal.md, databases/relational.md, technology/cockroachdb.md]
+  tier: deep
   notes: >
-    Distributed SQL. Range distribution, transaction retries, and locality-aware placement
-    are not covered by the generic relational file.
+    CockroachDB speaks the PostgreSQL wire protocol, so an application using it declares
+    ordinary Postgres drivers (pgx, psycopg, pg, npgsql) and nothing in the dependency
+    manifest names this engine — the postgres signal will fire instead. When both fire, or
+    when postgres fires alone, confirm which engine is actually deployed before applying
+    technology/postgres.md's engine-specific claims: vacuum, WAL, and buffer-cache reasoning
+    do not transfer, and CockroachDB's application-visible transaction-retry requirement has
+    no Postgres equivalent.
 
 # ---------------------------------------------------------------------------
 # Datastores — document
@@ -126,19 +131,22 @@ version: 1
 - signal: couchbase
   kind: datastore
   category: document
-  match: [couchbase, "couchbase://"]
-  load: [databases/universal.md, databases/document.md]
-  tier: conceptual
+  match: [couchbase, "couchbase://", "couchbases://", gocb, "com.couchbase",
+          "CouchbaseNetClient"]
+  load: [databases/universal.md, databases/document.md, technology/couchbase.md]
+  tier: deep
 
 - signal: firestore
   kind: datastore
   category: document
-  match: [firestore, "google-cloud-firestore", "firebase-admin"]
-  load: [databases/universal.md, databases/document.md]
-  tier: conceptual
+  match: [firestore, "google-cloud-firestore", "firebase-admin", "firestore.indexes.json"]
+  load: [databases/universal.md, databases/document.md, technology/firestore.md]
+  tier: deep
   notes: >
     Billing is per document read/write, so cost is often the binding constraint rather
-    than latency. Treat cost as a first-class axis for this engine.
+    than latency. Treat cost as a first-class axis for this engine. Record whether the
+    database is in Native mode or Datastore mode — they are the same service with
+    materially different query semantics and limits.
 
 - signal: dynamodb
   kind: datastore
@@ -159,23 +167,22 @@ version: 1
 - signal: neo4j
   kind: datastore
   category: graph
-  match: [neo4j, "bolt://", "neo4j://", py2neo, "neo4j-driver", cypher]
-  load: [databases/universal.md, databases/graph.md]
-  tier: conceptual
-  notes: >
-    Graph category principles apply in full. No engine-specific file yet — diagnostics,
-    profiler output format, and configuration knobs are not covered; treat those as unknowns.
+  match: [neo4j, "bolt://", "neo4j://", py2neo, "neo4j-driver", cypher, "Neo4j.Driver"]
+  load: [databases/universal.md, databases/graph.md, technology/neo4j.md]
+  tier: deep
 
 - signal: neptune
   kind: datastore
   category: graph
   match: ["amazonaws.com/neptune", neptune, gremlin, sparql, "opencypher"]
-  load: [databases/universal.md, databases/graph.md]
-  tier: conceptual
+  load: [databases/universal.md, databases/graph.md, technology/neptune.md]
+  tier: deep
   notes: >
-    Graph category principles apply in full. No engine-specific file yet — Neptune's managed-
-    service specifics (instance sizing, read-replica behavior, engine choice between Gremlin
-    and openCypher) are not covered; treat those as unknowns.
+    The gremlin, sparql, and opencypher tokens name query languages, not this engine —
+    JanusGraph, Blazegraph, Apache Jena, and Neptune Analytics speak them too. Treat a match
+    on those alone as "a graph query language is in use" and confirm the engine from a
+    *.neptune.amazonaws.com endpoint or an infrastructure declaration before applying
+    technology/neptune.md's managed-service specifics.
 
 - signal: cassandra
   kind: datastore
@@ -201,13 +208,16 @@ version: 1
 - signal: influxdb
   kind: datastore
   category: time-series
-  match: [influxdb, "influxdb-client", prometheus_remote_write]
-  load: [databases/universal.md, databases/time-series.md]
-  tier: conceptual
+  match: [influxdb, "influxdb-client", prometheus_remote_write, influxd, "org.influxdb",
+          "com.influxdb"]
+  load: [databases/universal.md, databases/time-series.md, technology/influxdb.md]
+  tier: deep
   notes: >
-    Time-series category principles apply in full. No engine-specific file yet — series-index
-    memory behavior, chunk/shard duration defaults, and continuous-query syntax are not
-    covered; treat those as unknowns.
+    Establish the major version before scoring any finding: 1.x (InfluxQL/TSM), 2.x
+    (Flux/buckets), and 3.x (SQL, columnar Parquet storage) differ enough that guidance for
+    one can be actively wrong for another — the series-cardinality wall that dominates
+    1.x/2.x reasoning is substantially removed in 3.x. If the version cannot be determined,
+    say so in the report's scope section.
 
 - signal: vector-store
   kind: datastore
