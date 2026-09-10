@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 28 deep · 9 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 30 deep · 7 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -80,8 +80,8 @@ and why retention is independent of consumption (a log, not a queue).
 | **Go** | **deep** |
 | **.NET** | **deep** |
 | **Rust** | **deep** |
-| PHP | conceptual |
-| Ruby | conceptual |
+| **PHP** | **deep** |
+| **Ruby** | **deep** |
 
 All runtimes get `runtimes/universal.md`, which is a taxonomy rather than a survey: the skill
 places the runtime on five dimensions — execution model, parallelism, concurrency model,
@@ -158,15 +158,15 @@ RabbitMQ, MySQL/MariaDB and DynamoDB, and all six planned per-runtime references
 Python, JVM, Go, .NET, Rust). Every datastore category, including object storage, now has a
 category file.
 
-Every datastore engine is now `deep`, including both multi-vendor umbrellas (vector stores,
-object storage), each covered by a deliberately comparative technology file rather than a
-per-vendor split — see `docs/roadmap.md` for the reasoning.
+Every datastore engine and every runtime is now `deep`. The datastore umbrellas (vector
+stores, object storage) are each covered by a deliberately comparative technology file
+rather than a per-vendor split — see `docs/roadmap.md` for the reasoning.
 
 1. Promote any remaining `conceptual`/`generic` engine to `deep` by writing its technology
    reference — the largest remaining gap toward the 1.0.0 milestone, and a bounded,
    well-defined contribution (see below). `docs/roadmap.md` tracks the remaining batches:
-   runtimes (PHP, Ruby), brokers (SQS, task queues), frameworks (GraphQL, gRPC, REST), and
-   infrastructure (Kubernetes, Docker, Serverless, Terraform).
+   brokers (SQS, task queues), frameworks (GraphQL, gRPC, REST), and infrastructure
+   (Kubernetes, Docker, Serverless, Terraform).
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 

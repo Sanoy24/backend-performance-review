@@ -39,6 +39,20 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- PHP and Ruby promoted to `deep` tier — the third batch of the 1.0.0 goal, and the point
+  at which **every runtime signal in the registry is `deep`**:
+  - **`technology/php.md`** — the shared-nothing, tear-down-per-request execution model as
+    the fact that changes what "startup cost" means for this runtime (in-process caches
+    don't survive between requests; persistent DB connections trade that cost against a
+    real state-leakage risk), OPcache as the single most consequential and most overlooked
+    setting, Composer's autoloader production mode, PHP-FPM worker-pool sizing as a direct
+    analogue of connection-pool sizing, and the state-leakage risk newer persistent-process
+    runtimes (Swoole, RoadRunner, FrankenPHP) reintroduce by inverting that model.
+  - **`technology/ruby.md`** — the GVL as the fact determining whether threads or processes
+    actually fix a given bottleneck (I/O concurrency vs. CPU parallelism), copy-on-write
+    memory sharing across forked workers and how Ruby's own GC has historically undermined
+    it, GC heap-growth tuning after boot, Sidekiq concurrency's same GVL constraint applied
+    to background jobs, and YJIT's default-on status as of Ruby 3.3.
 - `vector-store` and `object-storage` promoted to `deep` tier — the second batch of the
   1.0.0 goal, and the point at which **every datastore signal in the registry is `deep`**,
   including both multi-vendor umbrellas:
