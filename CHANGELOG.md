@@ -39,6 +39,26 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- `sqs` and `task-queue` promoted to `deep` tier — the fourth batch of the 1.0.0 goal, and
+  the point at which **no signal in the registry is `generic` tier any more**:
+  - **`technology/sqs.md`** — visibility timeout as the specific lease mechanism behind
+    redelivery, Standard's documented at-least-once/best-effort-ordering behavior as
+    correctness-relevant rather than a bug, FIFO's per-message-group-ID throughput ceiling,
+    and long polling as both a cost and a message-completeness question (short polling can
+    under-report what's actually on the queue, not just waste requests).
+  - **`technology/task-queues.md`** — a comparative file across Celery, Sidekiq, BullMQ,
+    RQ, Dramatiq, Hangfire, Temporal, and Asynq. Leads with backing store as the throughput/
+    failure-mode determinant (Hangfire's SQL-backed default sharing the application's own
+    database and connection pool, unlike every Redis/broker-backed alternative), and a
+    table of default retry behavior that varies enormously and counterintuitively across
+    libraries (Sidekiq retries up to 25 times over ~21 days by default; BullMQ/RQ don't
+    retry at all unless configured). Flags Temporal explicitly as a durable-execution engine
+    rather than a simple job queue, rather than forcing it into the same comparison table.
+  - Detection audit found `sqs` had never matched the boto3 Python client, AWSSDK.SQS
+    (.NET), or the AWS SDK v2 Java/Gradle coordinate at all — fixed with tokens quoted the
+    same way the Node.js `pg` fix was, since bare `sqs` was already known to collide with
+    base64 lockfile hashes (the same class the `task-queue` signal's own `rq` removal
+    documents).
 - PHP and Ruby promoted to `deep` tier — the third batch of the 1.0.0 goal, and the point
   at which **every runtime signal in the registry is `deep`**:
   - **`technology/php.md`** — the shared-nothing, tear-down-per-request execution model as

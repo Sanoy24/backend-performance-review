@@ -304,22 +304,35 @@ version: 1
 
 - signal: sqs
   kind: broker
-  match: ["aws-sdk/client-sqs", "aws-sdk-go-v2/service/sqs", "arn:aws:sqs", "AWS::SQS"]
-  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md]
-  tier: generic
+  match: ["aws-sdk/client-sqs", "aws-sdk-go-v2/service/sqs", "aws-sdk-go/service/sqs",
+          "arn:aws:sqs", "AWS::SQS", "software.amazon.awssdk:sqs", "AWSSDK.SQS",
+          "boto3.client('sqs')", "boto3.client(\"sqs\")"]
+  load: [distributed/retries-and-backpressure.md, distributed/timeouts-and-deadlines.md,
+         technology/sqs.md]
+  tier: deep
+  notes: >
+    A bare "sqs" token is deliberately not in this list — behavioral evaluation found it
+    matching inside base64-encoded lockfile hashes (see LockfileHashCollisionTests), the
+    same collision class as the "rq" removal below. The boto3 Python client has no
+    package-manifest token of its own (boto3 is a single generic package covering every AWS
+    service), so it is matched via the literal client-construction call instead, in both
+    quote styles.
 
 - signal: task-queue
   kind: broker
   match: [celery, sidekiq, bullmq, bull, "django-rq", "python-rq", dramatiq, "hangfire",
           temporal, "asynq"]
-  load: [distributed/retries-and-backpressure.md, application/connection-pools.md]
-  tier: generic
+  load: [distributed/retries-and-backpressure.md, application/connection-pools.md,
+         technology/task-queues.md]
+  tier: deep
   notes: >
     A bare "rq" token was removed from this match list after behavioral evaluation found
     it matching inside base64-encoded hashes in lockfiles (e.g. go.sum), producing false
     positives. See docs/evaluation.md. This narrows detection of the Python `rq` library
     to its more specific package names; a project using bare `rq` without django-rq or
-    python-rq framing will not be detected by this signal.
+    python-rq framing will not be detected by this signal. Temporal is architecturally a
+    durable-execution engine, not a simple job queue — technology/task-queues.md flags this
+    explicitly rather than applying the same comparison table to it uncritically.
 
 # ---------------------------------------------------------------------------
 # Runtimes

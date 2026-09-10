@@ -37,37 +37,42 @@ that would most benefit from a `deep`-tier reference file. See
 and [docs/supported-technologies.md](supported-technologies.md) for the full current tier
 table.
 
-**The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore engine and every
-runtime is now there. Datastores: the six originally on this list (Elasticsearch/OpenSearch,
-Cassandra/ScyllaDB, ClickHouse, SQL Server, Memcached, SQLite), then Oracle, then
-CockroachDB, Couchbase, Firestore, Neo4j, Neptune, and InfluxDB, and then `vector-store`
-(`technology/vector-stores.md`) and `object-storage` (`technology/object-storage.md`).
-Runtimes: `php` (`technology/php.md`) and `ruby` (`technology/ruby.md`) — the last two of
-eight. See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
+**The 1.0.0 milestone is to leave nothing below `deep`.** Every datastore, every runtime,
+and every broker is now there — **no signal is `generic` any more.** Datastores: the six
+originally on this list (Elasticsearch/OpenSearch, Cassandra/ScyllaDB, ClickHouse, SQL
+Server, Memcached, SQLite), then Oracle, then CockroachDB, Couchbase, Firestore, Neo4j,
+Neptune, and InfluxDB, and then `vector-store` (`technology/vector-stores.md`) and
+`object-storage` (`technology/object-storage.md`). Runtimes: `php` (`technology/php.md`)
+and `ruby` (`technology/ruby.md`) — the last two of eight. Brokers: `sqs`
+(`technology/sqs.md`) and `task-queue` (`technology/task-queues.md`) — the last two signals
+of any kind at `generic` tier. See [CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
 Remaining for 1.0.0, in planned batch order:
 
 | Batch | Signals | Note |
 |:--|:--|:--|
-| Brokers | `sqs`, `task-queue` | The only two `generic`-tier signals left; `task-queue` is an umbrella |
 | Frameworks | `graphql`, `grpc`, `rest` | `rest` spans 15 web frameworks |
 | Infrastructure | `kubernetes`, `docker`, `serverless`, `terraform` | `serverless` is an umbrella |
 
 ### The remaining umbrella signals, and how they get promoted
 
-Three of the remaining signals are not one engine each: `task-queue` spans ten queue
-libraries, `serverless` spans five platforms, and `rest` spans fifteen web frameworks. The
-same approach already applied to `vector-store` and `object-storage` (below) is the plan for
-these too.
+Two of the remaining signals are not one engine each: `serverless` spans five platforms, and
+`rest` spans fifteen web frameworks. The same approach already applied to `vector-store`,
+`object-storage`, and `task-queue` is the plan for these too.
 
 Unlike the `elasticsearch`/`redis` signals — which combine engines that really are
 API-compatible forks — these span independently designed systems whose limits and defaults
 genuinely differ. The decided approach is **one deliberately comparative technology file per
 umbrella**, not splitting each signal into per-vendor signals (which would have turned the
-datastore umbrellas alone into ten separate promotions). `technology/vector-stores.md` and
-`technology/object-storage.md` are now the precedent for this shape, alongside
-`technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
+datastore umbrellas alone into ten separate promotions). `technology/vector-stores.md`,
+`technology/object-storage.md`, and `technology/task-queues.md` are now the precedent for
+this shape, alongside `technology/cassandra.md` (Cassandra *and* ScyllaDB's divergence) and
 `technology/elasticsearch.md` (Elasticsearch *and* OpenSearch, naming its Solr gaps).
+`technology/task-queues.md` additionally had to decide what to do with Temporal, which is
+architecturally a durable-execution engine rather than a simple job queue — flagging that
+distinction explicitly, rather than forcing it into the same comparison table as the other
+seven libraries, is itself part of what "the bar such a file has to clear" (below) means in
+practice.
 
 The bar such a file has to clear is the same as any other: per
 [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-non-derivable-content-rule), it must carry what
