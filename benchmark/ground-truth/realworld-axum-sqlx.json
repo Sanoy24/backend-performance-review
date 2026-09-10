@@ -1,0 +1,84 @@
+{
+  "repository": {
+    "name": "launchbadge/realworld-axum-sqlx",
+    "commit": "unpinned-at-review-time",
+    "url": "https://github.com/launchbadge/realworld-axum-sqlx",
+    "language": "Rust",
+    "framework": "Axum",
+    "datastore": "PostgreSQL (via SQLx)",
+    "workload": "Not supplied — a public RealWorld reference implementation with no stated production traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.14, an independent blind pass with no memory of this project's own findings — the second of three untested deep-tier runtime references (JVM, Rust, .NET) closed by this round. Two real correctness bugs (an uncorrelated EXISTS subquery for `favorited`, a feed endpoint missing ORDER BY) were also found and filed under Kind: Correctness, out of the performance rubric entirely per SKILL.md Hard Rule 8 — they are not encoded here, since this schema's category enum matches the performance-finding categories in finding.schema.json and has no correctness axis. `forbidden` is intentionally empty: the pass correctly declined to flag spawn_blocking-offloaded Argon2 hashing as a blocking-call defect (it is the right pattern, confirmed by technology/rust.md's runtime-identification guidance), but no exact file:line for that call site is given in §3.14's \"in brief\" summary, and inventing one here would violate the same no-invented-facts discipline this corpus exists to hold reviews to."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "src/http/articles/mod.rs",
+        "symbol": "list_tags"
+      },
+      "category": "data-access",
+      "also_acceptable_categories": ["networking"],
+      "mechanism": "An unauthenticated, unbounded GET /api/tags endpoint runs a full-table DISTINCT-over-unnest scan with no cache and no rate limit. The codebase's own source comment states this query requires a full table scan and is a likely point for a DoS attack — corroborating evidence for the finding, not a claim invented by the review.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["cache", "rate limit", "materialize"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "src/http/articles/mod.rs",
+        "symbol": "list_articles"
+      },
+      "category": "data-access",
+      "mechanism": "limit.unwrap_or(20) is used directly as the SQL LIMIT on two list endpoints with no upper clamp on the caller-supplied value, each returned row carrying two to three correlated subqueries.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["clamp", "cap the limit", "maximum"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-003",
+      "location": {
+        "file": "src/http/mod.rs"
+      },
+      "category": "networking",
+      "mechanism": "No server-side request timeout or body-size limit configured anywhere in the Axum middleware stack — tower-http is included with only its trace feature, not limit or timeout.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["timeout", "body limit", "tower-http"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-004",
+      "location": {
+        "file": "src/http/articles/mod.rs",
+        "symbol": "list_articles"
+      },
+      "category": "data-access",
+      "mechanism": "The primary unfiltered article-listing sort (ORDER BY created_at) has no supporting index; the schema's only secondary index is the GIN index on tag_list.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["index"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-005",
+      "location": {
+        "file": "src/http/users/mod.rs"
+      },
+      "category": "concurrency",
+      "mechanism": "Argon2 password hashing is correctly offloaded via spawn_blocking (the right pattern for CPU-bound work in an async handler, not itself a defect), but nothing bounds how many concurrent offloaded hashes can run beyond Tokio's own default blocking-thread-pool cap.",
+      "severity": "Medium",
+      "max_confidence": "Medium",
+      "expected_recommendation": ["bound", "semaphore", "limit concurrent"],
+      "forbidden_recommendation": ["flag the spawn_blocking offload itself as blocking"]
+    }
+  ],
+  "acceptable": [],
+  "forbidden": []
+}

@@ -1,0 +1,70 @@
+{
+  "repository": {
+    "name": "gothinkster/spring-boot-realworld-example-app",
+    "commit": "unpinned-at-review-time",
+    "url": "https://github.com/gothinkster/spring-boot-realworld-example-app",
+    "language": "Java",
+    "framework": "Spring Boot / DGS GraphQL",
+    "datastore": "SQLite (via HikariCP)",
+    "workload": "Not supplied — a public RealWorld reference implementation with no stated production traffic."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.13, an independent blind pass with no memory of this project's own findings and no instruction beyond \"review this repository\" — the first repository in the evaluation record on the JVM runtime. `forbidden` is intentionally empty: unlike the first batch of ground-truth files, §3.13's write-up documents what the pass correctly reasoned about (SQLite's conceptual-tier confidence cap) only in prose, without a specific file:line for a discarded candidate — encoding one here would mean inventing a location not actually in the source record, which is the exact discipline this corpus exists to hold reviews to. A real, reproducible detector false negative was also found and fixed during this pass (registry.yaml's `sqlite` signal missed the JVM driver coordinate `org.xerial:sqlite-jdbc` and the `jdbc:sqlite:` connection scheme entirely); that is a detect_stack.py regression, already covered by tests/test_detect_stack_regressions.py, not a finding-content question this schema models."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "ProfileDatafetcher",
+        "symbol": "ProfileDatafetcher / ArticleDatafetcher"
+      },
+      "category": "data-access",
+      "mechanism": "Every GraphQL field resolver issues unbatched per-item queries with no DataLoader anywhere in the codebase — an O(N*M) cost under nested queries. The REST path in the same codebase already batches the identical data (ArticleQueryService.setFavoriteCount), which is direct evidence the fix is a known, available pattern rather than new work.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["dataloader", "batch"],
+      "forbidden_recommendation": ["redis", "cache"]
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "src/main/resources/db/migration"
+      },
+      "category": "data-access",
+      "mechanism": "No index on any foreign-key or filter column in the schema (tags.name, article_tags.article_id/tag_id, comments.article_id, follows.user_id/follow_id) — provable directly from the migration file with no runtime evidence needed.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["index"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-003",
+      "location": {
+        "file": "application.properties"
+      },
+      "category": "concurrency",
+      "mechanism": "SQLite behind a 10-connection HikariCP pool and a 200-thread Tomcat pool, with no journal-mode or busy-timeout configuration. Confidence is deliberately capped at Medium rather than asserted High or Critical, because SQLite carries no dedicated technology file in this project (registry.yaml notes it as conceptual-tier) and concurrency questions at that tier should be flagged as unknowns rather than asserted with unwarranted certainty — a correct application of graceful degradation, not a missed opportunity.",
+      "severity": "High",
+      "max_confidence": "Medium",
+      "expected_recommendation": ["journal mode", "busy timeout", "WAL"],
+      "forbidden_recommendation": []
+    },
+    {
+      "id": "GT-004",
+      "location": {
+        "file": "ArticleCommandService"
+      },
+      "category": "data-access",
+      "also_acceptable_categories": ["concurrency"],
+      "mechanism": "An unbounded per-tag loop inside a single write transaction on article creation, with no upper bound on the caller-supplied tag list.",
+      "severity": "Medium",
+      "max_confidence": "High",
+      "expected_recommendation": ["bound", "limit", "batch"],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": []
+}

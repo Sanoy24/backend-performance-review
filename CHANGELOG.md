@@ -227,26 +227,43 @@ value and `[Unreleased]` accumulates.
   fallback matched `orders/service.py` against `users/service.py`. Matching is now
   suffix-only, because a wrong match is silent while an unmatched annotation prints a MISSED
   line somebody can correct.
-- **A first batch of ground truth**, retro-annotated from `docs/evaluation.md`'s recorded
-  blind passes: `gin-realworld.json` (the N+1 traced through the serializer chain, §3.1/§3.9/
-  §3.18), `fastapi-full-stack-template.json` (unbounded pagination, §3.2/§3.10),
-  `urlshortener.json` (the one repository with real `Confirmed`-grade runtime evidence — the
-  benchmarks were actually run, §3.5/§3.11), `github-signature-verifier.json` (a severity
-  corrected from `Medium` to `High` between two independent passes on evidence the first
-  pass had already read and set aside, §3.7 → §3.8 — itself a worked example of what
-  severity calibration exists to catch), and `gin-realworld-pr49-change-scoped.json` (ground
-  truth for a real, merged PR, testing that a review credits a genuine fix while still
-  catching the untouched half of the same problem one call deeper, §3.6). Each carries
-  `forbidden` traps for the specific false positives the underlying blind pass actually
-  encountered and rejected, not hypothetical ones. Scored end-to-end against a
-  hand-constructed review to confirm the harness works on real corpus data — including that
-  a manufactured false positive on one of the `forbidden` traps correctly halves precision
-  and is named in the restraint report, not just detected as a count.
+- **The ground-truth corpus, seeded from all eight independently blind-passed repositories
+  recorded in `docs/evaluation.md`**, plus one change-scoped case, nine files total:
+  `gin-realworld.json` (the N+1 traced through the serializer chain, §3.1/§3.9/§3.18),
+  `fastapi-full-stack-template.json` (unbounded pagination, §3.2/§3.10), `urlshortener.json`
+  (the one repository with real `Confirmed`-grade runtime evidence — the benchmarks were
+  actually run, §3.5/§3.11), `github-signature-verifier.json` (a severity corrected from
+  `Medium` to `High` between two independent passes on evidence the first pass had already
+  read and set aside, §3.7 → §3.8 — itself a worked example of what severity calibration
+  exists to catch), `spring-boot-realworld.json` (JVM — an unbatched GraphQL N+1 with a
+  working REST counter-example in the same codebase, §3.13), `realworld-axum-sqlx.json`
+  (Rust — five findings including a full-table scan the codebase's own source comment calls
+  a DoS vector, and a `spawn_blocking` offload correctly *not* flagged as blocking, §3.14),
+  `aspnetcore-realworld.json` (.NET — a synchronous EF Core transaction wrapping every
+  request inside an `async` handler, §3.15), `node-express-realworld-prisma-postgres.json`
+  (Node.js/Prisma — an unbounded relation fetch where the already-computed efficient form is
+  silently discarded in favor of the expensive one, §3.16), and
+  `gin-realworld-pr49-change-scoped.json` (ground truth for a real, merged PR, testing that a
+  review credits a genuine fix while still catching the untouched half of the same problem
+  one call deeper, §3.6).
+  - Every `forbidden` trap is a false positive the underlying blind pass actually encountered
+    and rejected, not a hypothetical one; four files carry a thin or empty `forbidden` list
+    rather than one, because their source write-ups describe what was correctly declined
+    only in prose without pinning an exact file:line — inventing a location to fill the field
+    would violate the same no-invented-facts discipline this corpus exists to hold reviews to.
+  - Scored end-to-end against hand-constructed reviews to confirm the harness works on real
+    corpus data: a manufactured false positive on one `forbidden` trap correctly halves
+    precision and is named in the restraint report; a partial review covering 3 of the
+    5-finding Rust file correctly scores 0.6 recall with a per-category breakdown that
+    separates a 0.0-recall category from a 1.0-recall one in the same result.
   - Case 2 (a repository whose correct answer is zero findings) remains open: none of the
-    five files below satisfy it, which is itself consistent with `docs/evaluation.md` §3.7's
-    finding that no repository reviewed so far has produced a literal zero-finding result.
+    nine files satisfy it, consistent with `docs/evaluation.md` §3.7's finding that no
+    repository reviewed so far has produced a literal zero-finding result.
   - `benchmark/ground-truth/.gitkeep` removed — the directory documented as "empty on
     purpose" no longer is.
+  - Not yet annotated: the second independent pass used for stability measurement (§3.18,
+    §3.21) — that needs a second, distinct `review.json` scored with `score.py stability`
+    against the first, not a ground-truth file.
 
 ### Added — detection
 

@@ -86,8 +86,8 @@ In priority order, and the first one is not a tie:
    cases bugs later confirmed and fixed. Retro-annotating them costs a fraction of
    commissioning new cases. Mark these `"method": "blind-pass-derived"` — truth derived from
    a run rather than established independently is weaker evidence, and the annotation has to
-   say so. **A first batch of five is done** (`ground-truth/*.json`), covering four of the
-   nine recorded repositories/passes plus one change-scoped case:
+   say so. **All eight independently blind-passed repositories are now done**
+   (`ground-truth/*.json`), plus one change-scoped case:
    - `gin-realworld.json` — the N+1 traced through the serializer chain (§3.1, §3.9, §3.18),
      plus two `forbidden` traps for patterns that look like the same shape and aren't (an
      already-batched favorites query, an SQLite pool-config non-contradiction).
@@ -104,15 +104,35 @@ In priority order, and the first one is not a tie:
      from `Medium` to `High` between two independent passes (§3.7 → §3.8) on evidence the
      first pass had already read and set aside. Encodes that correction as the ground truth,
      making this file also a worked example of what severity-calibration scoring is for.
+   - `spring-boot-realworld.json` (JVM) — an unbatched GraphQL N+1 with a working REST
+     counter-example in the same codebase proving the fix is a known pattern, plus a missing
+     index provable from the migration file alone.
+   - `realworld-axum-sqlx.json` (Rust) — five findings, including an unbounded full-table
+     scan the codebase's own source comment calls a DoS vector, and a `spawn_blocking`
+     offload correctly identified as the *right* pattern rather than a defect (`forbidden`).
+   - `aspnetcore-realworld.json` (.NET) — a synchronous EF Core transaction wrapping every
+     request inside an `async` handler, with precise `file:line` citations throughout; the
+     only file in this batch with a pinned commit in the source record.
+   - `node-express-realworld-prisma-postgres.json` (Node.js/Prisma) — an unbounded relation
+     fetch where the efficient `_count` form is already computed in parallel and silently
+     discarded in favor of the expensive one, plus a `forbidden` trap for declining to
+     recommend clustering with no host core count anywhere in evidence.
    - `gin-realworld-pr49-change-scoped.json` — the one change-scoped case (§3.6): ground
      truth for a real, merged PR, testing that a review credits a genuine fix (`forbidden`)
      while still catching the untouched, structurally identical half of the same problem one
      call deeper (`expected`) — the "sits directly adjacent to" rule in `SKILL.md` §Modes.
 
-   Still to retro-annotate: the JVM, Rust, .NET, and Node.js repositories (§3.13–§3.16), and
-   the second independent pass used for stability measurement (§3.18, §3.21) — that one
-   needs a second, distinct `review.json` scored with `score.py stability` against the first,
-   not a second ground-truth file for the same repository.
+   `forbidden` is intentionally sparse or empty on four of these files (JVM, Rust, .NET,
+   Node's clustering item aside) — the source write-ups for that batch describe what was
+   correctly declined mostly in prose, without pinning an exact file:line in every case, and
+   inventing one to fill the field would violate the same no-invented-facts discipline this
+   corpus exists to hold reviews to. A thinner `forbidden` list is a more honest annotation
+   than a fabricated one.
+
+   Still to retro-annotate: the second independent pass used for stability measurement
+   (§3.18, §3.21) — that one needs a second, distinct `review.json` scored with
+   `score.py stability` against the first, not a second ground-truth file for the same
+   repository.
 
 3. **Repositories with misleading signals** — an obvious smell that is harmless, a real
    problem somewhere unexpected, a technology named in a manifest but never used.
