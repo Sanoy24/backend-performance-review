@@ -154,8 +154,9 @@ More: **[docs/architecture.md](docs/architecture.md)**.
 
 ## Supported technologies
 
-Support is tiered honestly. Most engines are at `conceptual` or `generic` — the methodology
-still applies, and the report says so in its scope section.
+Support is tiered honestly. Most engines are now `deep`, but a `conceptual` or `generic`
+one still gets a real review — the methodology still applies, and the report says so in its
+scope section.
 
 | Tier | Meaning |
 |:--|:--|
@@ -194,7 +195,8 @@ still applies, and the report says so in its scope section.
 | **Memcached** | **deep** |
 | **Kafka / Redpanda** | **deep** |
 | **RabbitMQ** | **deep** |
-| SQS · Celery/Sidekiq/BullMQ-style queues | generic |
+| **Amazon SQS** | **deep** |
+| **Celery / Sidekiq / BullMQ / RQ / Dramatiq / Hangfire / Temporal / Asynq** | **deep** |
 | **Node.js** | **deep** |
 | **Python (CPython)** | **deep** |
 | **JVM (Java / Kotlin)** | **deep** |
@@ -292,7 +294,7 @@ report a vulnerability in the bundled script, see [SECURITY.md](SECURITY.md).
 
 - Static analysis cannot measure. Without runtime evidence, most findings cap at `High` or
   `Medium` confidence by design, and the report says so.
-- Coverage is deliberately narrow. Thirty engines are `deep`; everything else relies on
+- Coverage is deliberately narrow. Thirty-two engines are `deep`; everything else relies on
   category-level reasoning.
 - The skill can be wrong. It is a starting point for a senior engineer, not a replacement for
   one — and its validation plans exist precisely so its claims can be checked.
