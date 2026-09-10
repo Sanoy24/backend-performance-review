@@ -99,6 +99,14 @@ infrastructure, and a `references_to_load` list. It is an accelerator, never a
 dependency — if it is missing or errors, inspect manifests manually (see
 `methodology/discovery.md`).
 
+Two fields change how you read it. **`evidence_strength`** grades each detection —
+`direct` (a file that declares the engine), `indirect` (a declared dependency implying it),
+`weak` (an incidental YAML mention), `ambiguous` (a likely token collision). Anything below
+`direct` is a lead to confirm against an actual import or client call, not a fact. And when
+**`services`** holds more than one entry, the repository is not one stack: scope findings to
+a service, load each service's own references, and disregard the top-level union — it
+describes no single service accurately.
+
 **`references_to_load` is necessarily partial — it is not the reading list, §Reference
 routing's table is.** The script's list is built entirely from `registry.yaml`'s
 signal-matched entries; it structurally cannot include a row from §Reference routing's

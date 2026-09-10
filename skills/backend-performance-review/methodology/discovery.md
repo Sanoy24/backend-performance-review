@@ -83,6 +83,19 @@ async support. If you cannot determine a version, say so rather than assuming th
 
 You need enough structure to answer "where does a request go", not a full design doc.
 
+**Establish first whether this is one service or several.** A workspace marker
+(`pnpm-workspace.yaml`, `lerna.json`, `turbo.json`, `nx.json`, `go.work`, a Cargo or Gradle
+workspace) or a runtime manifest in more than one subdirectory means it is several — and
+`apps/api` on one runtime beside `services/payments` on another is ordinary. The accelerator
+reports these in `services[]`.
+
+This matters before anything else, because a repository-wide stack list is the union across
+every service and therefore describes none of them. Detect, route references, and scope
+findings **per service**; a finding that says "this repository issues a query per row" when
+only one of five services does is not actionable. Where services share a datastore, a cache,
+or a connection pool, say so explicitly — that shared resource is where one service's
+problem becomes another's.
+
 **Find the entry points.** Search for route registration, HTTP handler decorators, gRPC
 service implementations, GraphQL resolvers, message consumers, scheduled jobs, and CLI
 commands. These are the roots of every path you will analyze.
