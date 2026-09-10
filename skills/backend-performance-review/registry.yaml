@@ -222,29 +222,37 @@ version: 1
 - signal: vector-store
   kind: datastore
   category: vector
-  match: [pinecone, weaviate, qdrant, milvus, chromadb, pgvector, faiss, lancedb]
-  load: [databases/universal.md, databases/vector.md]
-  tier: conceptual
+  match: [pinecone, weaviate, qdrant, milvus, chromadb, pgvector, faiss, lancedb,
+          "EXTENSION vector", "EXISTS vector", "@lancedb/lancedb"]
+  load: [databases/universal.md, databases/vector.md, technology/vector-stores.md]
+  tier: deep
   notes: >
-    Vector category principles apply in full — recall/latency/memory trade-offs, the
-    search-breadth parameter, and filter/search-order interaction. No engine-specific file
-    yet — actual parameter names, defaults, and memory-overhead figures are not covered;
-    treat those as unknowns.
+    One combined signal spanning eight independently designed engines — a deliberately
+    comparative technology file, not a per-vendor split (see docs/roadmap.md). Confirm which
+    engine(s) are actually in use before applying a claim from the comparison table;
+    pgvector in particular loads databases/relational.md's reasoning too when the connection
+    is via a postgres signal, since it is a Postgres extension, not a standalone service.
 
 - signal: object-storage
   kind: datastore
   category: object-store
   match: ["s3://", "aws-sdk/client-s3", boto3_s3, "amazonaws.com/s3", "com.amazonaws.services.s3",
           "google-cloud-storage", "storage.googleapis.com", "azure-storage-blob",
-          "blob.core.windows.net", minio, "gcs://"]
-  load: [databases/universal.md, databases/object-storage.md]
-  tier: conceptual
+          "blob.core.windows.net", minio, "gcs://", "aws-sdk-go/service/s3",
+          "aws-sdk-go-v2/service/s3", "software.amazon.awssdk:s3",
+          "cloud.google.com/go/storage", "Google.Cloud.Storage", "@google-cloud/storage",
+          "azure-sdk-for-go/sdk/storage/azblob", "Azure.Storage.Blobs",
+          "@azure/storage-blob"]
+  load: [databases/universal.md, databases/object-storage.md, technology/object-storage.md]
+  tier: deep
   notes: >
-    Object storage category principles apply in full — request-count-dominated cost,
-    key/prefix-only access, immutable full-object writes, multipart size limits, and
-    egress/request cost as a first-class dimension distinct from latency. No engine-specific
-    file yet — actual size limits, consistency guarantees, and storage-tier pricing differ
-    by provider and are not covered; treat those as unknowns.
+    One combined signal spanning independently designed services (S3-compatible, GCS, Azure
+    Blob) — a deliberately comparative technology file, not a per-vendor split (see
+    docs/roadmap.md). Confirm which provider is actually in use before applying a claim from
+    the comparison table. The AWS SDK v2 Java/Kotlin client (software.amazon.awssdk:s3) only
+    matches when declared in single-line Gradle notation; a Maven pom.xml splits groupId and
+    artifactId across separate elements with no reliably matchable contiguous substring, a
+    known residual detection gap.
 
 # ---------------------------------------------------------------------------
 # Caches

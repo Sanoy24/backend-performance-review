@@ -39,6 +39,31 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- `vector-store` and `object-storage` promoted to `deep` tier — the second batch of the
+  1.0.0 goal, and the point at which **every datastore signal in the registry is `deep`**,
+  including both multi-vendor umbrellas:
+  - **`technology/vector-stores.md`** — a comparative file across Pinecone, Weaviate,
+    Qdrant, Milvus, Chroma, pgvector, FAISS, and LanceDB. Leads with the table
+    `docs/supported-technologies.md` named as the actual gap: what the search-breadth
+    parameter is really called in each engine (`ef`, `ef_search`, `nprobe`, `efSearch`,
+    `search_ef`, `hnsw.ef_search`...). Also covers per-engine filter-integration mitigations,
+    and deployment model as a first-class axis — FAISS as an in-process library with no
+    network round trip and no built-in filtering, LanceDB as disk-first by design rather
+    than assuming memory residency, and pgvector inheriting the Postgres query planner.
+  - **`technology/object-storage.md`** — a comparative file across S3-compatible services,
+    GCS, Azure Blob, and MinIO. Resolves the read-after-write consistency question the
+    category file deliberately declines to answer, per provider (S3: strong since December
+    2020; GCS and Azure: strong since launch; MinIO: depends entirely on the self-hosted
+    deployment). Also covers multipart/block/compose mechanics and their real limits per
+    provider, archive-tier retrieval as an availability trap rather than only a cost one,
+    and MinIO as the one provider where underlying infrastructure is a legitimate review
+    question at all.
+  - Detection audit found `object-storage` had never been checked per-runtime at all (it
+    was `conceptual` tier since inception): all 9 cases tested across Go/.NET/JVM/Node for
+    S3/GCS/Azure Blob failed before this promotion. Fixed with 9 new tokens.
+  - Also fixed: `pgvector`'s `CREATE EXTENSION vector` detection (a bare migration with no
+    package-manifest dependency at all) and LanceDB's renamed Node.js package
+    (`@lancedb/lancedb`, formerly `vectordb`).
 - Six datastore engines promoted to `deep` tier — the first batch of the 1.0.0 goal of
   leaving no signal below `deep`, and the point at which **every datastore engine in the
   registry is `deep`**:
