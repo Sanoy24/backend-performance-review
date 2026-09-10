@@ -1,11 +1,14 @@
 # backend-performance-review
 
-An open-source **Agent Skill** that teaches an AI coding agent how to perform an
-evidence-based backend performance review — on any language, framework, runtime, or
-datastore.
+**AI-assisted performance engineering with evidence, workload context, and validation** —
+on any language, framework, runtime, or datastore.
 
-It is not a checklist. It is a methodology, plus a set of reference files the agent loads
-only when the detected stack calls for them.
+It is not a checklist, and it is not a linter. It is a methodology an AI coding agent
+follows, plus reference files it loads only when the detected stack calls for them. Its
+most distinctive property is what it refuses to do: it will not invent a number, and it
+will return zero findings rather than manufacture one.
+
+Packaged as an open-source **Agent Skill**.
 
 ```
 Performance principle → observed implementation → technology manifestation
@@ -15,6 +18,48 @@ Performance principle → observed implementation → technology manifestation
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.6.0-informational.svg)](CHANGELOG.md)
 [![checks](https://github.com/Sanoy24/backend-performance-review/actions/workflows/checks.yml/badge.svg)](.github/workflows/checks.yml)
+
+---
+
+## In sixty seconds
+
+> **You:** Review this PR for performance.
+
+> **Agent:** **WARN** — 1 finding: 1 P1.
+>
+> **PERF-001 — P1 / High confidence**
+> Building the order list issues one datastore query per order rather than one query for
+> all of them. `src/orders/service.py:84`
+>
+> **Matters when:** a single request returns more than a handful of orders. Request rate is
+> unknown, so this is scored on growth, not on measured load.
+>
+> **May not matter if:** orders per user are bounded in the low tens by a product constraint
+> not visible in this code.
+>
+> **Counter-evidence:** no memoization wraps the lookup; no pagination bounds the route; the
+> ORM is not configured for eager loading here.
+>
+> **Suggested:** batch the related lookup into one query — preferred over caching, because it
+> removes the work rather than hiding it.
+>
+> **Validation:** query count per request should fall from one-per-row to a constant.
+> *Falsifier: if query count drops and latency does not, this path was not query-bound and
+> the impact was overstated.*
+>
+> *No runtime evidence was supplied, so nothing here is measured.*
+
+Fix the query, push, and the check re-runs:
+
+> **Agent:** **PASS** — no performance regression found in the changed paths.
+> 1 improvement: the per-row lookup is now a batched query.
+
+Note what is *absent*: no invented p99, no "add Redis", no severity without a workload to
+justify it, and an explicit statement of what would prove the finding wrong. Every one of
+those omissions is a rule, not an accident — see [Honest limitations](#honest-limitations).
+
+Run it on every pull request with the [GitHub Action](docs/github-action.md). Advisory by
+default; it does not block merges.
 
 ---
 

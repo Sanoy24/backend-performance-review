@@ -213,7 +213,51 @@ anywhere" property, which matters more.
 
 ---
 
-## 11. Constraints on future changes
+## 11. Why there is a machine-readable schema, and why the matrix is not in it
+
+The Markdown report is what a human reads and argues with. It is a poor thing to compare
+mechanically, and almost everything this project wants to know about itself is a comparison:
+
+```
+precision and recall            ─┐
+severity / confidence calibration │
+run-to-run stability              ├── all require comparing findings mechanically
+historical comparison             │
+cross-model comparison           ─┘
+```
+
+Before `schemas/`, answering any of those meant a human diffing prose — which is exactly what
+`docs/evaluation.md` §3.18 and §3.21 do by hand, and exactly why nine blind passes produced
+only two consistency data points. The schema is upstream of the whole measurement programme,
+which is why it landed before the benchmark corpus rather than after it.
+
+Three decisions inside it are load-bearing:
+
+**The Markdown stays authoritative.** The JSON is emitted alongside, never instead. If the two
+disagree the Markdown is right, because a claim that appears only in the JSON has escaped
+human review — and this project's failure mode is confident fabrication, which is much easier
+to commit in a field nobody reads.
+
+**The priority matrix is deliberately absent from the schema.** JSON Schema can express it, as
+twenty `if`/`then` branches. Doing so would put the matrix in three places — `SKILL.md`,
+`README.md`, and the schema — when the reason `check_priority_matrix_consistency()` exists at
+all is that two copies already drift. It is enforced instead from the copy `SKILL.md`
+publishes, so there is exactly one authoritative matrix and the schema cannot contradict it.
+
+**`stable_id` never encodes a line number.** A finding whose identity changes when someone adds
+an import above it cannot answer "is this the same problem we saw last month" — and that
+question is the prerequisite for fix verification, historical comparison, and stability
+measurement. Deriving identity from root cause, file, symbol, and mechanism costs nothing at
+emit time and is the difference between a report and a record.
+
+The validator (`scripts/json_schema_lite.py`) is stdlib-only for the same reason the registry
+reader is: the one command CONTRIBUTING tells a contributor to run must work on a clean
+checkout with nothing installed. The trade is identical too — it supports only the subset
+these schemas use, and extending them may mean extending it.
+
+---
+
+## 12. Constraints on future changes
 
 - `SKILL.md` stays tight. Its content persists in context for the whole session, so every line
   is a recurring cost. Detail belongs in reference files that load on demand.

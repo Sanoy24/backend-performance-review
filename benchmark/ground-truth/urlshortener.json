@@ -1,0 +1,64 @@
+{
+  "repository": {
+    "name": "slytomcat/URLshortener",
+    "commit": "unpinned-at-review-time",
+    "url": "https://github.com/slytomcat/URLshortener",
+    "language": "Go",
+    "framework": "net/http",
+    "datastore": "Redis (go-redis/redis/v7)",
+    "workload": "Not supplied. The repository ships committed Go benchmarks (go test -bench=. -benchmem), which is why it was chosen for this case — see docs/evaluation.md §3.5."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.5 (Round 2, case 4) and §3.11 (independent blind pass, same repository). The benchmark numbers themselves were captured by actually running the repository's test suite (`go test -bench=. -benchmem`), which is the first and only Confirmed-grade runtime evidence recorded anywhere in docs/evaluation.md — everything else in this file is High-confidence static analysis. commit is not pinned because the author's own review did not pin one beyond a shallow default-branch clone; annotate a real commit before using this file to score an actual review run against a specific checkout."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "service.go",
+        "symbol": "NewHandler"
+      },
+      "category": "networking",
+      "mechanism": "The main HTTP server is constructed as &http.Server{Addr: ..., Handler: ...} with no ReadTimeout, WriteTimeout, IdleTimeout, or ReadHeaderTimeout set, and no http.TimeoutHandler wrapper anywhere in the non-test source (confirmed by grepping for all four identifiers). Go's net/http.Server treats an unset timeout as no timeout at all, so a slow or malicious client can hold a connection open indefinitely with no worker pool to absorb it.",
+      "severity": "Critical",
+      "max_confidence": "High",
+      "expected_recommendation": ["set", "timeout", "ReadTimeout", "WriteTimeout", "IdleTimeout"],
+      "forbidden_recommendation": ["redis", "add a cache", "add more replicas"]
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "healthCheck.go",
+        "symbol": "healthCheck"
+      },
+      "category": "networking",
+      "mechanism": "The built-in self-test makes outbound calls with the package-level http.Post/http.Get, which use http.DefaultClient — Timeout: 0, also unbounded. Confined to the health-check path rather than the main serving path, so severity is lower than GT-001 even though the underlying mechanism (an unset http.Client/http.Server timeout) is the same class of gap.",
+      "severity": "Medium",
+      "max_confidence": "High",
+      "expected_recommendation": ["timeout", "http.Client"],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "service.go",
+        "symbol": "redis.NewUniversalClient"
+      },
+      "category": "concurrency",
+      "why_not": "PoolSize, DialTimeout, ReadTimeout, and WriteTimeout are left unset on the Redis client, but this is not the same situation as the http.Server above. The actual vendored dependency source (go-redis/redis/v7@v7.4.1's options.go) was read directly: unset DialTimeout defaults to 5s, unset ReadTimeout/WriteTimeout default to 3s, unset PoolSize defaults to 10 * runtime.NumCPU(). These are sane library defaults, not an omission, and reporting this as an unbounded-timeout finding (the same shape as GT-001) without checking the actual default would be a category error."
+    },
+    {
+      "id": "GT-F02",
+      "location": {
+        "file": "token.go"
+      },
+      "category": "cost",
+      "why_not": "The repository's own source comment claims a sync.Pool-based token generator is slower and uses more memory than the original; the committed benchmark confirms this (the pooled variant is ~15-30% slower with no memory benefit at this scale) and both are in the 60-180ns range. Against a Redis round trip (single-digit milliseconds over a network), token generation and validation are nowhere near this service's bottleneck regardless of which variant is used. The correct conclusion from this Confirmed-grade evidence is \"this is not where time goes, do not optimize it further\" — recommending a swap between the two implementations, or any further optimization here, would violate principles/latency.md's warning against optimizing a non-bottleneck stage with real numbers in hand that say otherwise."
+    }
+  ]
+}

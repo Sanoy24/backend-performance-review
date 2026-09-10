@@ -1,0 +1,170 @@
+name: Backend Performance Review
+description: >-
+  Publish a backend performance review to a pull request — SARIF for code scanning, a
+  comment, and a verdict. Advisory by default; it does not block merges.
+author: backend-performance-review contributors
+
+# What this action does and does not do
+#
+# It does the deterministic half: take the machine-readable review a coding agent produced,
+# validate it, convert it to SARIF, comment on the pull request, and surface the verdict.
+#
+# It does NOT run the review. That needs a coding agent with access to a model, and the
+# credentials, cost, and non-determinism that come with it — so it belongs in the caller's
+# workflow, where those decisions are theirs to make. Shipping an action that quietly spent
+# someone's model budget on every push would be the wrong default.
+#
+# See docs/github-action.md for a complete workflow, including the agent step.
+
+branding:
+  icon: activity
+  color: blue
+
+inputs:
+  review:
+    description: Path to the machine-readable review JSON (schemas/review.schema.json).
+    required: true
+  sarif-file:
+    description: Where to write the SARIF output.
+    required: false
+    default: backend-performance-review.sarif
+  upload-sarif:
+    description: "Upload the SARIF to GitHub code scanning. Needs `security-events: write`."
+    required: false
+    default: "true"
+  comment:
+    description: "Post or update a pull-request comment. Needs `pull-requests: write`."
+    required: false
+    default: "true"
+  include-adjacent:
+    description: >-
+      Include SEC-/COR-/MAINT- items in the SARIF. Off by default: this tool has no security
+      or correctness methodology, and publishing those into a security dashboard would
+      present them as the output of a scanner it is not.
+    required: false
+    default: "false"
+  fail-on:
+    description: >-
+      When to fail the job — `never` (default), `fail` (only a FAIL verdict), or `warn`
+      (WARN or FAIL). The default is `never` on purpose: a performance review is advice, and
+      a static review with no runtime evidence should not be a merge gate until a team has
+      decided it has earned that. UNKNOWN never fails the job, because "could not analyze"
+      is not the author's fault.
+    required: false
+    default: never
+  strict-verdict:
+    description: >-
+      Fail if the review's declared verdict disagrees with the one derived from its own
+      findings — a review claiming PASS while carrying a confirmed regression.
+    required: false
+    default: "true"
+  github-token:
+    description: Token used to post the comment.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  verdict:
+    description: PASS, WARN, FAIL, UNKNOWN, or empty for a full review.
+    value: ${{ steps.summarize.outputs.verdict }}
+  findings:
+    description: Number of findings reported.
+    value: ${{ steps.summarize.outputs.findings }}
+  sarif-file:
+    description: Path to the generated SARIF file.
+    value: ${{ inputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate the review against the schema
+      shell: bash
+      run: |
+        python3 "${{ github.action_path }}/scripts/validate_review.py" \
+          --review "${{ inputs.review }}" \
+          --schema-dir "${{ github.action_path }}/schemas"
+
+    - name: Convert to SARIF
+      shell: bash
+      run: |
+        # `if`, not `[ ... ] && ...`: this shell runs with `set -e`, so a `&&` chain whose
+        # test is false returns 1 and would fail the step whenever the flag is off.
+        args=(--review "${{ inputs.review }}")
+        if [ "${{ inputs.include-adjacent }}" = "true" ]; then
+          args+=(--include-adjacent)
+        fi
+        if [ "${{ inputs.strict-verdict }}" = "true" ]; then
+          args+=(--strict-verdict)
+        fi
+        python3 "${{ github.action_path }}/scripts/to_sarif.py" "${args[@]}" \
+          > "${{ inputs.sarif-file }}"
+
+    - name: Summarize
+      id: summarize
+      shell: bash
+      run: |
+        python3 "${{ github.action_path }}/scripts/pr_comment.py" \
+          --review "${{ inputs.review }}" > "$RUNNER_TEMP/perf-comment.md"
+        cat "$RUNNER_TEMP/perf-comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+        verdict=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("verdict") or "")' "${{ inputs.review }}")
+        findings=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1], encoding="utf-8")).get("findings") or []))' "${{ inputs.review }}")
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        echo "findings=$findings" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: backend-performance-review
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        body="$RUNNER_TEMP/perf-comment.md"
+        # Update the previous comment rather than adding one per push: a check that
+        # accumulates a comment on every commit gets muted, and then deleted.
+        existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+          --jq 'map(select(.body | startswith("<!-- backend-performance-review -->"))) | .[0].id // empty')
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@"$body" > /dev/null
+        else
+          gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$body" > /dev/null
+        fi
+
+    - name: Apply the verdict
+      shell: bash
+      run: |
+        # Every branch here must end in a zero status unless it deliberately fails. Under
+        # `set -e` a `[ ... ] && { ... }` whose test is false returns 1, which would have
+        # failed the job precisely when the verdict was acceptable — backwards, and the kind
+        # of bug that looks like the check working.
+        verdict="${{ steps.summarize.outputs.verdict }}"
+        echo "Performance verdict: ${verdict:-none (full review)}"
+
+        case "${{ inputs.fail-on }}" in
+          never)
+            ;;
+          fail)
+            if [ "$verdict" = "FAIL" ]; then
+              echo "::error::Performance verdict: FAIL"
+              exit 1
+            fi
+            ;;
+          warn)
+            if [ "$verdict" = "FAIL" ] || [ "$verdict" = "WARN" ]; then
+              echo "::error::Performance verdict: $verdict"
+              exit 1
+            fi
+            ;;
+          *)
+            echo "::warning::unrecognized fail-on value '${{ inputs.fail-on }}'; treating as never"
+            ;;
+        esac
+        exit 0

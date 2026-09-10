@@ -1,0 +1,61 @@
+{
+  "repository": {
+    "name": "antonosmond/github-signature-verifier",
+    "commit": "unpinned-at-review-time",
+    "url": "https://github.com/antonosmond/github-signature-verifier",
+    "language": "Node.js",
+    "framework": "AWS Lambda",
+    "workload": "A minimal, stateless Lambda function validating GitHub webhook signatures — no persistent server, no connection pool, no datastore, no pagination surface. Chosen deliberately as a case-2 (near-minimal repository) candidate, docs/evaluation.md §3.7."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.7 (manual review, Medium severity on the core finding) and §3.8 (independent blind pass on the same repository, which reproduced the core finding, found a second real one the manual review missed, and made a better-evidenced case for a HIGHER severity on the core finding using evidence — src/example.js documenting synchronous cross-function invocation — the manual review had looked at but set aside). §3.8's corrected severity (High, not Medium) is taken as authoritative here, and is itself the point of this file: it is a documented case where a second independent pass produced a materially different, better-supported score for the same finding, which is exactly what severity-calibration scoring (benchmark/README.md) exists to catch."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "src/index.js"
+      },
+      "category": "io",
+      "also_acceptable_categories": ["networking"],
+      "mechanism": "The webhook secret is fetched from AWS SSM Parameter Store inside the handler, on every invocation, rather than cached at module scope. infrastructure/resources.md §5 documents that Lambda execution environments are reused across invocations and that state initialized outside the handler persists across them; this pays the SSM round-trip cost on every call instead of once per warm environment. src/example.js documents other Lambda functions invoking this one synchronously (InvocationType: 'RequestResponse'), and the README states this function exists specifically so other functions do not have to hold the secret themselves — meaning callers block on this function's latency, making the blast radius the whole calling service rather than just this endpoint.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["module scope", "cache", "outside the handler", "once"],
+      "forbidden_recommendation": ["redis", "elasticache"]
+    },
+    {
+      "id": "GT-002",
+      "location": {
+        "file": "src/index.js"
+      },
+      "category": "observability",
+      "mechanism": "Unconditional console.log of the full event and context objects on every invocation. Real and correctly evidenced, but low severity — logging cost on a low-traffic, minimal function.",
+      "severity": "Low",
+      "max_confidence": "High",
+      "expected_recommendation": [],
+      "forbidden_recommendation": []
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "src/index.js"
+      },
+      "category": "data-access",
+      "why_not": "The signature comparison (requestSignature === expectedSignature) is a plain string comparison rather than constant-time, which is a real timing-attack concern — but it is a security question, not a performance one. SKILL.md states this skill is not a security review; this belongs in an adjacent SEC- finding (per Hard Rule 8), never scored on the performance rubric with a PERF- id, Severity, or Priority."
+    },
+    {
+      "id": "GT-F02",
+      "location": {
+        "file": "terraform/main.tf"
+      },
+      "category": "infrastructure",
+      "why_not": "The Terraform config declares the long-unsupported nodejs4.3 Lambda runtime. This is real, but it is a maintenance/support-lifecycle fact, not a performance one — an end-of-life runtime is \"no performance impact demonstrated,\" not \"no impact,\" and filing it as Informational/P3 on the performance rubric misrepresents a different-axis concern as a benign performance non-issue. Report as a MAINT- adjacent finding with a full write-up, never as a PERF- finding and never folded silently into prose."
+    }
+  ]
+}

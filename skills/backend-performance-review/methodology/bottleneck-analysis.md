@@ -84,6 +84,28 @@ merged into one finding, with the cause named — not filed as three.
 exhaustion under load", and "slow /orders endpoint" as three findings, when they are one
 problem, misrepresents both the count and the fix.
 
+Give the merged finding a root-cause id and name the cause in it. Recording the merge is
+what makes it auditable — "three symptoms, one problem" is a much stronger statement than
+three separate entries, and a reader can check it.
+
+### Issues that are mild alone and severe together
+
+The opposite error is splitting problems that *interact*. Independently moderate issues
+compound when they share a resource:
+
+```
+per-request extra queries        moderate on its own
++ a connection pool sized small   moderate on its own
++ traffic arriving in bursts      moderate on its own
+= pool exhaustion under burst     severe
+```
+
+Where two findings feed the same constrained resource, say so explicitly and score the
+combination on its real blast radius rather than scoring each in isolation. This is not
+license to inflate: the interaction has to be mechanical and stateable — *this* consumes
+*that* resource, which *that other thing* also consumes — not merely "both are about the
+database."
+
 ---
 
 ## 3. Discard aggressively
@@ -113,7 +135,74 @@ explain in one sentence why it is fine? Try to construct that sentence first.
 
 ---
 
-## 4. Scoring
+## 4. Search for counter-evidence
+
+§3 discards weak candidates. This step attacks the ones that survived.
+
+The asymmetry is the problem. Having formed a hypothesis, you will naturally find more of
+what supports it — a second query in the same file reads as confirmation, and the reading
+that would have refuted it never gets attempted. The discipline is to go looking for the
+refutation *on purpose*, before scoring, and to record what you found.
+
+**What to look for, by what you think you have found:**
+
+| Hypothesis | The counter-evidence that would deflate it |
+|:--|:--|
+| Query in a loop | A hard cap on the collection size; the ORM batching this into one round trip; the result memoized upstream; the loop running over a fixed configuration list, not user data |
+| Unbounded query | A `LIMIT` applied by the caller or by a framework default; a table whose row count is structurally small; pagination in the layer above |
+| Blocking call in async code | The call being made once at startup, not per request; the runtime already offloading it to a thread pool |
+| Missing index | An index created in a migration you have not read; a table small enough for a scan to be correct; a query that never filters on that column |
+| Pool exhaustion risk | A pool sized against a documented limit; short-lived connections; a concurrency cap upstream |
+| Serialization cost | Payloads bounded by a schema; compression handled at the proxy; the endpoint being internal |
+
+**Also check, for any finding:** is this path actually reachable? Is it admin-only, or behind
+a feature flag that is off? Is it dead code? Is it a test fixture or a seed script? A finding
+on an unreachable path is a false positive no matter how correct the mechanism is.
+
+**What you find must change something.** Record the effect, then apply it:
+
+| What you found | Effect |
+|:--|:--|
+| The mechanism cannot occur as described | `refutes` — this never becomes a finding. It goes in "Considered and not reported" |
+| The mechanism holds but is bounded | `bounds-impact` — reduce **Severity**; the growth or blast radius you assumed was wrong |
+| The mechanism holds but the reading is less certain | `lowers-confidence` — reduce **Confidence**; the code is more ambiguous than you first read it |
+| Looked, found nothing | `no-effect` — scores stand, and the record shows the finding was tested rather than merely asserted |
+
+Severity and Confidence move for different reasons, and the distinction survives here:
+counter-evidence that *bounds* a problem makes it smaller, while counter-evidence that
+*obscures* it makes you less sure. Do not collapse the two.
+
+**Recording it is not optional.** A finding with no counter-evidence section is
+indistinguishable from one where nobody looked, and the reader has no way to tell which they
+are holding. "Searched, found nothing" is a complete and respectable answer. Silence is not.
+
+If new evidence arrives later — the user answers a workload question, a trace appears —
+revisit the findings it bears on and revise. Confidence is a running assessment, not a
+verdict issued once at the moment of discovery.
+
+---
+
+## 5. Separate what is wrong from what should change
+
+Establish the problem completely before considering the fix.
+
+Reversing that order corrupts the analysis, and it does so invisibly. An agent that has
+decided the answer is a cache will find the evidence that justifies a cache: repeated reads
+look hotter, the cost of the underlying query looks higher, and the counter-evidence search
+above gets quietly less rigorous because the conclusion is already comfortable. The finding
+ends up shaped by the recommendation instead of the other way round.
+
+Two practical consequences:
+
+- Do not name a technology while establishing the mechanism. "Query count grows with result
+  size" is a finding. "This needs Redis" is a recommendation wearing a finding's clothes.
+- When the fix seems obvious immediately, treat that as a signal to slow down rather than
+  speed up. The obvious fix is usually the one that masks the work — a cache in front of a
+  query nobody needed to run.
+
+---
+
+## 6. Scoring
 
 Score Severity and Confidence per `rubrics.md`, write down all four severity factors, and
 derive Priority from the matrix. Do not choose the priority and reverse-engineer the
@@ -128,7 +217,7 @@ Two rules that are easy to get wrong:
 
 ---
 
-## 5. Recommendations that survive review
+## 7. Recommendations that survive review
 
 A recommendation is only complete when it addresses the principle rather than the symptom,
 and when it states its own cost.
@@ -162,7 +251,7 @@ storage, and planner surface. "Add an index" is a trade, and the write-side cost
 
 ---
 
-## 6. When you find nothing
+## 8. When you find nothing
 
 This happens, and it is a legitimate outcome. Do not treat an empty findings list as a
 failed review.
@@ -180,7 +269,7 @@ be trusted the next time.
 
 ---
 
-## 7. Output of this phase
+## 9. Output of this phase
 
 A findings list, deduplicated and scored, ordered by priority, with the output budget
 applied: full format for the top 10–15, a ranked table for the remainder. Plus the

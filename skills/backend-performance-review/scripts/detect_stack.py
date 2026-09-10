@@ -20,17 +20,28 @@ Output shape:
       "detected": {"datastore": [{
                      "signal": "postgres", "tier": "deep", "category": "relational",
                      "matched_on": [{"token": "postgres", "weak_evidence": false,
+                                     "evidence_strength": "indirect",
                                      "files": ["requirements.txt"]}],
-                     "weak_evidence": false   # present and true only when every match
-                   }], ...},                  # for this signal came from a non-manifest
-                                               # YAML file (see content_kind())
+                     "weak_evidence": false,  # present and true only when every match
+                                              # for this signal came from a non-manifest
+                                              # YAML file (see content_kind())
+                     "evidence_strength": "direct|indirect|weak|ambiguous",
+                     "confidence": 0.95       # derived from evidence_strength; never 1.0
+                   }], ...},
       "references_to_load": [...],
       "tiers": {"postgres": "deep", ...},
       "notes": {"mysql": "...", ...},
+      "services": [{"name": "api", "path": "apps/api", "runtime": ["node"],
+                    "datastore": ["postgres"], "references_to_load": [...]}, ...],
+      "workspace_markers": ["pnpm-workspace.yaml", ...],
       "secret_files_present": [...],
       "evidence_files": [...],
-      "warnings": [...]   # includes a "weak evidence only for: ..." entry when applicable
+      "warnings": [...]   # "weak evidence only for: ...", "ambiguous evidence only for:
+                          # ...", and a multi-service warning, when applicable
     }
+
+`detected` is the union across the whole repository. Where `services` has more than one
+entry, that union describes no single service accurately — use the per-service blocks.
 """
 
 import argparse
@@ -348,6 +359,108 @@ MAX_FILES_PER_TOKEN = 3
 # happened to land in (a CI workflow, a k8s values file, this project's own registry.yaml).
 STRONG_EVIDENCE_KINDS = {"filename", "manifest", "migration"}
 
+# --------------------------------------------------------------------------------------
+# Evidence strength
+#
+# content_kind() answers "why was this file read". This answers a different question: "how
+# good is this match". The two come apart in a way that matters — a dependency manifest and
+# an ORM's datastore-declaration file are both "manifest", but only one of them actually
+# names the engine.
+#
+#   direct     The match names the datastore itself, in a file whose job is to declare it:
+#              a connection-scheme token, or a hit inside schema.prisma / knexfile.js /
+#              config/config.json. `provider = "postgresql"` proves PostgreSQL.
+#   indirect   The match is a declared dependency, a migration, or a filename. Strong
+#              evidence the library is present; not proof the datastore behind it is the one
+#              you think, and not proof it is used at all.
+#   weak       The match appears only in a non-manifest YAML file. This is the shape of the
+#              false positives behavioral evaluation actually found.
+#   ambiguous  Every match for a collision-prone token landed in a lockfile — where base64
+#              hashes live, and where `rq`, `koa`, and bare `gin` all produced real false
+#              positives (docs/evaluation.md §3.1, §3.2). Surfaced rather than trusted.
+#
+# The distinction is not cosmetic: an indirect match is exactly the case where the review
+# should go look at an actual import or client call before believing the detection.
+# --------------------------------------------------------------------------------------
+
+DECLARATION_PATTERNS = [
+    re.compile(r"\.prisma$", re.I),
+    re.compile(r"(^|/)knexfile\.(js|ts|cjs|mjs)$", re.I),
+    re.compile(r"(^|/)config/config\.json$", re.I),
+]
+
+LOCKFILE_PATTERN = re.compile(
+    r"(^|/)([^/]*\.lock|.*lock\.json|.*-lock\.ya?ml|go\.sum|gradle\.lockfile|"
+    r"packages\.lock\.json|pipfile\.lock)$", re.I)
+
+# Bare alphanumeric tokens this short collide readily inside hashes and ordinary words.
+AMBIGUOUS_TOKEN_MAX_LENGTH = 3
+
+STRENGTH_ORDER = ["ambiguous", "weak", "indirect", "direct"]
+
+# Deterministic, and deliberately never 1.0 — detection is evidence for a human to verify,
+# not a conclusion, and a confidence of 1.0 would say otherwise.
+STRENGTH_BASE_CONFIDENCE = {
+    "direct": 0.95,
+    "indirect": 0.80,
+    "weak": 0.40,
+    "ambiguous": 0.20,
+}
+
+
+def is_declaration_file(rel_path):
+    """A file whose purpose is to declare which datastore a project actually uses."""
+    normalized = rel_path.replace(os.sep, "/")
+    return any(pattern.search(normalized) for pattern in DECLARATION_PATTERNS)
+
+
+def is_lockfile(rel_path):
+    return bool(LOCKFILE_PATTERN.search(rel_path.replace(os.sep, "/")))
+
+
+def is_collision_prone(token):
+    return len(token) <= AMBIGUOUS_TOKEN_MAX_LENGTH and token.isalnum()
+
+
+def grade_token(token, hits):
+    """Grade one token's matches. `hits` is a list of (path, kind) pairs."""
+    if not hits:
+        return None
+    paths = [path for path, _ in hits if path is not None]
+    kinds = {kind for _, kind in hits}
+
+    if paths and is_collision_prone(token) and all(is_lockfile(p) for p in paths):
+        return "ambiguous"
+    if any(is_declaration_file(p) for p in paths):
+        return "direct"
+    if kinds & STRONG_EVIDENCE_KINDS:
+        # A connection scheme names the engine outright — but only where it was found
+        # somewhere that means something. The same `postgres://` sitting in an arbitrary
+        # YAML file (a CI workflow, a docs snippet, this project's own registry.yaml) is
+        # the weak case below, not proof of a datastore.
+        return "direct" if "://" in token else "indirect"
+    if "yaml" in kinds:
+        return "weak"
+    return None
+
+
+def strongest(strengths):
+    known = [s for s in strengths if s in STRENGTH_ORDER]
+    if not known:
+        return None
+    return max(known, key=STRENGTH_ORDER.index)
+
+
+def confidence_for(strength, supporting_file_count):
+    """More independent files supporting the same signal is more evidence, but it never
+    turns a weak signal into a strong one — the ceiling is set by the best evidence kind,
+    not by how many times a bad match repeats."""
+    base = STRENGTH_BASE_CONFIDENCE.get(strength)
+    if base is None:
+        return None
+    bonus = 0.02 * max(0, supporting_file_count - 1)
+    return round(min(base + bonus, 0.99), 2)
+
 
 def _record_texts(corpus):
     """Normalize either a records list (from scan()) or a legacy flat string into a list
@@ -374,14 +487,18 @@ def detect(corpus, entries):
         any_matched = False
         signal_has_strong_evidence = False
         signal_has_graded_evidence = False
+        signal_strengths = []
+        signal_files = set()
         for token in sorted(set(tokens)):
             token_lower = token.lower()
             files = []
             token_kinds = set()
+            hits = []
             for path, lowered_text, kind in records:
                 if token_lower in lowered_text:
                     any_matched = True
                     token_kinds.add(kind)
+                    hits.append((path, kind))
                     if path is not None and path not in files:
                         files.append(path)
             if not token_kinds:
@@ -396,10 +513,17 @@ def detect(corpus, entries):
                 entry_out["weak_evidence"] = is_weak
                 if not is_weak:
                     signal_has_strong_evidence = True
+                strength = grade_token(token, hits)
+                if strength:
+                    entry_out["evidence_strength"] = strength
+                    signal_strengths.append(strength)
+                if is_collision_prone(token):
+                    entry_out["collision_prone"] = True
             if files:
                 entry_out["files"] = sorted(files)[:MAX_FILES_PER_TOKEN]
                 if len(files) > MAX_FILES_PER_TOKEN:
                     entry_out["file_count"] = len(files)
+                signal_files.update(files)
             matched_on.append(entry_out)
 
         if not any_matched:
@@ -415,6 +539,10 @@ def detect(corpus, entries):
             record["category"] = entry["category"]
         if signal_has_graded_evidence and not signal_has_strong_evidence:
             record["weak_evidence"] = True
+        best = strongest(signal_strengths)
+        if best:
+            record["evidence_strength"] = best
+            record["confidence"] = confidence_for(best, len(signal_files))
         detected.setdefault(kind, []).append(record)
 
         tiers[signal] = entry.get("tier", "generic")
@@ -451,6 +579,87 @@ def order_references(references):
             return 7
         return 8
     return sorted(references, key=lambda p: (rank(p), p))
+
+
+# --------------------------------------------------------------------------------------
+# Service topology
+#
+# A modern repository is frequently not one stack. apps/api on Node/PostgreSQL beside
+# services/payments on Go/Kafka is ordinary, and flattening both into a single detection
+# result produces a stack that no service actually has — then routes reference files for
+# engines half of them never touch, and scopes findings to "the repository" when the reader
+# needs to know which service to go and fix.
+#
+# Detection is deliberately shallow: a directory below the root holding a runtime manifest
+# is a service. That is wrong at the edges (a tools/ directory with its own package.json is
+# not a service), which is why the output says services are candidates and the root-level
+# detection is still reported in full.
+# --------------------------------------------------------------------------------------
+
+SERVICE_MANIFESTS = {
+    "package.json", "go.mod", "cargo.toml", "pyproject.toml", "requirements.txt",
+    "pom.xml", "build.gradle", "build.gradle.kts", "composer.json", "gemfile",
+    "pipfile", "setup.py",
+}
+
+WORKSPACE_MARKERS = {
+    "pnpm-workspace.yaml", "lerna.json", "turbo.json", "nx.json", "go.work",
+    "rush.json",
+}
+
+MAX_SERVICES = 50
+
+
+def find_workspace_markers(records):
+    found = set()
+    for path, _text, kind in records:
+        if kind != "filename":
+            continue
+        name = path.rsplit("/", 1)[-1].lower()
+        if name in WORKSPACE_MARKERS:
+            found.add(name)
+    return sorted(found)
+
+
+def find_service_dirs(records):
+    """Directories below the root that hold a runtime manifest, shallowest-wins."""
+    candidates = set()
+    for path, _text, kind in records:
+        if kind != "filename" or "/" not in path:
+            continue
+        directory, _, name = path.rpartition("/")
+        if name.lower() in SERVICE_MANIFESTS:
+            candidates.add(directory)
+
+    # Drop anything nested inside another candidate: apps/api is the service, and
+    # apps/api/functions/worker is part of it, not a peer.
+    roots = []
+    for directory in sorted(candidates, key=lambda d: (d.count("/"), d)):
+        if not any(directory == r or directory.startswith(r + "/") for r in roots):
+            roots.append(directory)
+    return roots[:MAX_SERVICES]
+
+
+def detect_services(records, entries):
+    """Per-service detection, by re-running the matcher over each service's own files."""
+    services = []
+    for directory in find_service_dirs(records):
+        scoped = [(path, text, kind) for path, text, kind in records
+                  if path is not None and path.startswith(directory + "/")]
+        if not scoped:
+            continue
+        detected, references, _tiers, _notes = detect(scoped, entries)
+        if not detected:
+            continue
+        service = {
+            "name": directory.rsplit("/", 1)[-1],
+            "path": directory,
+            "references_to_load": order_references(references),
+        }
+        for kind, records_for_kind in sorted(detected.items()):
+            service[kind] = [rec["signal"] for rec in records_for_kind]
+        services.append(service)
+    return services
 
 
 # --------------------------------------------------------------------------------------
@@ -500,6 +709,31 @@ def main(argv=None):
             "verify with an actual import or client call before treating as a real "
             "dependency" % ", ".join(weak_signals))
 
+    services = detect_services(records, entries)
+    workspace_markers = find_workspace_markers(records)
+    if len(services) > 1 or (services and workspace_markers):
+        warnings.append(
+            "%d candidate services detected%s — this repository is not one stack. Scope "
+            "findings to a service rather than to the repository, and load each service's "
+            "own references; the top-level 'detected' block is the union across all of "
+            "them and describes no single service accurately"
+            % (len(services),
+               " (workspace markers: %s)" % ", ".join(workspace_markers)
+               if workspace_markers else ""))
+
+    ambiguous_signals = sorted(
+        rec["signal"]
+        for records_for_kind in detected.values()
+        for rec in records_for_kind
+        if rec.get("evidence_strength") == "ambiguous"
+    )
+    if ambiguous_signals:
+        warnings.append(
+            "ambiguous evidence only for: %s — every match came from a short, "
+            "collision-prone token found only inside a lockfile, which is where base64 "
+            "hashes live; treat as unconfirmed until an actual import or client call is "
+            "found" % ", ".join(ambiguous_signals))
+
     result = {
         "repo": repo,
         "registry": registry_path,
@@ -507,6 +741,8 @@ def main(argv=None):
         "references_to_load": order_references(references),
         "tiers": tiers,
         "notes": notes,
+        "services": services,
+        "workspace_markers": workspace_markers,
         "secret_files_present": sorted(secrets),
         "evidence_files": sorted(set(evidence))[:200],
         "warnings": warnings,

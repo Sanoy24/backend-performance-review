@@ -1,0 +1,43 @@
+{
+  "repository": {
+    "name": "gothinkster/golang-gin-realworld-example-app",
+    "commit": "pr-49-merge-commit-unpinned",
+    "url": "https://github.com/gothinkster/golang-gin-realworld-example-app/pull/49",
+    "language": "Go",
+    "framework": "Gin",
+    "datastore": "SQLite (via GORM)",
+    "workload": "Change-scoped review of a real, merged pull request: \"perf: optimize database queries to eliminate N+1 problems\" (PR #49). Not a full-repository review — see docs/evaluation.md §3.6 for the scope this was analyzed under (the diff's five changed files plus their direct callers)."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.6. This is the ground truth for a CHANGE-SCOPED review of one specific PR, not a full-repository review — compare against a review run with mode=change-scoped against this diff, not against a full review. commit is the PR's merge commit, not pinned in the original review beyond fetching the .diff via GitHub's API; pin the real SHA before scoring an actual run. The point of this file is specifically to test the change-scoped mode's \"sits directly adjacent to\" rule (SKILL.md §Modes) and its crediting-fixes rule (methodology/change-scoped.md §2) together: the diff correctly fixes half of a two-part problem, and a change-scoped review has to credit that fix while still catching the untouched, structurally identical other half one call deeper in a file the diff already had open."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "users/models.go",
+        "symbol": "UserModel.isFollowing"
+      },
+      "category": "data-access",
+      "mechanism": "The diff restructures ArticleUserSerializer.Response() (called from inside the loop this diff modifies) but does not touch what that method calls next: ProfileSerializer.Response() -> isFollowing(), which issues its own per-article query. This is the same N+1 shape the diff's own title (\"eliminate N+1 problems\", plural) targets, one call deeper, in a file the diff already had open. A change-scoped review that only checks whether the diff does what its commit message claims would miss this; SKILL.md's \"sits directly adjacent to\" language is what requires checking it.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["batch", "preload", "single query"],
+      "forbidden_recommendation": ["redis", "cache"]
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "articles/serializers.go",
+        "symbol": "ArticlesSerializer.Response"
+      },
+      "category": "data-access",
+      "why_not": "The diff adds BatchGetFavoriteCounts and BatchGetFavoriteStatus and a new ResponseWithPreloaded serializer method, restructuring ArticlesSerializer.Response() to call the batch functions once before its loop rather than per article inside it. This converts the query count from 1+2n to a fixed 3 regardless of page size. The favorites-count N+1 no longer exists in the code this diff produces; reporting it as a live finding would be scoring the pre-diff code, not the change under review. A change-scoped review must credit this as a real, verified fix (methodology/change-scoped.md §2), not re-flag it."
+    }
+  ]
+}

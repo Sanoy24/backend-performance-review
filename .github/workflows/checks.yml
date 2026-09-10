@@ -57,5 +57,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run the false-positive/false-negative fixture corpus
+      # Covers the detection false-positive/false-negative corpus, the secret-safety and
+      # hostile-repository fixtures, and the benchmark scoring harness. No pip install step
+      # exists here either: every script under test is standard-library only.
+      - name: Run the fixture corpus and the scoring harness tests
         run: python -m unittest discover -s tests -v
+
+      - name: Verify the scoring harness runs on the committed example review
+        run: |
+          python benchmark/scoring/score.py score \
+            --truth tests/fixtures/example-ground-truth.json \
+            --review docs/examples/review.example.json \
+            --json > /dev/null
+
+      # The publishing path runs on every pull request once the action is in use, so a
+      # break here is seen by users before it is seen by us.
+      - name: Verify the publishing path end to end
+        run: |
+          python scripts/validate_review.py --review docs/examples/review.example.json
+          python scripts/to_sarif.py --review docs/examples/review.example.json \
+            --strict-verdict > /tmp/review.sarif
+          python -c "import json; d=json.load(open('/tmp/review.sarif')); assert d['version']=='2.1.0'; assert d['runs']"
+          python scripts/pr_comment.py --review docs/examples/review.example.json > /dev/null

@@ -6,6 +6,36 @@ you're looking for somewhere to start, this is the list — see
 
 ---
 
+## Measurement programme
+
+An external review of this project produced 140 recommendations; every one has a recorded
+disposition in [review-response.md](review-response.md), so a proposal already considered can
+be answered with a link rather than re-argued. Its central point — that the next stage is
+measuring this system rather than adding more references to it — is accepted, with one
+correction to the ordering: the machine-readable finding schema is upstream of every metric
+worth having, so it shipped first (see [architecture.md §11](architecture.md)).
+
+What that unlocked, and what remains:
+
+| Step | Status |
+|:--|:--|
+| Machine-readable finding and review schema | **Done** — `schemas/`, validated in CI |
+| Counter-evidence as a recorded, scoring-relevant step | **Done** — `methodology/bottleneck-analysis.md` §4 |
+| Review completeness and coverage confidence | **Done** — report template §2 |
+| Structured detection evidence, service topology | **Done** — `detect_stack.py` |
+| Ground-truth format and a scoring harness | **Done** — `schemas/ground-truth.schema.json`, `benchmark/scoring/score.py`, tested in CI |
+| Ground truth seeded from the nine blind passes already recorded | **Done** — all eight independently blind-passed repositories annotated, plus one change-scoped case, in `benchmark/ground-truth/*.json`. Scored end-to-end against hand-constructed reviews (including a partial, 3-of-5-finding case on the five-finding Rust file) to confirm the pipeline works on real corpus data. Only the ninth item — the *second* pass used for stability measurement (§3.18, §3.21) — remains, and it needs a second `review.json` scored with `score.py stability`, not a ground-truth file |
+| A corpus repository whose correct answer is **zero findings** | **Open, and now the highest-value gap.** §3.7 records that four repositories all produced findings, so the case testing whether this system resists manufacturing one has never been cleanly run. It is at least now expressible: an empty `expected` with a populated `forbidden` |
+| Run-to-run stability as a computed metric rather than a hand diff | **Done** — `score.py stability`; the §3.18/§3.21 gap below is now cheap to close on the remaining six repositories |
+| Change-scoped verdict model, policy file, SARIF, GitHub Action | **Done** — `methodology/change-scoped.md`, `action.yml`, [github-action.md](github-action.md). Advisory by default; `UNKNOWN` never reads as `PASS` |
+
+Deliberately deferred, with reasons in [review-response.md](review-response.md): runtime
+evidence adapters, query-plan parsing, cross-model evaluation, synthetic bug generation, and
+performance debt tracking. Declined outright: human-feedback telemetry (this skill has no
+server and adding one would contradict its own privacy posture), and energy efficiency.
+
+---
+
 ## Evaluation gaps
 
 These are worth more than additional reference content — see
