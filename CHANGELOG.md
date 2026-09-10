@@ -100,9 +100,17 @@ schema-valid JSON — against the complete, post-1.0.0 skill.
   traced to a specific verified claim, ordered so specific symbol-bearing items are tried
   before the broad, symbol-less missing-indexes item — preventing the same class of
   ordering-driven mismatch this run also surfaced.
-- One item remains open as a direct result of this run, tracked in `docs/roadmap.md`: a live
-  GitHub Actions dry run of `action.yml` (its constituent scripts are CI-tested end to end;
-  the composite action itself has not yet executed on a real runner).
+- **A live GitHub Actions dry run of `action.yml`, both halves.** The one item this run left
+  open is now closed. A permanent job, `action-self-test` in `.github/workflows/checks.yml`,
+  runs `action.yml` itself via `uses: ./` on every push and PR (not just its constituent
+  scripts individually) and asserts the SARIF and outputs it produces are correct; it runs
+  with `comment`/`upload-sarif` off by default so it stays silent. The outward-facing half —
+  actually posting a comment and uploading SARIF — was then exercised once, deliberately,
+  against this repository's own PR #54 (flip the two inputs to `true`, push, confirm, revert),
+  rather than left as an unverified code path: a real comment from `github-actions[bot]`
+  landed on the PR with the actual review body, and a real code-scanning alert (rule
+  `perf/data-access`, tool `backend-performance-review v0.6.0`) was created from the uploaded
+  SARIF.
 
 ### Added — infrastructure batch, completing the 1.0.0 milestone
 
