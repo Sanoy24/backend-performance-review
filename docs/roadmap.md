@@ -41,12 +41,25 @@ Every engine originally named on this list — Elasticsearch/OpenSearch, Cassand
 ClickHouse, SQL Server, Memcached, and SQLite — is now `deep`; see
 [CHANGELOG.md](../CHANGELOG.md) for each promotion.
 
-The full remaining conceptual/generic list — Oracle, CockroachDB, Couchbase, Firestore,
-Neo4j, Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC,
-REST, Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a
-valid contribution. Oracle and the object-storage engines (S3-compatible, GCS, Azure Blob)
-are reasonable next candidates, being the most commonly encountered as a primary
-datastore/cache among what remains.
+Oracle is now `deep` too (`technology/oracle.md`); see `CHANGELOG.md`.
+
+The full remaining conceptual/generic list — CockroachDB, Couchbase, Firestore, Neo4j,
+Neptune, InfluxDB, the vector stores, object storage, PHP, Ruby, GraphQL, gRPC, REST,
+Kubernetes, Docker, Serverless, Terraform — is in `registry.yaml`; any of them is a valid
+contribution.
+
+**Object storage needs a design decision before it can be promoted, not just a reference
+file.** `registry.yaml`'s single `object-storage` signal currently spans S3-compatible
+services, GCS, and Azure Blob under one `conceptual`-tier entry — unlike the
+`elasticsearch`/`redis` signals, which combine engines that really are API-compatible forks
+of each other, S3/GCS/Azure Blob are three independently-designed services with genuinely
+different consistency histories, multipart size limits, and request-rate partitioning
+behavior. A single combined technology file would either hedge every claim to the lowest
+common denominator (defeating the point of `deep` tier) or read as three files interleaved.
+The likely right shape is splitting the one `object-storage` signal into three
+(`s3`/`gcs`/`azure-blob`, each keeping its own subset of the existing match tokens), each
+independently promotable — a larger, structural change to decide deliberately before writing
+content, not a drop-in reference file the way the other promotions on this list were.
 
 ---
 

@@ -29,6 +29,13 @@ Breaking changes carry a migration note in the entry.
 
 ### Added
 
+- Oracle Database promoted to `deep` tier: `technology/oracle.md`, covering bind-variable/
+  shared-pool hard-parse storms, undo-based read consistency and `ORA-01555`, PL/SQL
+  context-switch cost versus `BULK COLLECT`/`FORALL`, bitmap-index OLTP locking risk,
+  sequence-`CACHE` contention, and RAC Cache Fusion wait events. The registry's driver
+  match list was also widened per-runtime (Go `godror`, .NET `Oracle.ManagedDataAccess`,
+  and the `jdbc:oracle:thin:@` connection scheme), rather than repeating the incomplete-
+  match-list pattern this session already fixed for six other engines.
 - `docs/evaluation.md` §3.21, a second inter-run-consistency blind pass — this time on
   `spring-boot-realworld-example-app` (JVM), a different repository and stack than §3.18's
   `gin-realworld` (Go). All five of the original blind pass's findings (§3.13) reproduced by

@@ -20,7 +20,7 @@ single source of truth. If the two disagree, the registry is right and this page
 Regardless of tier, the skill never fabricates engine behavior. `Generic` means a shorter,
 more careful section — not a guessed one.
 
-**Current coverage:** 19 deep · 18 conceptual · 2 generic (39 detection signals).
+**Current coverage:** 20 deep · 17 conceptual · 2 generic (39 detection signals).
 
 ---
 
@@ -32,7 +32,7 @@ more careful section — not a guessed one.
 | **MongoDB** | document | **deep** | Atlas-specific features (Search, Federation, Online Archive) out of scope |
 | **MySQL / MariaDB** | relational | **deep** | InnoDB's clustered-index primary-key design, `REPEATABLE READ` gap/next-key locking, and buffer-pool sizing versus Postgres-style guidance |
 | **SQL Server** | relational | **deep** | Lock escalation, RCSI/snapshot-isolation opt-in, tempdb as a shared bottleneck, parameter sniffing, heap forwarding-pointer fragmentation, and `NOLOCK`'s correctness risk |
-| Oracle | relational | conceptual | |
+| **Oracle Database** | relational | **deep** | Bind-variable/shared-pool hard-parse storms, undo-based read consistency and `ORA-01555`, PL/SQL context-switch cost, bitmap-index OLTP locking risk, and sequence-cache contention |
 | **SQLite** | relational | **deep** | Whole-file single-writer locking, WAL-mode checkpoint growth, connection pooling's write-throughput ceiling, network-filesystem locking hazards, and type-affinity index misses |
 | CockroachDB | relational | conceptual | Range distribution, transaction retries, and locality-aware placement not covered |
 | Couchbase | document | conceptual | |
@@ -159,8 +159,12 @@ Python, JVM, Go, .NET, Rust). Every datastore category, including object storage
 category file.
 
 1. Promote any `conceptual` engine to `deep` by writing its technology reference — the largest
-   remaining gap, and a bounded, well-defined contribution (see below). Oracle and the
-   object-storage engines (S3-compatible, GCS, Azure Blob) are reasonable starting points.
+   remaining gap, and a bounded, well-defined contribution (see below). The object-storage
+   engines (S3-compatible, GCS, Azure Blob) are a reasonable starting point, though note that
+   `registry.yaml`'s single `object-storage` signal currently spans all three under one
+   category-level entry — promoting it well may mean splitting it into per-vendor signals
+   first, since their consistency guarantees, size limits, and request-partitioning behavior
+   genuinely differ (see `docs/roadmap.md`).
 
 Contributions in this area are welcome; see [extending.md](extending.md).
 
