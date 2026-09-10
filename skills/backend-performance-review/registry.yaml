@@ -80,9 +80,10 @@ version: 1
 - signal: oracle
   kind: datastore
   category: relational
-  match: [cx_Oracle, oracledb, "ojdbc", "oracle.jdbc"]
-  load: [databases/universal.md, databases/relational.md]
-  tier: conceptual
+  match: [cx_Oracle, oracledb, "ojdbc", "oracle.jdbc", godror, "Oracle.ManagedDataAccess",
+          "jdbc:oracle:thin:@"]
+  load: [databases/universal.md, databases/relational.md, technology/oracle.md]
+  tier: deep
 
 - signal: sqlite
   kind: datastore
