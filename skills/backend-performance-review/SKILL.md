@@ -147,7 +147,9 @@ Load: `methodology/bottleneck-analysis.md`.
 
 ### Phase 7 — Report
 Produce the report using `templates/review-report.md`. Every significant recommendation
-needs a validation path.
+needs a validation path. Emit the machine-readable JSON alongside the Markdown (template
+§10, `schemas/review.schema.json`) — the Markdown is authoritative; the JSON is the same
+content in a form that can be diffed and scored.
 
 Load: `methodology/validation.md`.
 
@@ -200,6 +202,7 @@ Expanded guidance and worked scoring examples: `rubrics.md`.
 
 ```
 ID:            PERF-001
+Root cause:    ROOT-001                 (findings sharing a cause share this id)
 Severity:      Critical | High | Medium | Low | Informational
 Confidence:    Confirmed | High | Medium | Low
 Priority:      P0 | P1 | P2 | P3      (must match the matrix)
@@ -216,8 +219,16 @@ Evidence:             What in the repo supports this — cite files and lines. I
 Impact:               Position, frequency, growth, blast radius — made explicit.
 Conditions:           The workload under which this matters. If workload is unknown,
                       state the assumption. This field may never be empty.
+Counter-evidence:     What you looked for that would refute this, and what you found.
+                      "Nothing found" is a valid answer; not looking is not. Anything
+                      found here must already be reflected in Confidence.
+Why this might not
+matter:               The strongest honest case against acting on this. Required at
+                      Medium severity and above.
 Recommendation:       What to change, and why it addresses the principle rather than
                       the symptom.
+Alternatives:         Other options considered, with the preferred one named and why.
+                      Required at Medium severity and above.
 Trade-offs:           Complexity, memory, consistency, operational burden, new failure
                       modes.
 Validation:           How to prove it worked. Specific measurements, each labelled

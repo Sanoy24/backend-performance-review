@@ -32,6 +32,9 @@ DETECT_SCRIPT = SKILL / "scripts" / "detect_stack.py"
 sys.path.insert(0, str(SKILL / "scripts"))
 import detect_stack as detect  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "scripts"))
+import json_schema_lite as schema_lite  # noqa: E402
+
 PRODUCT_NAME_PATTERN = re.compile(
     r"\b(postgres|postgresql|mysql|mariadb|mongodb|mongo|redis|cassandra|scylla|"
     r"dynamodb|neo4j|elasticsearch|opensearch|kafka|rabbitmq|sqlite|oracle|"
@@ -450,6 +453,161 @@ def check_roadmap_freshness(entries):
 
 
 # ---------------------------------------------------------------------------
+# 14. The finding schema must agree with SKILL.md, and the worked example must validate
+#
+# The schema restates enums that SKILL.md also publishes (severity, confidence, priority,
+# category, tags). Restating them is what makes the JSON output self-describing, and it is
+# also exactly how the two drift apart: a rubric edit in SKILL.md leaves the schema behind,
+# and reports keep validating against a scale nobody uses any more. So every shared enum is
+# checked in both directions here.
+#
+# The severity/confidence -> priority matrix is deliberately NOT duplicated into the schema.
+# JSON Schema can express it, as twenty if/then branches, but then the matrix would exist in
+# three places instead of two. It is enforced here instead, read from the table SKILL.md
+# already publishes — the same single-source-of-truth argument check_priority_matrix_
+# consistency() makes for the README copy.
+# ---------------------------------------------------------------------------
+
+SCHEMAS = ROOT / "schemas"
+EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
+
+
+def _load_json(path, label):
+    if not path.is_file():
+        fail(f"{label}: {path.relative_to(ROOT)} does not exist")
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"{label}: {path.relative_to(ROOT)} is not valid JSON — {exc}")
+        return None
+
+
+def _backticked_first_column(section):
+    """Rubric tables in SKILL.md put the level in a backticked first cell."""
+    return [m for m in re.findall(r"^\|\s*`([^`]+)`\s*\|", section, re.MULTILINE)]
+
+
+def _skill_section(skill_text, heading):
+    match = re.search(
+        r"^%s\n(.*?)(?=^#{2,3} )" % re.escape(heading),
+        skill_text, re.DOTALL | re.MULTILINE)
+    return match.group(1) if match else ""
+
+
+def parse_priority_matrix(skill_text):
+    """Return {(severity, confidence): priority} from SKILL.md's published matrix."""
+    lines = skill_text.splitlines()
+    confidences, matrix = [], {}
+    for index, line in enumerate(lines):
+        if "Severity ＼ Confidence" not in line:
+            continue
+        confidences = [c.strip() for c in line.strip().strip("|").split("|")][1:]
+        for row in lines[index + 1:]:
+            row = row.strip()
+            if not row.startswith("|"):
+                break
+            cells = [c.strip() for c in row.strip("|").split("|")]
+            if not cells or set(cells[0]) <= set(":- "):
+                continue  # the |:--|:--| separator row
+            severity = cells[0]
+            for confidence, priority in zip(confidences, cells[1:]):
+                matrix[(severity, confidence)] = priority
+        break
+    return matrix
+
+
+def check_finding_schema_agrees_with_skill():
+    finding_schema = _load_json(SCHEMAS / "finding.schema.json", "finding schema")
+    review_schema = _load_json(SCHEMAS / "review.schema.json", "review schema")
+    if finding_schema is None or review_schema is None:
+        return None, None
+
+    skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    properties = finding_schema.get("properties", {})
+
+    category_match = re.search(
+        r"^Category:\s+(.+(?:\n\s{4,}.+)*)", skill_text, re.MULTILINE)
+    if category_match:
+        declared = {tok.strip() for tok in category_match.group(1).split("|") if tok.strip()}
+        in_schema = set(properties.get("category", {}).get("enum", []))
+        for missing in sorted(declared - in_schema):
+            fail(f"schemas/finding.schema.json: category enum is missing '{missing}', "
+                 f"which SKILL.md's Category: line declares")
+        for stray in sorted(in_schema - declared):
+            fail(f"schemas/finding.schema.json: category enum has '{stray}', which is not "
+                 f"in SKILL.md's Category: line — the two have drifted apart")
+
+    for heading, field in (("### Confidence — an evidence grade", "confidence"),
+                           ("### Severity — from four factors", "severity")):
+        levels = _backticked_first_column(_skill_section(skill_text, heading))
+        if not levels:
+            fail(f"SKILL.md: could not read the levels out of '{heading}'")
+            continue
+        in_schema = properties.get(field, {}).get("enum", [])
+        if levels != in_schema:
+            fail(f"schemas/finding.schema.json: {field} enum {in_schema} does not match "
+                 f"SKILL.md's {levels} — a rubric level was added, removed, or renamed "
+                 f"without updating the schema")
+
+    matrix = parse_priority_matrix(skill_text)
+    if not matrix:
+        fail("SKILL.md: could not parse the priority matrix")
+        return finding_schema, review_schema
+
+    priorities = sorted(set(matrix.values()))
+    in_schema = sorted(properties.get("priority", {}).get("enum", []))
+    if priorities != in_schema:
+        fail(f"schemas/finding.schema.json: priority enum {in_schema} does not match the "
+             f"priorities the matrix can produce, {priorities}")
+
+    return finding_schema, review_schema
+
+
+def check_example_review_validates(review_schema):
+    """The worked example is the only place a full review document is committed, so it is
+    the only thing that can prove the schema describes a review someone could actually
+    write. It lives in docs/examples/ — outside skills/, so it can never be loaded as a
+    reference (docs/architecture.md §9) — and it deliberately contains no invented runtime
+    numbers, for the same reason."""
+    if review_schema is None:
+        return
+    instance = _load_json(EXAMPLE_REVIEW, "example review")
+    if instance is None:
+        return
+
+    errors = schema_lite.validate(
+        instance, review_schema, base_dir=SCHEMAS, filename="review.schema.json")
+    for error in errors[:20]:
+        fail(f"docs/examples/review.example.json: {error}")
+    if len(errors) > 20:
+        fail(f"docs/examples/review.example.json: {len(errors) - 20} further "
+             f"schema error(s) not shown")
+
+    skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    matrix = parse_priority_matrix(skill_text)
+    declared_causes = {c.get("id") for c in instance.get("root_causes", [])}
+    for finding in instance.get("findings", []):
+        key = (finding.get("severity"), finding.get("confidence"))
+        expected = matrix.get(key)
+        if expected and finding.get("priority") != expected:
+            fail(f"docs/examples/review.example.json: {finding.get('id')} is "
+                 f"{key[0]}/{key[1]}, which the matrix derives as {expected}, "
+                 f"but it declares {finding.get('priority')}")
+        if finding.get("root_cause_id") not in declared_causes:
+            fail(f"docs/examples/review.example.json: {finding.get('id')} references "
+                 f"{finding.get('root_cause_id')}, which no root_causes[] entry declares")
+
+
+def check_schema_is_referenced():
+    """A schema nothing points at is a schema nobody will keep current."""
+    template = SKILL / "templates" / "review-report.md"
+    if template.is_file() and "finding.schema.json" not in template.read_text(encoding="utf-8"):
+        fail("templates/review-report.md does not mention finding.schema.json — the report "
+             "template is where an agent learns the machine-readable output exists")
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     entries = check_registry()
@@ -461,6 +619,9 @@ def main():
     check_detect_script_stdlib_only()
     check_category_routing_coverage()
     check_version_coherence()
+    _finding_schema, review_schema = check_finding_schema_agrees_with_skill()
+    check_example_review_validates(review_schema)
+    check_schema_is_referenced()
     if entries:
         check_tier_summary_counts(entries)
         check_technology_registry_consistency(entries)

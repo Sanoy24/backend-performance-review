@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/review.schema.json",
+  "title": "Backend performance review — machine-readable review",
+  "description": "The machine-readable form of one review. The Markdown report (templates/review-report.md) stays the primary human artifact; this is emitted alongside it, never instead of it. Everything here must be derivable from the report — if the two disagree, the report is wrong, because a number that appears only in the JSON has escaped human review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mode",
+    "reproducibility",
+    "completeness",
+    "assumptions",
+    "root_causes",
+    "findings"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Version of this schema the document claims to conform to. Changing a field name here is a breaking change to the project — see CHANGELOG.md.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["full", "change-scoped"]
+    },
+    "verdict": {
+      "description": "Change-scoped mode only. UNKNOWN is load-bearing and must never be collapsed into PASS: it means the review could not establish whether the change regresses performance, which is different from establishing that it does not.",
+      "type": "string",
+      "enum": ["PASS", "WARN", "FAIL", "UNKNOWN"]
+    },
+    "reproducibility": {
+      "description": "Everything needed to re-run this review and expect the same answer. A finding produced under one methodology version is not necessarily reproducible under another.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generated_at", "skill_version", "spec", "repository"],
+      "properties": {
+        "generated_at": { "type": "string", "format": "date-time" },
+        "skill_version": { "type": "string" },
+        "spec": {
+          "description": "The skill's frontmatter `spec` value, e.g. backend-performance-review/2.0.",
+          "type": "string"
+        },
+        "registry_version": { "type": "string" },
+        "detector_version": {
+          "description": "Version of detect_stack.py, where it was used. Absent means detection was manual.",
+          "type": "string"
+        },
+        "model": {
+          "description": "The agent and model that produced the review. Required for any cross-model comparison to mean anything.",
+          "type": "string"
+        },
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string" },
+            "commit": { "type": "string" },
+            "diff_base": {
+              "description": "Change-scoped mode: what the change was reviewed against.",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "description": "Service topology for a monorepo, from detect_stack.py's services[]. A single-service repository may omit this. Findings scope to a service through location.service.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "runtime": { "type": "array", "items": { "type": "string" } },
+          "datastores": { "type": "array", "items": { "type": "string" } },
+          "caches": { "type": "array", "items": { "type": "string" } },
+          "brokers": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "workload": {
+      "description": "The workload model the findings are scored against. Unanswered is a legitimate state — the review proceeds and caps workload-dependent findings at Medium confidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "answered": { "type": "boolean" },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["question", "answer", "source"],
+            "properties": {
+              "question": { "type": "string" },
+              "answer": { "type": "string" },
+              "source": {
+                "type": "string",
+                "enum": ["user", "repository", "derived"]
+              }
+            }
+          }
+        },
+        "scenarios": {
+          "description": "Which operating conditions the findings were considered under. A finding can be irrelevant at normal load and severe on a cold cache.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "peak",
+              "burst",
+              "degraded-dependency",
+              "large-dataset",
+              "cold-cache",
+              "cold-start",
+              "high-concurrency"
+            ]
+          }
+        }
+      }
+    },
+    "runtime_evidence": {
+      "description": "Runtime artifacts supplied by the user. An empty list is why most findings cap below Confirmed, and saying so plainly is part of an honest review.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "source"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "explain-plan",
+              "profile",
+              "benchmark",
+              "load-test",
+              "trace",
+              "metrics",
+              "query-log",
+              "other"
+            ]
+          },
+          "source": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "completeness": {
+      "description": "How much of the system this review actually saw. Without it, a reader can mistake \"no findings\" for \"everything is healthy\" — the failure mode that makes a zero-finding result dangerous instead of honest.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["review_confidence", "evidence_available", "ranking_method"],
+      "properties": {
+        "review_confidence": {
+          "description": "Confidence in the review as a whole. Distinct from any finding's confidence: every finding can be High while the review is Low, if most of the system was never examined.",
+          "type": "string",
+          "enum": ["High", "Medium", "Low"]
+        },
+        "evidence_available": {
+          "type": "string",
+          "enum": ["well-instrumented", "partially-instrumented", "uninstrumented"]
+        },
+        "ranking_method": {
+          "type": "string",
+          "enum": ["runtime-data", "structural-signals-only"]
+        },
+        "repository_coverage": {
+          "description": "Share of in-scope code actually examined, where it can be stated honestly. Omit rather than estimate.",
+          "type": "string"
+        },
+        "critical_paths_identified": { "type": "integer", "minimum": 0 },
+        "critical_paths_analyzed": { "type": "integer", "minimum": 0 },
+        "technology_support": {
+          "description": "Registry tier per detected technology, so reduced depth is visible rather than silent.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["technology", "tier"],
+            "properties": {
+              "technology": { "type": "string" },
+              "tier": {
+                "type": "string",
+                "enum": ["deep", "conceptual", "generic"]
+              },
+              "detection_confidence": {
+                "description": "From detect_stack.py, where it was used.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "unknowns": {
+          "description": "What this review could not determine, and why. The two reasons are genuinely different: no evidence existing is a gap the user can close, while an unsupported technology is a gap in this skill.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subject", "reason"],
+            "properties": {
+              "subject": { "type": "string" },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "no-evidence-exists",
+                  "technology-unsupported",
+                  "out-of-scope",
+                  "not-examined"
+                ]
+              },
+              "what_would_resolve_it": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "assumptions": {
+      "description": "The assumption ledger. Separating what is known from what is assumed is what lets a reader disagree with a specific step rather than with the conclusion as a whole.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["known", "unknown", "assumed", "derived", "measured"],
+      "properties": {
+        "known": { "type": "array", "items": { "type": "string" } },
+        "unknown": { "type": "array", "items": { "type": "string" } },
+        "assumed": { "type": "array", "items": { "type": "string" } },
+        "derived": {
+          "description": "Conclusions computed from other entries. Each states its inputs, per Hard Rule 1.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "measured": {
+          "description": "Values that came from a real measurement. Empty is the common and honest case for a static review.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "decision_changing_questions": {
+      "description": "Unanswered questions whose answers would change the ranking, most valuable first. More useful to a reader than \"more information is needed\".",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "what_it_would_change"],
+        "properties": {
+          "question": { "type": "string" },
+          "what_it_would_change": { "type": "string" },
+          "affects": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^PERF-[0-9]{3,}$" }
+          }
+        }
+      }
+    },
+    "root_causes": {
+      "description": "Underlying constraints. Several findings may share one; that is the point. A report of three symptoms under one root cause is one problem, not three.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^ROOT-[0-9]{3,}$" },
+          "description": { "type": "string", "minLength": 1 },
+          "findings": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^PERF-[0-9]{3,}$" }
+          }
+        }
+      }
+    },
+    "findings": {
+      "description": "May be empty. Zero findings is a valid, successful result, and manufacturing findings to fill this array is the failure this project exists to prevent.",
+      "type": "array",
+      "items": { "$ref": "finding.schema.json" }
+    },
+    "considered_not_reported": {
+      "description": "Candidates examined and discarded, with the reason. Evidence that the review had a filter — and the honest home for \"theoretically inefficient, not worth optimizing\".",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observation", "why_discarded"],
+        "properties": {
+          "observation": { "type": "string" },
+          "why_discarded": { "type": "string" },
+          "location": { "type": "string" }
+        }
+      }
+    },
+    "adjacent_findings": {
+      "description": "Real issues found with the same evidence discipline that are not performance questions. Never scored on the performance rubric — no Severity, no Priority, no PERF- id — because those axes measure performance impact and would misrepresent a security issue as safe to deprioritize.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "confidence", "risk", "problem", "evidence", "recommendation", "assessed_properly_by"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^(SEC|COR|MAINT)-[0-9]{3,}$" },
+          "kind": {
+            "type": "string",
+            "enum": ["security", "correctness", "maintenance"]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["Confirmed", "High", "Medium", "Low"]
+          },
+          "risk": {
+            "description": "A plain-language judgment with one sentence of justification — deliberately not a CVSS-style score, which this skill has no methodology to produce honestly.",
+            "type": "string",
+            "enum": ["Low", "Medium", "High"]
+          },
+          "problem": { "type": "string" },
+          "evidence": { "type": "array", "items": { "$ref": "finding.schema.json#/$defs/evidenceItem" } },
+          "recommendation": { "type": "string" },
+          "location": { "type": "string" },
+          "assessed_properly_by": {
+            "description": "What dedicated review or tool would actually assess this. Pointing at the right tool is honest; pretending to be it is not.",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "mode": { "const": "change-scoped" } },
+        "required": ["mode"]
+      },
+      "then": { "required": ["verdict"] }
+    }
+  ]
+}
