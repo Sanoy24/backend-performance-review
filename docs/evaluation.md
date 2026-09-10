@@ -1354,6 +1354,15 @@ the triggering code shape to a fixture set and confirm the skill no longer repor
 3. A quoted registry match token containing an escaped inner quote (`"\"x\":"`) must parse to
    the literal `"x":`, not to the four characters `\"x\":` (regression test for the parser's
    `_strip_quotes` unescaping bug).
+4. One real dependency declaration per (signal, runtime) combination that a `deep`-tier
+   signal's own `match:` list already implies it should cover must match that signal
+   (`DriverCoverageTests`). Added after three false negatives of the same shape —
+   `sqlite-jdbc` (§3.13), EF Core SqlServer (the .NET blind pass), and the Node.js `pg`
+   package (§3.20) — were each found separately, one at a time, by accident during
+   unrelated evaluation passes. An audit run once across every `deep`-tier signal's already
+   supported runtimes found six more at once; this fixture is that audit, committed so a
+   future promotion missing its dominant driver in some runtime fails in CI instead of
+   waiting to be found the same way again.
 
 Each fixture was verified to actually fail against the pre-fix code (`detect_stack.py` and
 `registry.yaml` as they stood before §3.3's fixes) before being accepted as a real regression
