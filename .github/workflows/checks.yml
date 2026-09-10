@@ -91,6 +91,15 @@ jobs:
     # upload on every one of those would be noise, not a test. It still exercises every other
     # step, including schema validation, SARIF generation, and verdict derivation, against the
     # actual action.yml file rather than only its constituent scripts run directly.
+    #
+    # TEMPORARY, for one push only: comment/upload-sarif flipped to "true" and permissions
+    # widened, to prove the outward-facing half (docs/roadmap.md's remaining open item) against
+    # this repository's own PR #54 — a real posted comment, a real code-scanning upload. The
+    # next commit reverts both the flags and this permissions block back to the silent default.
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
@@ -99,8 +108,8 @@ jobs:
         uses: ./
         with:
           review: docs/examples/review.example.json
-          comment: "false"
-          upload-sarif: "false"
+          comment: "true"
+          upload-sarif: "true"
           fail-on: never
 
       - name: Confirm the action's own outputs are wired correctly
