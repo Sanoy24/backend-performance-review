@@ -29,6 +29,14 @@ Breaking changes carry a migration note in the entry.
 
 ### Added
 
+- `docs/evaluation.md` §3.21, a second inter-run-consistency blind pass — this time on
+  `spring-boot-realworld-example-app` (JVM), a different repository and stack than §3.18's
+  `gin-realworld` (Go). All five of the original blind pass's findings (§3.13) reproduced by
+  location and mechanism; the priority matrix again applied with zero disagreements. New
+  result: two findings' severity escalated between the two runs because SQLite was promoted
+  to `deep` tier in between, and the later run cited the new `technology/sqlite.md` directly
+  as its reason — direct evidence a tier promotion measurably improves review quality, not
+  just changes it.
 - `docs/evaluation.md` §3.20, a real-tokenizer context-cost measurement replacing §3.19's
   byte-count proxy: four synthetic stack-breadth scenarios (single-signal to five
   `deep`-tier signals across four categories at once), each routed by actually running

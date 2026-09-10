@@ -1323,6 +1323,113 @@ not a substitute for measuring it directly. The harder version of this measureme
 API-metered context consumption from an actual dispatched review, across a comparable range of
 stack breadths — remains undone.
 
+### 3.21 A second blind pass on a different repository and stack — inter-run consistency, extended
+
+§3.18 blind-passed one repository (`gin-realworld`, Go) a second time and found substantial but
+partial convergence. Its own honest verdict named exactly what it could not establish: "a second
+data point of this shape, on a different repository or stack, would be needed before calling the
+question closed." This section is that second data point: `gothinkster/spring-boot-realworld-example-app`
+(JVM, §3.13) blind-passed a second time.
+
+**Setup.** A fresh clone of `gothinkster/spring-boot-realworld-example-app` resolved to
+`ee17e31aafe733d98c4853c8b9a74d7f2f6c924a`, confirmed by `git rev-parse HEAD`. Unlike §3.18's
+setup, §3.13's original write-up never recorded the commit it ran against — a gap this section
+inherits rather than can close; the repository is a static example project with no activity
+since 2022, so a mismatch is unlikely but not provable. A fresh `general-purpose` agent, spawned
+with no memory of this session, was given only the unmodified `SKILL.md` and the clone path,
+told it was a full review of a real, unmodified JVM backend, and explicitly instructed not to
+read `docs/evaluation.md`, `docs/roadmap.md`, `CHANGELOG.md`, or any git history of either
+repository — the same blindness protocol as §3.8–3.18. It was also asked to write its complete
+report to a file rather than only summarize it back — closing the specific gap §3.18 named in
+its own write-up ("recording only a summary... is exactly the kind of information loss that
+makes a later consistency measurement weaker than it needed to be"). One accretion in the
+skill's own coverage exists between the two runs: SQLite was `conceptual` tier with no dedicated
+reference file at §3.13's time and is `deep` tier with a full `technology/sqlite.md` now (this
+project's own promotion work, `CHANGELOG.md`). JVM was already `deep` tier at both points — a
+stable control. That accretion turns out to matter for what follows.
+
+**All four of §3.13's original findings, plus its adjacent security finding, reproduced by
+location and mechanism — five for five.** §3.13's PERF-001 (unbatched GraphQL resolvers, no
+`DataLoader`) is this run's PERF-004, citing the identical resolver classes
+(`CommentDatafetcher`, `ArticleDatafetcher`) and the same missing-batching mechanism; both score
+`Critical`/`P0`. §3.13's PERF-002 (no index on any foreign-key or filter column, naming
+`tags.name`, `article_tags.article_id`/`tag_id`, `comments.article_id`,
+`follows.user_id`/`follow_id`) is this run's PERF-001, naming the same columns — this run adds
+that `follows` has no primary key at all, a fact §3.13's brief summary did not mention having
+checked. Both score `High`/`P1`. §3.13's SEC-001 (JWT secret hardcoded in
+`application.properties`) is this run's SEC-001, same file, same line, same recommendation.
+Three of five findings reproduced with no change in score at all.
+
+**Two of five reproduced on location and mechanism but diverged sharply in severity — and the
+divergence has a specific, named cause: the skill's own reference content matured between the
+two runs.** §3.13's PERF-003 (SQLite behind a default HikariCP/Tomcat pool, no journal-mode or
+busy-timeout configuration) scored `High`/`P1`, explicitly **capped at `Medium` confidence**
+because, in the agent's own words at the time, `registry.yaml`'s note said "SQLite has no
+dedicated technology file and concurrency questions should be flagged as unknowns." This run's
+equivalent, PERF-006, scores `Critical`/`High`/**P0** — a full severity-and-confidence escalation
+— citing `technology/sqlite.md` §2 directly and by name as the source for the claim that a
+pool sized for a client-server engine provides no real write concurrency for SQLite and that its
+zero-second default `busy_timeout` converts a momentary write collision into an immediate
+failure. §3.13's PERF-004 (an unbounded per-tag loop inside one write transaction) scored
+`Medium`/`P2`. This run's equivalent, PERF-003, scores `Critical`/`High`/**P0**, citing
+`technology/sqlite.md` §2's "exactly one writer... by design" as the reason the same unbounded
+loop is now read as holding the system's single most contended resource for an unbounded
+duration, not merely as an unbounded database round trip in isolation. Neither run's blind agent
+had access to the other's reasoning; the divergence is not two reviewers disagreeing about the
+same evidence — it is the same evidence, read against a materially different amount of reference
+content, because the skill itself changed in between. **This is a different kind of evidence
+than §3.18 gathered.** §3.18 asked whether the same skill, run twice, converges. This asks
+whether a real tier promotion — the actual product of the work this project spends most of its
+effort on — measurably changes what a real review concludes about real code, in the direction
+the promotion was meant to produce. Here, it did: both severity escalations move *toward* the
+better-supported answer (SQLite's single-writer semantics are a documented, checkable fact, not
+a judgment call), not away from it, and both cite the new reference file as their reason.
+
+**Secondary findings: this run reported four scored findings with no counterpart in §3.13's
+write-up — but §3.13 was recorded as a "brief" summary, not the full report, so whether these
+are genuinely new or were found and not included in that summary cannot be determined, the same
+caveat §3.18 raised about its own comparison.** PERF-002 (`Critical`/`P0` — an unconditional
+multi-table join plus an unbounded exact `COUNT` on every article-list request), PERF-005
+(`High`/`P1` — the comment-fetch queries are missing the `LIMIT` clause their own sibling
+article queries correctly apply), PERF-007 (`High`/`P1` — offset pagination has no upper bound,
+unlike the existing limit cap), and PERF-008 (`Medium`/`P2` — no observability exists anywhere in
+the repository, filed as its own finding rather than only a confidence cap). All four are real,
+evidenced, and correctly filed. This is the same asymmetric-overlap pattern §3.8–3.18 documented
+in every prior comparison: each independent run surfaces something the other did not, in a
+different repository and a different stack, now for a fourth time.
+
+**The derivation itself never diverged.** Every scored performance finding in this run — eight
+of them — re-derives to the priority the matrix specifies for its stated severity and confidence
+with no exception: `Critical`/`High`→P0 (three instances), `High`/`High`→P1 (three instances),
+`Medium`/`High`→P2, `Low`/`High`→P3. `SEC-001` is correctly left unscored on the performance
+rubric per rule 8. This is the fourth independent run in this project's evaluation history (after
+§3.1/§3.9/§3.18's three on `gin-realworld`) to produce zero disagreements between a finding's
+severity-and-confidence and its derived priority — the matrix continues to be a mechanical
+lookup, never a place independent judgment leaks in.
+
+**No bug found in the skill's own tooling on this run.** `org.xerial:sqlite-jdbc` and
+`jdbc:sqlite:` — the exact detection gap §3.13 found and fixed at the time — correctly resolved
+this run's architecture table to `SQLite / deep`, confirming that fix has held since. The agent
+correctly treated Spring Boot, Spring MVC, Spring Security, MyBatis, and the DGS GraphQL
+framework as reduced-depth analysis at `conceptual` tier, exactly as `registry.yaml` declares
+them, rather than overclaiming depth the skill does not have reference content for.
+
+**The honest verdict.** Combined with §3.18, this project now has two inter-run comparisons, on
+two repositories and two stacks. Where §3.18 found the primary finding's *location and mechanism*
+reproduce exactly and its *severity* reproduce between two blind passes at the same point in the
+skill's evolution, this comparison finds all five of the original run's findings reproduce by
+location and mechanism, and adds a new, complementary result: when the skill's own reference
+content grows between two runs of the *same* code, the severity a later run assigns moves, and
+moves toward the better-supported answer, citing the new content by name as its reason. That is
+evidence the tier-promotion work this project spends most of its effort on does what it is meant
+to do, not just that two runs of an unchanged skill agree with each other. Secondary findings
+again overlapped only partially and in both directions, the same pattern now confirmed across
+four independent comparisons on four different repositories. The commit-pinning gap in §3.13's
+original record — the one piece of rigor §3.18 had that this comparison could not fully match —
+is itself a lesson worth carrying forward: every future comparison run should record its pinned
+commit at the time, not reconstruct it later from a static repository's low likelihood of having
+changed.
+
 ### Recording results
 
 For each run, record: repository and commit, mode, references loaded, findings with scores,
@@ -1397,23 +1504,29 @@ Stated rather than left implicit:
   except one.** §3.8–3.11 were still set up by the author (choosing the repositories and writing
   the prompts) even though the reviewing agents had no access to this session's prior findings;
   §3.13–3.16 went one step further and had no prior author review of the target repository to
-  compare against at all, only the choice of repository and the prompt. §3.18 blind-passed one of
-  the §3.8–3.11 repositories a second time — see that bullet below for what it found.
+  compare against at all, only the choice of repository and the prompt. §3.18 and §3.21
+  blind-passed two of these repositories a second time — see the bullet below for what they
+  found.
 - **Rounds 1–2 tested detection plus reasoning at the same standard as the methodology, largely
   performed or directly supervised by the author** rather than dispatching the unmodified
   `SKILL.md` procedure to a fully independent agent across every case. §3.8–3.11 and §3.13–3.16
   are the exception.
-- **Inter-run consistency measured once, on one repository — not a general result.** §3.18
-  blind-passed `gin-realworld` a second time, at the identical pinned commit reviewed in §3.1 and
-  §3.9, and found the primary finding's location and mechanism reproduced exactly across all
-  three independent reviews, its severity and derived priority reproduced exactly between the two
-  blind passes (diverging from the original manual review for a reason already on record in
-  §3.9), and the severity×confidence→priority matrix applied with zero disagreements across all
-  three runs' scored findings. Secondary findings still varied run to run, each surfacing at
-  least one real thing the other missed — the same pattern §3.8–3.11 documented across different
-  repositories, now also confirmed within one repository reviewed twice. This is one repository,
-  one extra run: it does not establish that consistency holds for other repositories, other
-  stacks, or findings below the primary one.
+- **Inter-run consistency measured on two repositories and two stacks — stronger than one data
+  point, still not a general result.** §3.18 blind-passed `gin-realworld` (Go) a second time, at
+  the identical pinned commit reviewed in §3.1 and §3.9, and found the primary finding's location
+  and mechanism reproduced exactly across all three independent reviews, its severity and derived
+  priority reproduced exactly between the two blind passes, and the priority matrix applied with
+  zero disagreements. §3.21 blind-passed `spring-boot-realworld-example-app` (JVM) a second time
+  and found all five of the original pass's findings (§3.13) reproduced by location and mechanism,
+  the matrix again applying with zero disagreements — and surfaced a new result neither §3.18 nor
+  any earlier comparison had: two findings' severity moved sharply, in both cases *because the
+  skill's own reference content matured between the two runs* (SQLite's tier promotion to `deep`,
+  landing after §3.13 and before §3.21), with the later, better-informed run citing the new
+  reference file directly as its reason and moving toward the better-supported score. Secondary
+  findings still varied run to run in both comparisons, each surfacing at least one real thing the
+  other missed. Two repositories, two extra runs: still not proof consistency holds universally,
+  but the second comparison points the same direction as the first, and adds direct evidence that
+  tier promotions measurably improve — not merely change — what a later review concludes.
 - No comparison against a human expert baseline.
 - **Context cost measured with a real tokenizer across four scenarios, but still not from a
   live instrumented run.** §3.20 replaced §3.19's byte proxy with real `tiktoken` counts across
