@@ -48,7 +48,7 @@ jobs:
           python -I skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null
 
   detection-regressions:
-    name: Regression fixtures and scoring harness (docs/evaluation.md §4)
+    name: Detection regression fixtures (docs/evaluation.md §4)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
