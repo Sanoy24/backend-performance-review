@@ -24,7 +24,7 @@ What that unlocked, and what remains:
 | Review completeness and coverage confidence | **Done** — report template §2 |
 | Structured detection evidence, service topology | **Done** — `detect_stack.py` |
 | Ground-truth format and a scoring harness | **Done** — `schemas/ground-truth.schema.json`, `benchmark/scoring/score.py`, tested in CI |
-| Ground truth seeded from the nine blind passes already recorded | **Open** — these runs are proto-ground-truth already paid for; retro-annotating them is far cheaper than commissioning a corpus |
+| Ground truth seeded from the nine blind passes already recorded | **In progress** — five `benchmark/ground-truth/*.json` files done (four repositories plus one change-scoped case), scored end-to-end against a hand-constructed review to confirm the pipeline works on real corpus data, not only synthetic tests. Four repositories/passes remain — see `benchmark/README.md` |
 | A corpus repository whose correct answer is **zero findings** | **Open, and now the highest-value gap.** §3.7 records that four repositories all produced findings, so the case testing whether this system resists manufacturing one has never been cleanly run. It is at least now expressible: an empty `expected` with a populated `forbidden` |
 | Run-to-run stability as a computed metric rather than a hand diff | **Done** — `score.py stability`; the §3.18/§3.21 gap below is now cheap to close on the remaining six repositories |
 | Change-scoped verdict model, policy file, SARIF, GitHub Action | **Done** — `methodology/change-scoped.md`, `action.yml`, [github-action.md](github-action.md). Advisory by default; `UNKNOWN` never reads as `PASS` |

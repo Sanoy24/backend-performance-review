@@ -1,0 +1,53 @@
+{
+  "repository": {
+    "name": "gothinkster/golang-gin-realworld-example-app",
+    "commit": "626c372d259472148d93303f74aa9b9a1cdcef24",
+    "url": "https://github.com/gothinkster/golang-gin-realworld-example-app",
+    "language": "Go",
+    "framework": "Gin",
+    "datastore": "SQLite (via GORM)",
+    "workload": "Not supplied — a public example RealWorld backend with no stated production traffic. Findings below are scored on growth and structural exposure, not measured load."
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "blind-pass-derived",
+    "notes": "Retro-annotated from docs/evaluation.md §3.1 (Round 1, manual trace) and §3.9 (independent blind pass, same repository, same finding reproduced) and §3.18 (a second independent blind pass on the same repository, reproducing location, mechanism, and priority exactly). This is derived from recorded review output, not established independently before the reviews ran, so it is annotated blind-pass-derived rather than expert-manual-review — weaker evidence per benchmark/README.md, appropriate for seeding rather than for scoring a genuinely held-out case."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "users/models.go",
+        "symbol": "UserModel.isFollowing"
+      },
+      "category": "data-access",
+      "also_acceptable_categories": ["concurrency"],
+      "mechanism": "Rendering an article's author profile calls ArticleUserSerializer.Response() -> ProfileSerializer.Response() -> isFollowing(), which issues its own db.Where(...).First(...) query once per article, per request, on both GET /articles and GET /articles/feed. The favorites-count half of the identical N+1 shape was fixed by a prior contributor (see PR #49, docs/evaluation.md §3.6); this structurally identical follow-status query one call deeper was not.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["batch", "preload", "single query", "join"],
+      "forbidden_recommendation": ["redis", "cache", "add an index"]
+    }
+  ],
+  "acceptable": [],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": {
+        "file": "articles/serializers.go",
+        "symbol": "ArticlesSerializer.Response"
+      },
+      "category": "data-access",
+      "why_not": "ArticleModel.favoritesCount() and .isFavoriteBy() look, read in isolation, like the canonical N+1 shape, but ArticlesSerializer.Response() already batches favorite counts and status via BatchGetFavoriteCounts/BatchGetFavoriteStatus before its per-article loop and calls ResponseWithPreloaded, not the naive per-article Response(). Reporting this half as a finding would be a false positive from stopping the trace one call too early — see docs/evaluation.md §3.1."
+    },
+    {
+      "id": "GT-F02",
+      "location": {
+        "file": "common/database.go",
+        "symbol": "Init"
+      },
+      "category": "concurrency",
+      "why_not": "SetMaxIdleConns(10) in Init() (production) vs SetMaxIdleConns(3) in TestDBInit() (tests) is two different values for two different contexts, not a contradiction. SQLite is an embedded, file-backed, single-writer engine with no server-side connection ceiling, so the pool-exhaustion arithmetic application/connection-pools.md describes for networked engines does not transfer here; reporting it as a pool-sizing finding would be a category error."
+    }
+  ]
+}

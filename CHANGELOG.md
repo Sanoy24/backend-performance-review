@@ -227,6 +227,26 @@ value and `[Unreleased]` accumulates.
   fallback matched `orders/service.py` against `users/service.py`. Matching is now
   suffix-only, because a wrong match is silent while an unmatched annotation prints a MISSED
   line somebody can correct.
+- **A first batch of ground truth**, retro-annotated from `docs/evaluation.md`'s recorded
+  blind passes: `gin-realworld.json` (the N+1 traced through the serializer chain, §3.1/§3.9/
+  §3.18), `fastapi-full-stack-template.json` (unbounded pagination, §3.2/§3.10),
+  `urlshortener.json` (the one repository with real `Confirmed`-grade runtime evidence — the
+  benchmarks were actually run, §3.5/§3.11), `github-signature-verifier.json` (a severity
+  corrected from `Medium` to `High` between two independent passes on evidence the first
+  pass had already read and set aside, §3.7 → §3.8 — itself a worked example of what
+  severity calibration exists to catch), and `gin-realworld-pr49-change-scoped.json` (ground
+  truth for a real, merged PR, testing that a review credits a genuine fix while still
+  catching the untouched half of the same problem one call deeper, §3.6). Each carries
+  `forbidden` traps for the specific false positives the underlying blind pass actually
+  encountered and rejected, not hypothetical ones. Scored end-to-end against a
+  hand-constructed review to confirm the harness works on real corpus data — including that
+  a manufactured false positive on one of the `forbidden` traps correctly halves precision
+  and is named in the restraint report, not just detected as a count.
+  - Case 2 (a repository whose correct answer is zero findings) remains open: none of the
+    five files below satisfy it, which is itself consistent with `docs/evaluation.md` §3.7's
+    finding that no repository reviewed so far has produced a literal zero-finding result.
+  - `benchmark/ground-truth/.gitkeep` removed — the directory documented as "empty on
+    purpose" no longer is.
 
 ### Added — detection
 

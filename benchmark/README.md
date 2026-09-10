@@ -78,14 +78,41 @@ In priority order, and the first one is not a tie:
    repositories, *none* produced a literal zero-finding result. The project's own required
    case 2 calls this "the most important case" and it has never been cleanly satisfied. A
    system that cannot be shown to resist manufacturing findings has not demonstrated the
-   property it is built around.
+   property it is built around. **Still open** — nothing in the corpus below satisfies this;
+   every one of them has at least one real `expected` finding.
 
-2. **The eight repositories already blind-passed.** Those runs are proto-ground-truth that
-   has already been paid for: they record locations, mechanisms, severities, and in several
+2. **The repositories already blind-passed.** Those runs are proto-ground-truth that has
+   already been paid for: they record locations, mechanisms, severities, and in several
    cases bugs later confirmed and fixed. Retro-annotating them costs a fraction of
    commissioning new cases. Mark these `"method": "blind-pass-derived"` — truth derived from
    a run rather than established independently is weaker evidence, and the annotation has to
-   say so.
+   say so. **A first batch of five is done** (`ground-truth/*.json`), covering four of the
+   nine recorded repositories/passes plus one change-scoped case:
+   - `gin-realworld.json` — the N+1 traced through the serializer chain (§3.1, §3.9, §3.18),
+     plus two `forbidden` traps for patterns that look like the same shape and aren't (an
+     already-batched favorites query, an SQLite pool-config non-contradiction).
+   - `fastapi-full-stack-template.json` — unbounded pagination (§3.2, §3.10), plus two
+     `forbidden` traps for the detection false positives that evaluation itself found and
+     fixed (a frontend `node_modules` misattributed as the backend runtime; Go framework
+     names matching inside an English word and inside shell `echo` commands).
+   - `urlshortener.json` — the one repository with real `Confirmed`-grade runtime evidence
+     (committed Go benchmarks, actually run): a genuine P0 missing-timeout finding, and a
+     `forbidden` trap for the *tempting* finding the benchmark itself argues against
+     (optimizing a sub-200ns operation nowhere near the real bottleneck).
+   - `github-signature-verifier.json` — the closest attempt yet at a case-2 candidate
+     (near-minimal, stateless), still not clean: a real caching gap, with severity corrected
+     from `Medium` to `High` between two independent passes (§3.7 → §3.8) on evidence the
+     first pass had already read and set aside. Encodes that correction as the ground truth,
+     making this file also a worked example of what severity-calibration scoring is for.
+   - `gin-realworld-pr49-change-scoped.json` — the one change-scoped case (§3.6): ground
+     truth for a real, merged PR, testing that a review credits a genuine fix (`forbidden`)
+     while still catching the untouched, structurally identical half of the same problem one
+     call deeper (`expected`) — the "sits directly adjacent to" rule in `SKILL.md` §Modes.
+
+   Still to retro-annotate: the JVM, Rust, .NET, and Node.js repositories (§3.13–§3.16), and
+   the second independent pass used for stability measurement (§3.18, §3.21) — that one
+   needs a second, distinct `review.json` scored with `score.py stability` against the first,
+   not a second ground-truth file for the same repository.
 
 3. **Repositories with misleading signals** — an obvious smell that is harmless, a real
    problem somewhere unexpected, a technology named in a manifest but never used.
