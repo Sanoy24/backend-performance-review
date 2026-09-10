@@ -26,6 +26,16 @@ sys.path.insert(0, str(HERE))
 import json_schema_lite as schema_lite  # noqa: E402
 
 
+def find_skill_scripts_dir(schema_dir):
+    for candidate in (
+        schema_dir.parent / "skills" / "backend-performance-review" / "scripts",
+        HERE.parent / "skills" / "backend-performance-review" / "scripts",
+    ):
+        if (candidate / "compute_stable_id.py").is_file():
+            return candidate
+    return None
+
+
 def parse_priority_matrix(skill_text):
     """Read {(severity, confidence): priority} out of the table SKILL.md publishes."""
     lines = skill_text.splitlines()
@@ -92,6 +102,34 @@ def validate(review, schema_dir):
         if finding.get("id") in seen_ids:
             problems.append("duplicate finding id %s" % finding.get("id"))
         seen_ids.add(finding.get("id"))
+
+    # stable_id must be the canonical, mechanically-computed value — not one the reviewing
+    # agent invented by reasoning. The first real independent blind-pass run found two
+    # agents disagreeing completely on a hand-computed stable_id despite agreeing on
+    # everything else the id is supposed to track; this check is what makes that
+    # mechanically impossible to ship silently going forward.
+    scripts_dir = find_skill_scripts_dir(schema_dir)
+    if scripts_dir:
+        sys.path.insert(0, str(scripts_dir))
+        import compute_stable_id  # noqa: E402
+        seen_stable_ids = {}
+        for finding in review.get("findings") or []:
+            expected = compute_stable_id.compute_for_finding(finding)
+            actual = finding.get("stable_id")
+            if actual != expected:
+                problems.append(
+                    "%s has stable_id %r, but the canonical algorithm "
+                    "(scripts/compute_stable_id.py) computes %r from its own location/"
+                    "category — recompute it, do not hand-invent one"
+                    % (finding.get("id"), actual, expected))
+            if actual in seen_stable_ids:
+                problems.append(
+                    "%s and %s share stable_id %r — a known, accepted collision case "
+                    "(same file, symbol, and category) but worth a human glance to confirm "
+                    "they are not actually the same finding reported twice"
+                    % (seen_stable_ids[actual], finding.get("id"), actual))
+            elif actual:
+                seen_stable_ids[actual] = finding.get("id")
 
     return problems
 

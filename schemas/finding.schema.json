@@ -33,7 +33,7 @@
       "pattern": "^PERF-[0-9]{3,}$"
     },
     "stable_id": {
-      "description": "Identity that survives line-number changes, refactoring, and file moves. Derived from root cause, file, enclosing symbol, and mechanism — never from a line number. Two reviews of the same unfixed problem must produce the same stable_id; this is what makes historical comparison, fix verification, and run-to-run stability measurable.",
+      "description": "Identity that survives line-number changes, computed mechanically — never invented by the reviewing agent. Run `scripts/compute_stable_id.py` (or its algorithm: normalize location.file and location.symbol, join with category, SHA-256, truncate) against this finding's own location and category; do not hand-compute a hash. Deliberately excludes freeform mechanism text: two agents describing the identical bug in different words must still get the same id, which hashing prose would break. Known limitation, accepted rather than hidden: two distinct findings sharing a file, symbol, and category collide. This is what makes exact-location fix verification and historical comparison mechanically checkable — it does not make two reviews that cite one bug at different points in a call chain resolve to the same id; that needs a human-curated `also_locations` entry (schemas/ground-truth.schema.json) or is reported as a known gap by `benchmark/scoring/score.py stability`'s `caveats` field, not silently assumed away.",
       "type": "string",
       "pattern": "^[a-z0-9]{8,64}$"
     },

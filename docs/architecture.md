@@ -244,11 +244,21 @@ twenty `if`/`then` branches. Doing so would put the matrix in three places — `
 all is that two copies already drift. It is enforced instead from the copy `SKILL.md`
 publishes, so there is exactly one authoritative matrix and the schema cannot contradict it.
 
-**`stable_id` never encodes a line number.** A finding whose identity changes when someone adds
-an import above it cannot answer "is this the same problem we saw last month" — and that
-question is the prerequisite for fix verification, historical comparison, and stability
-measurement. Deriving identity from root cause, file, symbol, and mechanism costs nothing at
-emit time and is the difference between a report and a record.
+**`stable_id` never encodes a line number, and is never computed by the reviewing agent's own
+reasoning.** A finding whose identity changes when someone adds an import above it cannot
+answer "is this the same problem we saw last month" — and that question is the prerequisite
+for fix verification and historical comparison. The first real independent blind-pass run
+(`docs/roadmap.md`) found this the hard way: two agents that agreed on a finding's location,
+severity, and recommendation still produced unrelated `stable_id` values, because the original
+description asked each agent to "derive" a hash from prose through reasoning, with no actual
+algorithm specified. `scripts/compute_stable_id.py` is the fix — a fixed, stdlib, mechanical
+algorithm over `location.file` + `location.symbol` + `category` (freeform mechanism text is
+deliberately excluded, since two agents' honest paraphrases of the same bug should not hash to
+different values), the same way `detect_stack.py` is a mechanical accelerator rather than
+something an agent reasons its way to. It has an accepted, documented limitation: two distinct
+findings sharing a file, symbol, and category collide, and it does not resolve two reviews
+citing one bug at different points in a call chain — that needs a human-curated
+`also_locations` entry or is reported as a known gap, not silently assumed away.
 
 The validator (`scripts/json_schema_lite.py`) is stdlib-only for the same reason the registry
 reader is: the one command CONTRIBUTING tells a contributor to run must work on a clean

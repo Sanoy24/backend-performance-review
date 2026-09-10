@@ -67,15 +67,30 @@ schema-valid JSON — against the complete, post-1.0.0 skill.
   locations a ground-truth item accepts alongside its primary `location` — and
   `benchmark/scoring/score.py`'s matcher checks all of them. New tests in
   `tests/test_scoring_harness.py`.
-- **A real specification gap, found and documented (not silently patched): `stable_id`
-  cannot support cross-review comparison as currently specified.** The two `gin-realworld`
-  runs agreed on the dominant finding's location (once fixed above), severity within one
-  level, and recommendation — and still had 0% `stable_id` agreement, because `SKILL.md`/the
-  schema describe it as "derived from root cause, file, symbol, and mechanism" without
-  mandating a canonical hashing algorithm, so two independently-run agents are not guaranteed
-  to produce the same bytes from the same inputs. `score.py stability`'s output now carries
-  an explicit `caveats` field rather than silently reporting a number that looks meaningful
-  and is not yet. A canonical algorithm is tracked as open work in `docs/roadmap.md`.
+- **A real specification gap, found and then fixed with a mechanical algorithm rather than
+  patched around: `stable_id` could not support cross-review comparison as originally
+  specified.** The two `gin-realworld` runs agreed on the dominant finding's location (once
+  fixed above), severity within one level, and recommendation — and still had 0% `stable_id`
+  agreement, because `SKILL.md`/the schema described it as "derived from root cause, file,
+  symbol, and mechanism" without mandating an actual algorithm, so two independently-run
+  agents each invented their own hash by reasoning and were never going to agree.
+  **`skills/backend-performance-review/scripts/compute_stable_id.py`** is the fix: a
+  stdlib-only, mechanical accelerator over `location.file` + `location.symbol` + `category` —
+  the same way `detect_stack.py` is a mechanical accelerator rather than something an agent
+  reasons its way to. Freeform mechanism text is deliberately excluded from the hash inputs,
+  since two honest paraphrases of the same bug must still produce the same id, which hashing
+  prose would have broken. `SKILL.md` Phase 7 now instructs running the script rather than
+  computing a value by reasoning; `scripts/validate_review.py` and
+  `scripts/check_repo_invariants.py` both recompute the expected id from a finding's own
+  fields and reject a mismatch (mutation-tested: a hand-altered `stable_id` on the committed
+  example is caught by both). A known, accepted limitation, stated rather than hidden: two
+  distinct findings sharing a file, symbol, and category collide, and it still cannot resolve
+  two reviews citing one bug at different points in a call chain — that needs a
+  human-curated `also_locations` entry or is reported via `score.py stability`'s `caveats`
+  field, which stays in place. Sixteen new tests in `tests/test_compute_stable_id.py`
+  (determinism, normalization, and — explicitly — that the function's signature has no
+  `mechanism` parameter at all, since that omission is the point) plus three in
+  `tests/test_sarif_and_verdict.py` for the new validation checks.
 - **A real `forbidden`-trap false alarm, found and fixed with a new `acceptable` item rather
   than by loosening the trap.** One run's finding (SQLite's single-writer lock causing
   `SQLITE_BUSY` with no `busy_timeout`) shared a file with an existing `forbidden` trap (a
@@ -85,9 +100,9 @@ schema-valid JSON — against the complete, post-1.0.0 skill.
   traced to a specific verified claim, ordered so specific symbol-bearing items are tried
   before the broad, symbol-less missing-indexes item — preventing the same class of
   ordering-driven mismatch this run also surfaced.
-- Two items opened as a direct result of this run, tracked in `docs/roadmap.md`: a canonical
-  `stable_id` algorithm, and a live GitHub Actions dry run of `action.yml` (its constituent
-  scripts are CI-tested; the composite action itself has not executed on a real runner).
+- One item remains open as a direct result of this run, tracked in `docs/roadmap.md`: a live
+  GitHub Actions dry run of `action.yml` (its constituent scripts are CI-tested end to end;
+  the composite action itself has not yet executed on a real runner).
 
 ### Added — infrastructure batch, completing the 1.0.0 milestone
 
