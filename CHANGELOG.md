@@ -37,6 +37,58 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added — the first real validation run, and two harness bugs it found
+
+The measurement system's first genuine end-to-end test against real, live data rather than
+retro-annotated prose or synthetic fixtures. Two fresh `general-purpose` agents, each with no
+memory of this project's own findings and explicitly forbidden from reading
+`docs/evaluation.md`, `docs/review-response.md`, or `benchmark/ground-truth/`, were given only
+`SKILL.md` and a freshly cloned repository, and produced a full review — Markdown report and
+schema-valid JSON — against the complete, post-1.0.0 skill.
+
+- **Two independent reviews of `gin-realworld`**, run specifically to get a real `score.py
+  stability` measurement rather than the hand-diffed one `docs/evaluation.md` §3.18/§3.21
+  describe. Both reproduced the dominant N+1 finding; once `gin-realworld.json`'s ground
+  truth was corrected (below) to reflect what both runs actually found, each scored
+  **precision 1.0 / recall 1.0** against it.
+- **One review of `rails-realworld.json`** (Ruby on Rails, a stack never independently
+  blind-passed before this) as an E4 attempt. It did not succeed — four real findings were
+  produced, two spot-verified directly against the source before being accepted (a
+  self-referential `has_many` correctness bug verified verbatim in `app/models/article.rb`;
+  an unclamped `params[:limit]` verified verbatim in the controller) — consistent with
+  `docs/evaluation.md` §3.7: no repository reviewed in this project's history has yet
+  produced a literal zero-finding result.
+- **A real harness bug, found and fixed: location matching was too brittle for a mechanism
+  spanning a call chain.** Both `gin-realworld` runs found the identical N+1 and cited
+  *opposite ends* of the same call chain — one the query-issuing method's definition, the
+  other the call site that would actually need to change. Neither is more correct; scoring
+  one as canonical and the other a miss would have scored the harness's own convention, not
+  the reviews. `schemas/ground-truth.schema.json` gains `also_locations` — alternative
+  locations a ground-truth item accepts alongside its primary `location` — and
+  `benchmark/scoring/score.py`'s matcher checks all of them. New tests in
+  `tests/test_scoring_harness.py`.
+- **A real specification gap, found and documented (not silently patched): `stable_id`
+  cannot support cross-review comparison as currently specified.** The two `gin-realworld`
+  runs agreed on the dominant finding's location (once fixed above), severity within one
+  level, and recommendation — and still had 0% `stable_id` agreement, because `SKILL.md`/the
+  schema describe it as "derived from root cause, file, symbol, and mechanism" without
+  mandating a canonical hashing algorithm, so two independently-run agents are not guaranteed
+  to produce the same bytes from the same inputs. `score.py stability`'s output now carries
+  an explicit `caveats` field rather than silently reporting a number that looks meaningful
+  and is not yet. A canonical algorithm is tracked as open work in `docs/roadmap.md`.
+- **A real `forbidden`-trap false alarm, found and fixed with a new `acceptable` item rather
+  than by loosening the trap.** One run's finding (SQLite's single-writer lock causing
+  `SQLITE_BUSY` with no `busy_timeout`) shared a file with an existing `forbidden` trap (a
+  pool-*size*/exhaustion claim the original evaluation had already ruled out) and was
+  incorrectly caught by category+location matching alone, despite being a genuinely different
+  and valid claim. `gin-realworld.json` now carries 8 `acceptable` items (up from 0), each
+  traced to a specific verified claim, ordered so specific symbol-bearing items are tried
+  before the broad, symbol-less missing-indexes item — preventing the same class of
+  ordering-driven mismatch this run also surfaced.
+- Two items opened as a direct result of this run, tracked in `docs/roadmap.md`: a canonical
+  `stable_id` algorithm, and a live GitHub Actions dry run of `action.yml` (its constituent
+  scripts are CI-tested; the composite action itself has not executed on a real runner).
+
 ### Added — infrastructure batch, completing the 1.0.0 milestone
 
 - **`kubernetes`, `docker`, `serverless`, and `terraform` promoted to `deep` tier — the last

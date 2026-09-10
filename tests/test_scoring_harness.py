@@ -94,6 +94,35 @@ class MatchingTests(unittest.TestCase):
         self.assertFalse(scorer.matches(
             finding(location={"file": "a.py", "symbol": "UserService.list"}), item))
 
+    def test_a_finding_at_an_also_location_matches(self):
+        # Discovered from two real independent reviews of the identical bug citing opposite
+        # ends of one call chain: the query-issuing definition and the call site that would
+        # actually need to change. Neither is more correct.
+        item = {"location": {"file": "users/models.go", "symbol": "isFollowing"},
+                "also_locations": [{"file": "articles/serializers.go",
+                                    "symbol": "ArticleSerializer.Response"}],
+                "category": "data-access"}
+        self.assertTrue(scorer.matches(
+            finding(location={"file": "users/models.go", "symbol": "isFollowing"}), item))
+        self.assertTrue(scorer.matches(
+            finding(location={"file": "articles/serializers.go",
+                              "symbol": "ArticleSerializer.Response"}), item))
+
+    def test_a_third_unrelated_location_does_not_match_via_also_locations(self):
+        item = {"location": {"file": "users/models.go"},
+                "also_locations": [{"file": "articles/serializers.go"}],
+                "category": "data-access"}
+        self.assertFalse(scorer.matches(finding(location={"file": "unrelated/file.go"}), item))
+
+    def test_also_locations_still_enforces_its_own_symbol(self):
+        # An also_location with a symbol is just as strict as the primary location — matching
+        # the file alone is not enough if that entry names a conflicting symbol.
+        item = {"location": {"file": "a.py"},
+                "also_locations": [{"file": "b.py", "symbol": "Wanted"}],
+                "category": "data-access"}
+        self.assertFalse(scorer.matches(
+            finding(location={"file": "b.py", "symbol": "Different"}), item))
+
 
 class ScoringTests(unittest.TestCase):
 
@@ -269,6 +298,16 @@ class RecommendationTests(unittest.TestCase):
 
 class StabilityTests(unittest.TestCase):
     """Turns docs/evaluation.md §3.18's hand diff into a number."""
+
+    def test_caveats_are_always_present(self):
+        # Discovered by running two real independent reviews of the same repository: the
+        # (file, category) key undercounts agreement across a call-chain citation choice,
+        # and stable_id_agreement is not yet meaningful with no canonical hash algorithm
+        # specified. Both must stay visible in the output, not just in a docstring nobody
+        # reading the JSON would see.
+        result = scorer.stability({"findings": []}, {"findings": []})
+        self.assertIn("caveats", result)
+        self.assertTrue(len(result["caveats"]) >= 2)
 
     def test_identical_runs_are_fully_stable(self):
         run = {"findings": [finding()]}

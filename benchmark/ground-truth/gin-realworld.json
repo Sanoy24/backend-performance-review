@@ -20,16 +20,102 @@
         "file": "users/models.go",
         "symbol": "UserModel.isFollowing"
       },
+      "also_locations": [
+        {
+          "file": "articles/serializers.go",
+          "symbol": "ArticleUserSerializer.Response / ProfileSerializer.Response"
+        }
+      ],
       "category": "data-access",
       "also_acceptable_categories": ["concurrency"],
-      "mechanism": "Rendering an article's author profile calls ArticleUserSerializer.Response() -> ProfileSerializer.Response() -> isFollowing(), which issues its own db.Where(...).First(...) query once per article, per request, on both GET /articles and GET /articles/feed. The favorites-count half of the identical N+1 shape was fixed by a prior contributor (see PR #49, docs/evaluation.md §3.6); this structurally identical follow-status query one call deeper was not.",
+      "mechanism": "Rendering an article's author profile calls ArticleUserSerializer.Response() -> ProfileSerializer.Response() -> isFollowing() (users/models.go), which issues its own db.Where(...).First(...) query once per article, per request, on both GET /articles and GET /articles/feed. The favorites-count half of the identical N+1 shape was fixed by a prior contributor (see PR #49, docs/evaluation.md §3.6); this structurally identical follow-status query one call deeper was not. Two independent real blind-pass runs against this exact file cited opposite ends of this call chain for the identical finding — one users/models.go (the query-issuing definition, matching the original manual write-up in docs/evaluation.md §3.1), the other articles/serializers.go (the call site, and where PR #49's real merged fix for the sibling favorites-count N+1 made its primary structural change). Neither is more correct; both are recorded via also_locations rather than picking one as canonical and scoring the other as a miss.",
       "severity": "High",
       "max_confidence": "High",
       "expected_recommendation": ["batch", "preload", "single query", "join"],
       "forbidden_recommendation": ["redis", "cache", "add an index"]
     }
   ],
-  "acceptable": [],
+  "acceptable": [
+    {
+      "id": "GT-A01",
+      "location": {
+        "file": "common/database.go",
+        "symbol": "Init"
+      },
+      "category": "concurrency",
+      "mechanism": "The GORM/SQLite connection is opened with no busy_timeout and no WAL mode configured (repository-wide search finds no PRAGMA/journal_mode/busy_timeout string anywhere). SQLite allows exactly one writer to the file at a time; without busy_timeout set, a second connection attempting to write while another write is in progress receives SQLITE_BUSY immediately rather than waiting. Added after a real blind-pass run (docs/evaluation.md-style, not yet written up) reported this and it was verified as a genuinely different claim from GT-F02 below, not the pool-size/exhaustion framing GT-F02 rules out: GT-F02 is about connection-count ceilings not applying to an embedded single-writer engine; this is about the effect of an unset busy_timeout on concurrent writers, which is real and SQLite-specific regardless of pool size. Confidence should not exceed High absent a demonstration that concurrent writers actually occur against this repository's usage pattern."
+    },
+    {
+      "id": "GT-A05",
+      "location": {
+        "file": "articles/models.go",
+        "symbol": "FindManyArticle"
+      },
+      "category": "data-access",
+      "mechanism": "limit and offset are parsed with a fallback default applied only on a parse error; any valid integer the caller supplies, however large, passes straight through to GORM's Offset()/Limit() with no enforced upper bound. Distinct from GT-001's amplification-via-uncapped-limit framing: this is the pagination-cap gap reported as its own finding rather than folded into the N+1's Conditions field, which a review may legitimately do either way.",
+      "expected_recommendation": ["clamp", "cap the limit", "maximum"]
+    },
+    {
+      "id": "GT-A06",
+      "location": {
+        "file": "articles/models.go",
+        "symbol": "FindManyArticle"
+      },
+      "category": "data-access",
+      "mechanism": "FindManyArticle and GetArticleFeed compute an exact row count for pagination metadata on every request regardless of requested page size -- a full COUNT(*) (with the same WHERE clauses as the page query) paid on every list request, not only when the caller actually needs the total."
+    },
+    {
+      "id": "GT-A03",
+      "location": {
+        "file": "articles/models.go",
+        "symbol": "GetArticleUserModel"
+      },
+      "also_locations": [
+        {
+          "file": "articles/serializers.go",
+          "symbol": "ArticleSerializer.Response"
+        }
+      ],
+      "category": "data-access",
+      "mechanism": "The current user's identity/favorite state is re-resolved independently at more than one layer of a single request (router/validator/handler and again in the serializer) via fresh FirstOrCreate/favorite-lookup round trips each time, with no memoization or single resolve-and-pass-down. Real blind-pass runs have cited this both narrowly (two call sites in GetArticleUserModel's callers) and more broadly (router, validator, and serializer together); both are the same underlying mechanism."
+    },
+    {
+      "id": "GT-A02",
+      "location": {
+        "file": "articles/models.go"
+      },
+      "category": "data-access",
+      "mechanism": "follows.follower_id/followed_id, favorites.article_id/user_id, articles.author_id, comments.article_id/author_id, and article_user_models.user_model_id are all used as WHERE predicates (several on the same per-article hot path as GT-001) but carry no GORM index struct tag, unlike other fields that do. No migration directory exists, so AutoMigrate driven by these struct tags is the only schema-creation path -- directly provable from the struct definitions with no runtime evidence needed. Deliberately has no `symbol` (the concern spans several structs/functions) and is placed after the more specific items above in this file so a specific finding at the same broad location is not accidentally absorbed by this one first -- see benchmark/README.md on match-ordering. Real and well-evidenced, but not required of every competent review since it is secondary to GT-001's per-request N+1, which dominates at any realistic page size regardless of index presence."
+    },
+    {
+      "id": "GT-A04",
+      "location": {
+        "file": "articles/models.go",
+        "symbol": "FindManyArticle"
+      },
+      "category": "concurrency",
+      "also_acceptable_categories": ["data-access"],
+      "mechanism": "FindManyArticle and GetArticleFeed open an explicit db.Begin()/tx.Commit() transaction around a sequence of statements that are exclusively reads (Find/First/Count/Association(...).Find) -- no write ever appears inside the transaction. Real but low severity: unneeded transaction overhead on a read path, not a correctness or scalability risk on its own. Filed under concurrency (a held-open transaction is a lock/contention question) but data-access is an equally defensible filing, since the mechanism is a query pattern."
+    },
+    {
+      "id": "GT-A07",
+      "location": {
+        "file": "hello.go",
+        "symbol": "main"
+      },
+      "category": "networking",
+      "mechanism": "Gin's default Run() starts the HTTP server via the standard library's http.ListenAndServe with no ReadTimeout, WriteTimeout, IdleTimeout, or ReadHeaderTimeout configured -- the same unbounded-connection pattern documented as an expected finding for urlshortener.json's GT-001, here filed as acceptable rather than expected since the original manual write-up for this repository (docs/evaluation.md §3.1) centered on the N+1 rather than this gap."
+    },
+    {
+      "id": "GT-A08",
+      "location": {
+        "file": "hello.go",
+        "symbol": "main"
+      },
+      "category": "networking",
+      "mechanism": "v1.Use(users.AuthMiddleware(false)) is called on the v1 route group, and v1.Use(users.AuthMiddleware(true)) is called again later on the same group object. Gin's RouterGroup.Use appends to the group's handler chain rather than replacing it, and every sub-group registered on v1 after both calls (UserRegister, ProfileRegister, ArticlesRegister -- covering GET/PUT /api/user, the follow endpoints, and every /api/articles write route) inherits both middlewares, so AuthMiddleware runs twice per request on those routes. Verified directly against the route-registration order in hello.go, not inferred."
+    }
+  ],
   "forbidden": [
     {
       "id": "GT-F01",

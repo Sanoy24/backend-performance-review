@@ -71,19 +71,40 @@ def categories_for(item):
     return {c for c in allowed if c}
 
 
+def _location_matches(reported, candidate):
+    """One candidate location (the item's primary `location`, or one entry of
+    `also_locations`) against the finding's reported location. File must match; a symbol
+    conflict (both sides name one, and they differ) rules the candidate out."""
+    if not same_file(reported.get("file"), candidate.get("file")):
+        return False
+    expected_symbol = candidate.get("symbol")
+    reported_symbol = reported.get("symbol")
+    if expected_symbol and reported_symbol and expected_symbol != reported_symbol:
+        return False
+    return True
+
+
 def matches(finding, item):
-    location = finding.get("location") or {}
-    if not same_file(location.get("file"), (item.get("location") or {}).get("file")):
+    """A finding matches a ground-truth item when its category is compatible and its
+    location matches EITHER the item's primary `location` OR any of its `also_locations`.
+
+    The multi-location list exists because two independent real reviews of the identical
+    bug — a per-item query reached through a call chain — legitimately cited opposite ends
+    of that chain: one the query-issuing method's definition, the other the call site that
+    would actually need to change to fix it. Neither is more correct, so scoring one of them
+    as a miss would be scoring the harness's own location convention, not the review.
+    """
+    reported = finding.get("location") or {}
+
+    candidates = [item.get("location") or {}]
+    candidates.extend(item.get("also_locations", []))
+    if not any(_location_matches(reported, candidate) for candidate in candidates):
         return False
 
     allowed = categories_for(item)
     if allowed and finding.get("category") not in allowed:
         return False
 
-    expected_symbol = (item.get("location") or {}).get("symbol")
-    reported_symbol = location.get("symbol")
-    if expected_symbol and reported_symbol and expected_symbol != reported_symbol:
-        return False
     return True
 
 
@@ -310,7 +331,27 @@ def recommendation_accuracy(pairs):
 
 def stability(first, second):
     """Turns the hand-diffing in docs/evaluation.md §3.18 and §3.21 into a number, so the
-    remaining repositories can be checked cheaply instead of by eye."""
+    remaining repositories can be checked cheaply instead of by eye.
+
+    Two known limitations, both found by running this against two real independent reviews
+    of the same repository (not hypothesized in advance) — see benchmark/README.md
+    "Known limitations, found by real use":
+
+    `overlap`/`only_in_a`/`only_in_b` key on (file, category), which UNDERCOUNTS true
+    agreement when two reviews cite the identical mechanism at opposite ends of one call
+    chain (a query's call site versus its definition) — ground truth's `also_locations`
+    exists for exactly this, but there is no ground truth here, only two raw reviews with no
+    external arbiter of "same finding." Two runs disagreeing on file for the same real bug is
+    a live, observed case, not a hypothetical one.
+
+    `stable_id_agreement` is close to meaningless as specified today: SKILL.md/the schema
+    describe `stable_id` as "derived from root cause, file, symbol, and mechanism" but do not
+    mandate a canonical algorithm, so two independently-run agents computing "a hash" from
+    the same inputs are not guaranteed to produce the same bytes even when they agree on
+    every input. Confirmed empirically: two real reviews that agreed on the dominant finding's
+    location, severity-within-one-level, and recommendation still had 0% stable_id agreement.
+    Treat this field as informative only until a canonical algorithm is specified.
+    """
     a, b = first.get("findings", []), second.get("findings", [])
 
     def key(finding):
@@ -339,6 +380,14 @@ def stability(first, second):
         "severity_agreement": round(severity_agree / len(shared), 3) if shared else None,
         "priority_agreement": round(priority_agree / len(shared), 3) if shared else None,
         "stable_id_agreement": round(stable_id_agree / len(shared), 3) if shared else None,
+        "caveats": [
+            "overlap/only_in_a/only_in_b key on (file, category) and will undercount "
+            "agreement when two reviews cite the identical mechanism at different points "
+            "in one call chain; see this function's docstring.",
+            "stable_id_agreement is not yet a reliable signal: no canonical hashing "
+            "algorithm is mandated, so independently-run agents are not guaranteed to "
+            "produce matching ids even for the identical finding.",
+        ],
     }
 
 
