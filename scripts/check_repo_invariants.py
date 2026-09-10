@@ -599,6 +599,22 @@ def check_example_review_validates(review_schema):
                  f"{finding.get('root_cause_id')}, which no root_causes[] entry declares")
 
 
+def check_ground_truth_files_validate():
+    """Every committed annotation must validate, because a malformed one fails silently:
+    the scorer reads what it can and the metrics come out subtly wrong rather than absent."""
+    directory = ROOT / "benchmark" / "ground-truth"
+    if not directory.is_dir():
+        fail("benchmark/ground-truth/ does not exist")
+        return
+    for path in sorted(directory.glob("*.json")):
+        instance = _load_json(path, "ground truth")
+        if instance is None:
+            continue
+        errors = schema_lite.validate_file(instance, SCHEMAS / "ground-truth.schema.json")
+        for error in errors[:10]:
+            fail(f"{path.relative_to(ROOT)}: {error}")
+
+
 def check_schema_is_referenced():
     """A schema nothing points at is a schema nobody will keep current."""
     template = SKILL / "templates" / "review-report.md"
@@ -621,6 +637,7 @@ def main():
     check_version_coherence()
     _finding_schema, review_schema = check_finding_schema_agrees_with_skill()
     check_example_review_validates(review_schema)
+    check_ground_truth_files_validate()
     check_schema_is_referenced()
     if entries:
         check_tier_summary_counts(entries)

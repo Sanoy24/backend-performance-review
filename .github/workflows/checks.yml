@@ -48,7 +48,7 @@ jobs:
           python -I skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null
 
   detection-regressions:
-    name: Detection regression fixtures (docs/evaluation.md §4)
+    name: Regression fixtures and scoring harness (docs/evaluation.md §4)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,5 +57,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run the false-positive/false-negative fixture corpus
+      # Covers the detection false-positive/false-negative corpus, the secret-safety and
+      # hostile-repository fixtures, and the benchmark scoring harness. No pip install step
+      # exists here either: every script under test is standard-library only.
+      - name: Run the fixture corpus and the scoring harness tests
         run: python -m unittest discover -s tests -v
+
+      - name: Verify the scoring harness runs on the committed example review
+        run: |
+          python benchmark/scoring/score.py score \
+            --truth tests/fixtures/example-ground-truth.json \
+            --review docs/examples/review.example.json \
+            --json > /dev/null

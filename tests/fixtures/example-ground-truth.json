@@ -1,0 +1,46 @@
+{
+  "repository": {
+    "name": "example-orders-service",
+    "commit": "0000000000000000000000000000000000000000",
+    "language": "Python",
+    "datastore": "PostgreSQL",
+    "workload": "Unknown — the example review deliberately proceeds without one"
+  },
+  "annotation": {
+    "annotated_by": "repository maintainers",
+    "method": "injected-defect",
+    "notes": "A test fixture, not a corpus entry. It exists so CI can prove the scorer runs end to end against the committed example review; real annotations live in benchmark/ground-truth/. The severity here matches the example exactly, so any drift between the schema, the example, and the scorer shows up as a failing metric rather than as silence."
+  },
+  "expected": [
+    {
+      "id": "GT-001",
+      "location": {
+        "file": "src/orders/service.py",
+        "symbol": "OrderService.list"
+      },
+      "category": "data-access",
+      "also_acceptable_categories": ["io"],
+      "mechanism": "The order listing issues one datastore query per order rather than one query for all of them, so query count grows linearly with rows returned.",
+      "severity": "High",
+      "max_confidence": "High",
+      "expected_recommendation": ["batch", "single query"],
+      "forbidden_recommendation": ["redis", "add a cache"]
+    }
+  ],
+  "acceptable": [
+    {
+      "id": "GT-A01",
+      "location": { "file": "src/orders/serializers.py" },
+      "category": "serialization",
+      "mechanism": "A formatting helper is rebuilt on every call rather than reused. Real, but small next to the datastore work on the same path — a review may report it or discard it."
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "GT-F01",
+      "location": { "file": "src/orders/models.py" },
+      "category": "data-access",
+      "why_not": "Adding an index on the status column would add write cost with no read benefit: no query in the reviewed code filters on that column. Recommending it is the kind of suggestion that looks productive and is not."
+    }
+  ]
+}
