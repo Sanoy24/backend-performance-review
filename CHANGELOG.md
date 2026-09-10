@@ -37,8 +37,243 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Changed — BREAKING
+
+- **The finding format gains four required fields, and the report gains a machine-readable
+  form.** Both are breaking under this project's own definition: the finding schema changes,
+  and the report's section structure changes. A report issued before this change is still
+  readable, but it is not comparable field-by-field against one issued after it, and it
+  cannot be scored by the tooling this unlocks.
+
+  New required fields on every finding:
+
+  | Field | Why it is required rather than optional |
+  |:--|:--|
+  | `Root cause` | Merging symptoms into one finding was already mandatory (`methodology/bottleneck-analysis.md` §2). Recording *which* cause makes the merge auditable instead of merely asserted, and makes "three symptoms, one problem" legible in the output |
+  | `Counter-evidence` | The review already applied an alternative-explanation test and an intent test while discarding candidates, but left no trace of either, so a reader could not tell a candidate that survived scrutiny from one that was never scrutinized. An empty list now positively asserts that a search happened and found nothing |
+  | `Why this might not matter` | Required at Medium severity and above, where a false positive costs the most. Stating the strongest case against a finding is the cheapest defense against manufacturing one |
+  | `Alternatives` | Required at Medium severity and above. Guards the failure where the first plausible fix is the only one considered — usually the one that masks work rather than removing it |
+
+  Migration: reports produced under the previous format remain valid as documents; re-run
+  the review to produce a comparable one. Findings carried forward by hand need the four
+  fields added, and `Counter-evidence` should be filled in honestly rather than backfilled
+  as empty.
+
 ### Added
 
+- **`schemas/finding.schema.json` and `schemas/review.schema.json`** — the report's
+  machine-readable form. The Markdown report stays the primary artifact and stays
+  authoritative; the JSON is the same content in a shape that can be diffed, scored, and
+  compared across runs. Almost every measurement this project wants — precision and recall,
+  severity and confidence calibration, run-to-run stability, historical comparison,
+  cross-model comparison — was blocked on having a stable record to compare, which is why
+  this landed before the benchmark corpus rather than after it.
+  - Carries reproducibility metadata (commit, skill version, detector version, model), a
+    completeness block, an assumption ledger, and root-cause grouping.
+  - `stable_id` is derived from root cause, file, enclosing symbol, and mechanism — never
+    from a line number — so the same unfixed problem keeps its identity across a refactor.
+  - The severity/confidence → priority matrix is deliberately **not** duplicated into the
+    schema. It stays published in `SKILL.md` alone and is enforced from there, so the matrix
+    exists in one authoritative place rather than three.
+- **`scripts/json_schema_lite.py`** — a small standard-library JSON Schema validator
+  covering only the subset these schemas use. Chosen over a `jsonschema` dependency so that
+  `python scripts/check_repo_invariants.py` still works on a clean checkout with nothing
+  installed, matching the constraint the bundled detector already lives under. Extending the
+  schemas may mean extending this reader — the same trade `detect_stack.py` documents for
+  its YAML subset.
+- **`docs/examples/review.example.json`** — a worked, schema-valid review. It lives in
+  `docs/examples/` so it can never be loaded as a reference (`docs/architecture.md` §9), and
+  it contains no invented runtime numbers: the finding is scored on growth derived from the
+  code, its validation states a direction rather than a magnitude, and one of its
+  discarded candidates is an index that would have added write cost for no read benefit.
+- **`docs/review-response.md`** — a disposition for each of the 140 recommendations in an
+  external review of this project: adopted, already present, reframed, deferred, or
+  declined, each with a reason. The largest category is work that already existed under
+  another name, which is itself worth recording.
+- **Counter-evidence is now a named, recorded step** (`methodology/bottleneck-analysis.md`
+  §4). The discipline partly existed already — §3's "alternative-explanation test" and
+  "intent test" are counter-evidence search — but it happened invisibly and left no trace,
+  so a reader could not distinguish a finding that survived scrutiny from one that was never
+  scrutinized. It is now explicit about what to look for per hypothesis type, and about what
+  must change when something turns up: counter-evidence that *bounds* a problem reduces
+  **Severity**, while counter-evidence that *obscures* it reduces **Confidence**. The two
+  are not interchangeable, and collapsing them loses the distinction the whole two-axis
+  rubric rests on.
+- **Detection and recommendation are now explicitly separated**
+  (`methodology/bottleneck-analysis.md` §5). Deciding the answer is a cache makes
+  cache-shaped evidence easier to find, and quietly relaxes the counter-evidence search
+  because the conclusion is already comfortable. Naming a technology while establishing a
+  mechanism is now called out as a recommendation wearing a finding's clothes.
+- **Findings that interact are scored on the combination**
+  (`methodology/bottleneck-analysis.md` §2). Three independently moderate issues sharing one
+  constrained resource can be severe together. Guarded against inflation: the interaction has
+  to be mechanical and stateable, not "both are about the database."
+- **The workload model gains `DERIVED` and `MEASURED`** (`methodology/workload.md` §3),
+  completing the assumption ledger. It already separated known from assumed from unknown;
+  arithmetic previously had nowhere to go and could pass for a fact. `DERIVED` must show its
+  inputs, and an empty `MEASURED` list is now stated rather than implied — it is the line
+  that explains why almost nothing in a static review is `Confirmed`.
+- **The workload interview is now adaptive** (`methodology/workload.md` §2). The
+  seven-question cap stays; *which* seven is now driven by where Phase 1 found risk, and
+  ranked by how much the answer would move the ranking rather than by how natural the
+  question is to ask. Reviews now also close with the specific unanswered questions that
+  would change the result, which is more useful than "more information is needed".
+- **Review completeness** (report template §2). Repository coverage, critical paths analyzed
+  against identified, technology support, runtime evidence, and an overall **review
+  confidence that is explicitly not finding confidence** — every finding can be `High` while
+  the review is `Low`, which means "what I looked at, I am sure about; I did not look at
+  much." Unknowns are now split by cause: no evidence existing is a gap the user can close,
+  an unsupported technology is a gap in this skill, and presenting them identically misleads.
+  Without this block, a zero-finding result reads as "everything is healthy" — a much
+  stronger claim than the one the review is entitled to make.
+- **Investigation economy** (`methodology/discovery.md` §5). How much to spend on a candidate
+  by what it could be worth, expanding on evidence rather than on a fixed file budget, asking
+  before recommending an expensive diagnostic, and — the part most often missing — explicit
+  conditions under which stopping is correct and complete. Continuing until something turns
+  up is how a review manufactures findings.
+- **Precision and recall are traded off per priority band** (`rubrics.md` §5). High precision
+  at P0/P1, where a wrong finding costs a team a day and costs the review its credibility for
+  everything after it; recall acceptable at P3. Uncertainty now explicitly pushes a candidate
+  *down* a band, never up, and inflating severity to get something read is named as
+  destroying the only thing that makes the scale useful.
+
+### Added — change-scoped review as the flagship
+
+- **A derived verdict** — `PASS` / `WARN` / `FAIL` / `UNKNOWN` — and
+  `methodology/change-scoped.md`, which the mode previously lacked entirely despite the
+  README calling it the mode most worth running continuously. Like priority, the verdict is
+  read off a table rather than chosen: `FAIL` requires a `High`/`Critical`-severity finding
+  at `High` or `Confirmed` confidence, so a hypothesis cannot block a merge.
+  - **`UNKNOWN` never collapses into `PASS`.** They are different claims — "I looked and
+    found nothing" versus "I could not look" — and conflating them converts a gap in the
+    review into a false assurance the reader has no way to detect. `UNKNOWN` outranks
+    findings, and never fails a job under any setting, because a change the review could not
+    analyze is not the author's fault.
+  - The file also covers the expansion boundary (stop when expansion stops touching the
+    change), and **crediting fixes rather than re-flagging them** — a diff that removes an
+    N+1 still contains the N+1 in its removed lines, and reading direction before scoring is
+    the difference between a useful check and one teams route around.
+- **Repository performance policy** (`.performance-policy.yml`), with one rule kept
+  deliberately load-bearing: **a policy violation is not a measured performance problem**,
+  and the two are never reported as the same thing. One is a fact about a limit the team
+  chose; the other is a claim about production behavior. Conflating them lets an arbitrary
+  threshold read as a measurement. A budget expressed against a baseline nobody measured is
+  reported as `not-evaluable` — never as met. SLOs and business criticality enter here too,
+  affecting sequencing only, never severity.
+- **`scripts/to_sarif.py`** — SARIF 2.1.0 output, with three deliberate mappings:
+  - **`level` comes from priority, not severity**, because SARIF has one axis and this
+    methodology has two. Mapping severity alone would render a `High`/`Low`-confidence
+    hypothesis as an `error` beside a confirmed regression.
+  - **`stable_id` becomes `partialFingerprints`**, so a GitHub alert survives the code moving.
+    A line-number fingerprint produces a fresh alert every time someone adds an import above.
+  - **Adjacent `SEC-`/`COR-`/`MAINT-` findings are excluded by default.** This project has no
+    security methodology, and publishing them into code scanning would present them as the
+    output of a scanner it is not — a team could read a clean dashboard as evidence of a
+    security review that never happened. `--include-adjacent` exists, and still emits them at
+    `note` regardless of stated risk.
+- **`scripts/validate_review.py`** — schema validation plus the cross-field rules a schema
+  cannot express: priority against the published matrix, root-cause references, duplicate
+  ids, and the rule that `Confirmed` confidence requires cited runtime evidence a review
+  claiming none cannot have.
+- **`scripts/pr_comment.py`** — a compact comment that keeps what compression usually loses:
+  each finding's `Conditions`, its "why this might not matter", a coverage table so a `PASS`
+  can be read for what it is, and policy violations visually separated from findings. Zero
+  findings renders as "nothing material was found in what was reviewed" rather than as a
+  clean bill of health.
+- **`action.yml`** — a composite GitHub Action, plus [docs/github-action.md](docs/github-action.md).
+  It does the deterministic half — validate, convert, comment, surface the verdict — and
+  deliberately **does not run the review**, which needs a model, credentials, and a budget
+  that belong to the caller. `fail-on` defaults to `never`: a static review with no runtime
+  evidence is advice, and a check that blocks a release on its first false positive gets
+  marked non-required and then deleted. The documented path is to earn the gate.
+  - Two bugs were found and fixed before this shipped, both from GitHub running `shell: bash`
+    with `set -e`: a `[ test ] && append` argument builder aborted the step whenever the flag
+    was off, and the verdict gate failed the job precisely when the verdict was *acceptable*.
+    The second is the kind of bug that looks like the check working.
+- **Sixteen tests for the publishing path**, covering the ways a verdict can lie, fingerprint
+  stability across a moved finding, zero findings producing valid empty SARIF, and adjacent
+  findings staying out of the security dashboard.
+
+### Added — measurement
+
+- **`benchmark/scoring/score.py`** — scores a machine-readable review against expert ground
+  truth. Standard library only. It reports precision, recall, and F1 **per category** (a
+  single blended number hides "good at N+1, poor at concurrency"), severity calibration as
+  exact / within-one / large disagreement, confidence calibration as claimed-versus-actually-
+  correct, confidence-ceiling violations, recommendation accuracy **tracked separately from
+  finding accuracy**, and restraint failures. A `stability` subcommand turns the hand-diffing
+  in `docs/evaluation.md` §3.18 and §3.21 into a computed overlap figure, so the remaining
+  six repositories can be checked cheaply rather than by eye.
+- **`schemas/ground-truth.schema.json`** — the annotation format, with **three buckets rather
+  than one list**, which is the part that matters:
+  - `expected` — must be found; a miss is a false negative.
+  - `acceptable` — real but not required; scored neither way. Without this, a review would be
+    penalized for finding something real the annotator overlooked, which would train the
+    corpus toward the annotator's blind spots.
+  - `forbidden` — must **not** be reported, each with a required `why_not` stated as a fact
+    about the code. This is where precision is actually measured, and **an empty `expected`
+    with a populated `forbidden` is how a healthy repository gets written down** — the case
+    `docs/evaluation.md` §3.7 records as never cleanly obtained across four repositories, and
+    the one this project's central claim rests on.
+- **`benchmark/README.md`** — what to annotate first and why, in priority order. The
+  zero-findings repository is first. `benchmark/ground-truth/` ships empty on purpose:
+  annotations are the expensive part, and committing placeholder ones would put fabricated
+  truth into a repository whose first rule is not to fabricate.
+- **Twenty-nine tests for the harness**, built the way the invariant checker was — by trying
+  to fool it. They cover a review that misses everything, one that manufactures a finding on
+  a healthy repository, one that finds the right problem and recommends Redis anyway, one
+  that calls a Medium issue Critical, and one that claims `Confirmed` with no runtime
+  artifact. One of them found a real bug in the matcher before it was ever used: a basename
+  fallback matched `orders/service.py` against `users/service.py`. Matching is now
+  suffix-only, because a wrong match is silent while an unmatched annotation prints a MISSED
+  line somebody can correct.
+
+### Added — detection
+
+- **Four-level evidence strength on every detection** (`detect_stack.py`). The script already
+  graded evidence two ways; `direct` / `indirect` / `weak` / `ambiguous` makes the
+  distinction that actually matters visible: a file that *declares* an engine
+  (`schema.prisma`'s `provider`, `knexfile.js`'s `client`, a connection scheme in a manifest)
+  versus a dependency that merely *implies* one. A declared driver is not proof the datastore
+  is reached at runtime, and the review should confirm an indirect match against a real
+  import before believing it. Each signal also carries a deterministic `confidence`, capped
+  below 1.0 — detection is evidence for a human to verify, not a conclusion.
+  - `ambiguous` covers the specific class of bug behavioral evaluation found twice: a short,
+    collision-prone token matching only inside a lockfile, where base64 hashes live.
+  - The older `weak_evidence` boolean is unchanged and still emitted, so nothing consuming
+    it breaks.
+  - One bug in the grading was caught by running the detector against this repository: a
+    connection-scheme token was graded `direct` even when its only match was in an arbitrary
+    YAML file, promoting a documentation mention to the grade of a real datasource
+    declaration. Fixed, with a regression test.
+- **Service topology for monorepos** (`detect_stack.py`, `methodology/discovery.md` §2). A
+  repository with a runtime manifest in more than one subdirectory is not one stack, and the
+  flattened union across all of them describes no single service accurately — it routes
+  reference files for engines half the services never touch, and scopes findings to "the
+  repository" when the reader needs to know which service to fix. `services[]` now carries
+  per-service detection and its own `references_to_load`; `workspace_markers` reports
+  `pnpm-workspace.yaml`, `lerna.json`, `turbo.json`, `nx.json`, `go.work`, and `rush.json`.
+  Nested manifests collapse into their parent service rather than becoming peers.
+- **Nineteen new regression tests**, extending the existing corpus rather than starting a
+  parallel one:
+  - the evidence grades, including the grading bug above;
+  - service topology, including nesting and the single-service case;
+  - **secret safety, now automated** — `docs/evaluation.md` §2 calls this the check worth
+    re-running on every scanner change, and it was previously manual. A real `.env`
+    containing a real connection string is scanned, reported present, and proven never read;
+  - **hostile repository content** — a README carrying prompt-injection text must produce
+    byte-identical detection to one without it, an injected manifest comment must not
+    suppress a signal, and a planted `registry.yaml` must not reroute reference loading.
+    Repository content is data, never instructions; for a skill pointed at arbitrary
+    third-party code, that is a security property and now has tests.
+- Three new repository invariants, all mutation-tested before being trusted, per the
+  practice `docs/evaluation.md` §1 sets:
+  - the schema's `severity`, `confidence`, `priority`, and `category` enums must match
+    `SKILL.md` in both directions, so a rubric edit cannot silently leave the schema behind;
+  - the worked example must validate against the schema, and every finding in it must carry
+    the priority the published matrix derives;
+  - the report template must reference the schema, since a schema nothing points at is one
+    nobody will keep current.
 - `sqs` and `task-queue` promoted to `deep` tier — the fourth batch of the 1.0.0 goal, and
   the point at which **no signal in the registry is `generic` tier any more**:
   - **`technology/sqs.md`** — visibility timeout as the specific lease mechanism behind
