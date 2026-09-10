@@ -69,3 +69,13 @@ jobs:
             --truth tests/fixtures/example-ground-truth.json \
             --review docs/examples/review.example.json \
             --json > /dev/null
+
+      # The publishing path runs on every pull request once the action is in use, so a
+      # break here is seen by users before it is seen by us.
+      - name: Verify the publishing path end to end
+        run: |
+          python scripts/validate_review.py --review docs/examples/review.example.json
+          python scripts/to_sarif.py --review docs/examples/review.example.json \
+            --strict-verdict > /tmp/review.sarif
+          python -c "import json; d=json.load(open('/tmp/review.sarif')); assert d['version']=='2.1.0'; assert d['runs']"
+          python scripts/pr_comment.py --review docs/examples/review.example.json > /dev/null

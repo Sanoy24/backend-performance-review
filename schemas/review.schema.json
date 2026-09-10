@@ -280,6 +280,48 @@
       "type": "array",
       "items": { "$ref": "finding.schema.json" }
     },
+    "improvements": {
+      "description": "Performance problems this change removes or reduces. Change-scoped reviews must credit these rather than re-flagging a pattern that appears only in the diff's removed lines — reading the direction of a change before scoring it is the difference between a useful check and one teams route around.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "status"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["resolved", "partially-resolved", "improved"]
+          },
+          "location": { "type": "string" },
+          "remaining_concern": {
+            "description": "Required in spirit for partially-resolved: what the change did not fix.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "policy_violations": {
+      "description": "Breaches of a policy the repository declares for itself (.performance-policy.yml). Deliberately NOT findings, and never scored on the performance rubric: a policy violation is a fact about a rule the team chose, while a finding is a claim about performance backed by evidence. Conflating them lets an arbitrary threshold inflate a severity, and lets a team's own limit masquerade as a measurement.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "observed", "status"],
+        "properties": {
+          "rule": { "type": "string", "minLength": 1 },
+          "declared": { "type": "string" },
+          "observed": { "type": "string", "minLength": 1 },
+          "status": {
+            "description": "`not-evaluable` is the honest answer for a budget expressed against a baseline nobody measured — silently treating it as met would be a fabrication.",
+            "type": "string",
+            "enum": ["violated", "met", "not-evaluable"]
+          },
+          "location": { "type": "string" },
+          "why_not_evaluable": { "type": "string" }
+        }
+      }
+    },
     "considered_not_reported": {
       "description": "Candidates examined and discarded, with the reason. Evidence that the review had a filter — and the honest home for \"theoretically inefficient, not worth optimizing\".",
       "type": "array",

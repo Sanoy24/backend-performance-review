@@ -82,6 +82,12 @@ worsens, or sits directly adjacent to.
 Choose change-scoped when the user names a diff, branch, PR, or commit range, or asks
 "does this change hurt performance". Otherwise full. If ambiguous, ask once.
 
+Change-scoped reviews end in one derived verdict — `PASS`, `WARN`, `FAIL`, or `UNKNOWN`.
+`UNKNOWN` means the change could not be analyzed properly and **never collapses into
+`PASS`**: one says "I looked and found nothing", the other says "I could not look".
+Load `methodology/change-scoped.md` for the verdict rules, the expansion boundary, and
+how to handle a repository's `.performance-policy.yml`.
+
 ## Workflow
 
 ### Phase 0 — Scope and safety
