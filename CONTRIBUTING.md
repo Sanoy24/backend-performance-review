@@ -29,11 +29,14 @@ In rough order:
 
 This project uses a two-branch model: **`develop` is where work lands, `main` is what has
 been released.** Both are protected; every change reaches either one through a pull request.
+`main` is the GitHub default branch — what a fresh clone or visitor sees is always the last
+release, never in-progress work — so opening a pull request means explicitly switching the
+base branch to `develop`; GitHub will not default it for you.
 
 | Branch | What it holds | What targets it |
 |:--|:--|:--|
-| `develop` | Current state of work. The default branch — always green, not necessarily released | Every `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, `test/` branch |
-| `main` | The last released state, and nothing else. Every tag is cut from here | A release PR from `develop`, or a `hotfix/` branch |
+| `develop` | Current state of work, always green, not necessarily released | Every `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, `test/` branch |
+| `main` | The GitHub default branch. The last released state, and nothing else. Every tag is cut from here | A release PR from `develop`, or a `hotfix/` branch |
 
 ### The model
 
@@ -42,12 +45,14 @@ been released.** Both are protected; every change reaches either one through a p
 2. Commit there. Prefixes follow [Conventional Commits](https://www.conventionalcommits.org/):
    `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`. Keep the first line under about 70
    characters; put the "why," not just the "what," in the body.
-3. Open a pull request into `develop` (the default target). Use the PR template — it mirrors
-   §6's review gates as checkboxes, so filling it in honestly is most of the review.
+3. Open a pull request and **set the base branch to `develop`** — since `main` is the GitHub
+   default, a new PR targets it unless you change it. Use the PR template — it mirrors §6's
+   review gates as checkboxes, so filling it in honestly is most of the review.
 4. Both `develop` and `main` are **protected branches**: no direct pushes, including from
-   repository admins. All five CI jobs in `.github/workflows/checks.yml` must pass before a PR
-   can merge, the branch must be up to date with its target first (GitHub will prompt to update
-   it), and history stays linear — merges are squashed or rebased, not merge-commits.
+   repository admins. All six CI jobs in `.github/workflows/checks.yml` (including the
+   `action.yml` composite-action self-test) must pass before a PR can merge, the branch must be
+   up to date with its target first (GitHub will prompt to update it), and history stays
+   linear — merges are squashed or rebased, not merge-commits.
 5. Delete the branch after merging. A merged feature branch has no further purpose, and letting
    branches accumulate makes it harder to tell what's actually in flight.
 
