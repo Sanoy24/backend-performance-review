@@ -37,6 +37,19 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Changed
+
+- **GitHub default branch flipped from `develop` to `main`.** With a tagged 1.0.0 release now
+  shipped, the project's primary audience is people installing or reading about the skill, not
+  contributing to it — a fresh clone or repository visitor should land on the last release, not
+  in-progress work. `CONTRIBUTING.md` §2 now says explicitly to switch a new pull request's
+  base branch to `develop`, since GitHub no longer defaults it there.
+- **The `action.yml` composite-action self-test added to both branches' required status
+  checks.** It existed and passed on every PR since the live-Action-dry-run work, but was never
+  wired in as a merge gate — a regression there could not actually have blocked a merge. Both
+  `develop` and `main` branch protection now require it, alongside the five checks that were
+  already required.
+
 ## [1.0.0] — 2026-09-10
 
 The 1.0.0 milestone: every detection signal at `deep` tier, and the measurement system this
