@@ -37,6 +37,8 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-09-11
+
 ### Changed
 
 - **GitHub default branch flipped from `develop` to `main`.** With a tagged 1.0.0 release now
