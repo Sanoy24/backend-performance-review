@@ -97,6 +97,36 @@ A number that looks precise and is invented is the single most damaging output a
 review can produce, because it is the one a reader cannot check and will act on. If the
 methodology earns its context cost anywhere, it should be here.
 
+### Two of these metrics are worth much more than the others
+
+**Added after the first control run landed, before any control output was scored or read in
+detail — and it weakens the treatment's case rather than strengthening it, which is why it is
+recorded here rather than quietly omitted.**
+
+Three of the six metrics above — citation, falsifiability, conditioned-recommendation — are
+**enforced by the schema** in the treatment arm. `conditions` may never be empty;
+`counter_evidence` is required; a finding without a location fails validation. A treatment
+review therefore scores near 1.0 on them by construction, and *that is not a discovery*. It
+measures compliance with a required format, not better reasoning.
+
+They are still worth reporting, because "the methodology makes the model state its conditions
+and its falsifiers" is a real claim about real output a reader benefits from — but it must be
+read as **the format working as designed**, never as evidence the model reasoned better.
+
+The two that are *not* schema-enforced carry the actual weight:
+
+| Metric | Why it is the real test |
+|:--|:--|
+| **Unsourced number rate** | Nothing in the schema stops a `problem` field from containing a fabricated "p99 of 800ms". Only Hard Rule 1 and the reasoning it induces do. A difference here is behavioural |
+| **Cargo-cult rate** | A finding can carry a full, valid `conditions` field and still recommend Redis reflexively. Schema validation passes either way |
+
+`forbidden` trap hits (§4) belong with these two for the same reason: no format check catches
+asserting something the source refutes.
+
+When results are written up, these must be separated visibly. A summary that averages a
+schema-enforced 1.0 into a headline number would overstate the finding, and would be exactly
+the kind of unsupported claim this project exists to refuse.
+
 ## 4. Secondary metrics — ground-truth-dependent, declared biased
 
 Reported for completeness, never as the headline.

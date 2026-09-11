@@ -30,6 +30,8 @@ the defect.
 
 import argparse
 import json
+import os
+import re
 import sys
 from collections import defaultdict
 
@@ -392,6 +394,197 @@ def stability(first, second):
 
 
 # --------------------------------------------------------------------------------------
+# Discipline metrics — computed without ground truth
+#
+# These exist for benchmark/ab-comparison.md. Comparing a methodology-guided review against
+# an unguided one cannot lean on precision and recall, because this corpus was partly derived
+# from methodology-guided output and is therefore biased toward it. Everything below is
+# computed from the review and the repository alone, so no annotation is involved and that
+# bias has nowhere to enter.
+#
+# Every metric flags candidates; none declares a violation. A number absent from the
+# repository may still be legitimate — supplied by the user, or shown as a derivation — and
+# only a reader can tell which. Same division of labour as the ground-truth corpus: the
+# machine finds, a human decides.
+# --------------------------------------------------------------------------------------
+
+DIGITS = re.compile(r"\d+(?:\.\d+)?")
+
+# Deliberately requires a unit. A bare integer in prose is usually a count, a version, or a
+# line number; it is the unit that turns a number into a performance claim a reader will act
+# on and cannot check.
+NUMBER_WITH_UNIT = re.compile(
+    r"\d+(?:[.,]\d+)?\s*"
+    r"(?:ms|milliseconds?|µs|us|microseconds?|ns|nanoseconds?"
+    r"|secs?|seconds?|mins?|minutes?|hours?"
+    r"|%|percent"
+    r"|[kmgt]i?b\b|bytes?"
+    r"|rps|qps|req/s|requests?/s(?:ec)?|ops/s|queries/s"
+    r"|x\b|×)",
+    re.IGNORECASE)
+
+RUNTIME_ARTIFACT = re.compile(
+    r"\b(?:profil\w+|pprof|explain|analyz\w+|benchmark\w*|trace[sd]?|tracing|span"
+    r"|flame\s?graph|metrics?|load[- ]test\w*|apm|dashboard|histogram)\b",
+    re.IGNORECASE)
+
+# The list SKILL.md Hard Rule 5 names by name.
+CARGO_CULT = re.compile(
+    r"\b(?:cach(?:e|es|ing)|redis|memcached"
+    r"|add(?:ing)?\s+(?:an?\s+)?index|indexes|indices"
+    r"|async|asynchronous|parallelis\w+|parallelize"
+    r"|shard(?:ing|ed)?|denormali[sz]\w+|microservices?"
+    r"|more\s+(?:servers|instances|replicas)|scale\s+(?:out|horizontally))\b",
+    re.IGNORECASE)
+
+TEXT_FIELDS = ("problem", "evidence", "impact", "conditions", "recommendation",
+               "trade_offs", "validation", "why_this_might_not_matter")
+
+SKIP_DIRS = {".git", "node_modules", "vendor", "dist", "build", "target",
+             ".venv", "venv", "__pycache__", ".idea", ".gradle", ".next"}
+
+MAX_SCANNED_FILE_BYTES = 2_000_000
+
+
+def _strings(value):
+    """Every string anywhere inside a schema value, which may be str, list, or object."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            for found in _strings(item):
+                yield found
+    elif isinstance(value, dict):
+        for item in value.values():
+            for found in _strings(item):
+                yield found
+
+
+def finding_text(finding, fields=TEXT_FIELDS):
+    parts = []
+    for field in fields:
+        parts.extend(_strings(finding.get(field)))
+    return "\n".join(parts)
+
+
+def repo_number_tokens(repo_root):
+    """Every numeric literal appearing anywhere in the repository's text files.
+
+    Used to ask one question of each number in a review: does this value exist in the code at
+    all? The test is deliberately generous — a match anywhere in any file counts — so it
+    under-flags rather than over-flags. A "50" from an unrelated port number will absolve a
+    fabricated "50%". That asymmetry is the right one: everything this flags is worth a
+    human's attention, and the count is a floor, never a total.
+    """
+    tokens = set()
+    root = os.path.abspath(repo_root)
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for name in filenames:
+            path = os.path.join(dirpath, name)
+            try:
+                if os.path.getsize(path) > MAX_SCANNED_FILE_BYTES:
+                    continue
+                with open(path, encoding="utf-8", errors="ignore") as handle:
+                    text = handle.read()
+            except OSError:
+                continue
+            tokens.update(DIGITS.findall(text))
+    return tokens
+
+
+def _rate(count, total):
+    return None if not total else round(count / float(total), 3)
+
+
+def discipline(review, repo_tokens=None):
+    """Metrics that need no ground truth, only the review and (optionally) the repository."""
+    findings = review.get("findings") or []
+    total = len(findings)
+
+    cited, falsifiable, conditioned, cargo_cult, ceiling, unsourced = [], [], [], [], [], []
+
+    for finding in findings:
+        fid = finding.get("id")
+
+        if (finding.get("location") or {}).get("file"):
+            cited.append(fid)
+
+        if str(finding.get("why_this_might_not_matter") or "").strip() \
+                or finding.get("counter_evidence"):
+            falsifiable.append(fid)
+
+        has_conditions = bool(str(finding.get("conditions") or "").strip())
+        if has_conditions:
+            conditioned.append(fid)
+
+        recommendation = "\n".join(_strings(finding.get("recommendation")))
+        if CARGO_CULT.search(recommendation) and not has_conditions:
+            cargo_cult.append({"id": fid, "recommendation": recommendation[:200]})
+
+        if finding.get("confidence") == "Confirmed" \
+                and not RUNTIME_ARTIFACT.search(finding_text(finding, ("evidence",))):
+            ceiling.append(fid)
+
+        if repo_tokens is not None:
+            claims = []
+            for match in NUMBER_WITH_UNIT.finditer(finding_text(finding)):
+                literal = DIGITS.search(match.group(0))
+                if literal and literal.group(0).replace(",", "") not in repo_tokens:
+                    claims.append(match.group(0).strip())
+            if claims:
+                unsourced.append({"id": fid, "claims": sorted(set(claims))})
+
+    result = {
+        "findings": total,
+        "rates": {
+            "citation": _rate(len(cited), total),
+            "falsifiability": _rate(len(falsifiable), total),
+            "conditioned_recommendation": _rate(len(conditioned), total),
+            "cargo_cult": _rate(len(cargo_cult), total),
+            "confidence_ceiling_violation": _rate(len(ceiling), total),
+        },
+        "flagged": {
+            "uncited": [f.get("id") for f in findings
+                        if not (f.get("location") or {}).get("file")],
+            "unfalsifiable": [f.get("id") for f in findings if f.get("id") not in falsifiable],
+            "unconditioned": [f.get("id") for f in findings if f.get("id") not in conditioned],
+            "cargo_cult": cargo_cult,
+            "confidence_ceiling": ceiling,
+        },
+        "caveats": [
+            "Every entry is a candidate for adjudication, not a proven violation. The "
+            "machine finds; a human decides, exactly as with the ground-truth corpus.",
+            "cargo_cult flags a named remedy offered with no stated workload condition. A "
+            "remedy that names its conditions is not flagged, however wrong it may be — "
+            "this measures whether Hard Rule 5 was followed, not whether the fix is right.",
+        ],
+    }
+
+    if repo_tokens is None:
+        result["unsourced_numbers"] = None
+        result["rates"]["unsourced_number"] = None
+        result["caveats"].append(
+            "Unsourced-number detection was skipped: no --repo was given, so no numeric "
+            "claim could be checked against the code.")
+    else:
+        result["unsourced_numbers"] = unsourced
+        result["rates"]["unsourced_number"] = _rate(len(unsourced), total)
+        result["caveats"].append(
+            "unsourced_number is a floor, not a total. A number counts as sourced if it "
+            "appears anywhere in any repository file, so an unrelated coincidence absolves "
+            "a fabricated figure. It under-reports by construction.")
+
+    if not total:
+        result["caveats"].append(
+            "Zero findings: every rate is null rather than zero. A review that reported "
+            "nothing has no discipline rate to measure, and scoring it 0.0 would read as a "
+            "failure when it may be the correct answer.")
+
+    return result
+
+
+# --------------------------------------------------------------------------------------
 
 def load(path):
     with open(path, encoding="utf-8") as handle:
@@ -480,11 +673,24 @@ def main(argv=None):
     comparer.add_argument("--review", required=True, action="append", dest="reviews",
                           help="pass twice")
 
+    disciplined = subparsers.add_parser(
+        "discipline",
+        help="ground-truth-independent metrics (see benchmark/ab-comparison.md)")
+    disciplined.add_argument("--review", required=True)
+    disciplined.add_argument(
+        "--repo",
+        help="repository the review describes; without it, numeric claims are not checked")
+
     args = parser.parse_args(argv)
 
     if args.command == "score":
         result = score(load(args.truth), load(args.review))
         print(json.dumps(result, indent=2) if args.json else render(result))
+        return 0
+
+    if args.command == "discipline":
+        tokens = repo_number_tokens(args.repo) if args.repo else None
+        print(json.dumps(discipline(load(args.review), tokens), indent=2))
         return 0
 
     if len(args.reviews) != 2:
