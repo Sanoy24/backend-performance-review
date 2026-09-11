@@ -37,6 +37,13 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-09-10
+
+The 1.0.0 milestone: every detection signal at `deep` tier, and the measurement system this
+project's methodology needed to be more than an unverified pile of advice — a machine-readable
+finding schema, a scoring harness, ground truth from real independently-run reviews, and a
+GitHub Action exercised end to end against real infrastructure rather than asserted.
+
 ### Added — the first real validation run, and two harness bugs it found
 
 The measurement system's first genuine end-to-end test against real, live data rather than
