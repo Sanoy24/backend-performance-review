@@ -371,3 +371,117 @@ class ShippedExampleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DisciplineMetricTests(unittest.TestCase):
+    """The ground-truth-independent metrics behind benchmark/ab-comparison.md.
+
+    These decide an A/B comparison this project has a stake in the outcome of, so each one is
+    tested by handing it output it should flag and output it should not. A metric that only
+    ever agrees with its author is not measurement.
+    """
+
+    def test_citation_rate_counts_findings_naming_a_file(self):
+        review = {"findings": [finding(), finding(id="PERF-002", location={})]}
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["citation"], 0.5)
+        self.assertEqual(result["flagged"]["uncited"], ["PERF-002"])
+
+    def test_falsifiability_accepts_either_counter_evidence_or_why_not(self):
+        review = {"findings": [
+            finding(id="A", why_this_might_not_matter="Orders may be bounded in the low tens."),
+            finding(id="B", counter_evidence=["No memoization wraps the lookup."]),
+            finding(id="C"),
+        ]}
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["falsifiability"], round(2 / 3.0, 3))
+        self.assertEqual(result["flagged"]["unfalsifiable"], ["C"])
+
+    def test_an_empty_counter_evidence_array_does_not_count_as_falsifiable(self):
+        # An empty array is a positive assertion that a search found nothing, but this metric
+        # measures what a *reader* is given to argue with, and an empty array gives them none.
+        review = {"findings": [finding(counter_evidence=[])]}
+        self.assertEqual(scorer.discipline(review)["rates"]["falsifiability"], 0.0)
+
+    def test_conditioned_recommendation_rate_requires_non_empty_conditions(self):
+        review = {"findings": [
+            finding(id="A", conditions="Matters above a few dozen orders per request."),
+            finding(id="B", conditions="   "),
+        ]}
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["conditioned_recommendation"], 0.5)
+        self.assertEqual(result["flagged"]["unconditioned"], ["B"])
+
+    def test_cargo_cult_flags_a_named_remedy_with_no_stated_condition(self):
+        review = {"findings": [finding(recommendation="Add a Redis cache in front of it.")]}
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["cargo_cult"], 1.0)
+        self.assertEqual(result["flagged"]["cargo_cult"][0]["id"], "PERF-001")
+
+    def test_the_same_remedy_is_not_cargo_cult_once_conditions_are_stated(self):
+        # The rule being measured is Hard Rule 5 — state the workload the change pays off
+        # under — not "never say Redis". Conflating the two would make the metric dishonest.
+        review = {"findings": [finding(
+            recommendation="Add a Redis cache in front of it.",
+            conditions="Pays off above ~80% read ratio with tolerable staleness.")]}
+        self.assertEqual(scorer.discipline(review)["rates"]["cargo_cult"], 0.0)
+
+    def test_confirmed_without_a_runtime_artifact_is_flagged(self):
+        review = {"findings": [finding(
+            confidence="Confirmed", evidence="The loop issues a query per row.")]}
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["confidence_ceiling_violation"], 1.0)
+
+    def test_confirmed_citing_a_runtime_artifact_is_not_flagged(self):
+        review = {"findings": [finding(
+            confidence="Confirmed",
+            evidence="EXPLAIN ANALYZE on the endpoint shows 47 sequential scans.")]}
+        self.assertEqual(
+            scorer.discipline(review)["rates"]["confidence_ceiling_violation"], 0.0)
+
+    def test_a_number_absent_from_the_repository_is_flagged(self):
+        review = {"findings": [finding(problem="Tail latency reaches 800ms under load.")]}
+        result = scorer.discipline(review, repo_tokens={"84", "20"})
+        self.assertEqual(result["rates"]["unsourced_number"], 1.0)
+        self.assertEqual(result["unsourced_numbers"][0]["claims"], ["800ms"])
+
+    def test_a_number_present_in_the_repository_is_not_flagged(self):
+        review = {"findings": [finding(problem="The page size of 20 items bounds the loop.")]}
+        result = scorer.discipline(review, repo_tokens={"20"})
+        self.assertEqual(result["rates"]["unsourced_number"], 0.0)
+
+    def test_a_bare_number_with_no_unit_is_never_flagged(self):
+        # Line numbers, versions and counts are not performance claims. Flagging them would
+        # bury the one kind of number that actually misleads a reader.
+        review = {"findings": [finding(problem="Go 1.21 in a loop over 3 collections.")]}
+        result = scorer.discipline(review, repo_tokens=set())
+        self.assertEqual(result["rates"]["unsourced_number"], 0.0)
+
+    def test_numeric_checking_is_skipped_and_said_so_without_a_repo(self):
+        review = {"findings": [finding(problem="Tail latency reaches 800ms.")]}
+        result = scorer.discipline(review)
+        self.assertIsNone(result["rates"]["unsourced_number"])
+        self.assertIsNone(result["unsourced_numbers"])
+        self.assertTrue(any("skipped" in c for c in result["caveats"]))
+
+    def test_zero_findings_yields_null_rates_not_zero(self):
+        # A review that correctly reported nothing must not read as having failed every
+        # discipline check. Hard Rule 4 makes zero findings a success case.
+        result = scorer.discipline({"findings": []})
+        self.assertEqual(result["findings"], 0)
+        for name, value in result["rates"].items():
+            self.assertIsNone(value, "%s should be null on a zero-finding review" % name)
+
+    def test_nested_string_fields_are_searched_not_just_flat_ones(self):
+        review = {"findings": [finding(validation=["Measure p99; it sits near 800ms today."])]}
+        result = scorer.discipline(review, repo_tokens=set())
+        self.assertEqual(result["rates"]["unsourced_number"], 1.0)
+
+    def test_the_shipped_example_review_passes_every_discipline_check(self):
+        review = json.loads(EXAMPLE_REVIEW.read_text(encoding="utf-8"))
+        result = scorer.discipline(review)
+        self.assertEqual(result["rates"]["citation"], 1.0)
+        self.assertEqual(result["rates"]["conditioned_recommendation"], 1.0)
+        self.assertEqual(result["rates"]["falsifiability"], 1.0)
+        self.assertEqual(result["rates"]["cargo_cult"], 0.0)
+        self.assertEqual(result["rates"]["confidence_ceiling_violation"], 0.0)
