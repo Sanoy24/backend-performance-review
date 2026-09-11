@@ -17,8 +17,14 @@ This directory is the machinery for doing it by computation instead.
 ```
 benchmark/
 ├── ground-truth/     expert annotations, one file per repository at one commit
-└── scoring/score.py  precision, recall, calibration, restraint, stability
+├── scoring/score.py  precision, recall, calibration, restraint, stability
+├── ab-comparison.md  protocol: does the methodology beat asking the model plainly?
+└── ab-results/       results of that comparison, once adjudicated
 ```
+
+[`ab-comparison.md`](ab-comparison.md) is the one that answers the question the rest of this
+directory exists to serve. Precision and recall say how good a review is; only a control arm
+says whether the *methodology* is what made it good.
 
 `ground-truth/` is empty on purpose. Annotations are the expensive part, and committing
 placeholder ones would put fabricated truth into a repository whose first rule is not to

@@ -112,7 +112,7 @@ flagship · **G** deferred.
 | 71 | README positioning | Adopted — docs | Lead with the value, not the implementation |
 | 72 | 60-second demo | Adopted — docs | Genuinely missing and cheap |
 | 73 | Real-world case studies | Present (partial) | `docs/examples/` exists; measured outcomes need #19 |
-| 74 | Compare against baselines | Adopted — E | Straightforward once E2 exists; meaningless before |
+| 74 | Compare against baselines | **Done** | Run 2026-09-11: `benchmark/ab-comparison.md` (protocol, pre-registered) and `benchmark/ab-results/first-comparison.md` (results). Mixed — the methodology wins decisively on evidence discipline and loses on breadth |
 | 75 | Cross-model evaluation | Deferred — G | Each data point is a full manual review. Blocked on E2 |
 | 76 | Measure model independence | Deferred — G | Same as #75 |
 | 77 | Agent-performance benchmark | Deferred — G | The most ambitious item in the review; blocked on E in its entirety |

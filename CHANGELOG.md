@@ -37,6 +37,51 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-11
+
+### Added — the first evidence that the methodology does (and does not) help
+
+The question this project existed to answer and had never tested: does a strong model
+following the methodology beat the same model asked plainly? Answered once, on real data, with
+a **mixed** result reported in full rather than summarised into a win.
+
+- **`benchmark/ab-comparison.md`** — the protocol, committed *before* any control output was
+  read, so the metric definitions could not be fitted to the outcome. It states its threats up
+  front: the existing corpus is biased toward the treatment (it was partly derived from
+  skill-guided output), so recall is demoted to a secondary metric and the primary ones touch
+  no ground truth at all. It also fixes the reporting rule in advance — a null result gets the
+  same prominence a positive one would.
+- **An amendment that cuts against the treatment**, added on discovering it while running the
+  scorer against treatment output: three of the six primary metrics are *schema-enforced*, so a
+  treatment review scores ~1.0 on them by construction. That is the format working, not better
+  reasoning, and results must say so rather than averaging a guaranteed 1.0 into a headline.
+- **`score.py discipline`** — citation, falsifiability, conditioned-recommendation, cargo-cult,
+  confidence-ceiling and unsourced-number rates, computed from a review and the repository
+  alone. Flags candidates for adjudication rather than declaring violations, and documents
+  unsourced-number detection as a floor, since a coincidental match anywhere in the repo
+  absolves a fabricated figure. 15 new tests.
+- **`benchmark/ab-results/first-comparison.md`** — the result, with both arms' raw output
+  committed so every number can be recomputed. **What held up:** two independent control runs
+  each invented a *different* improvement percentage for the same recommendation (10–20% and
+  10–30% for `PrepareStmt`), plus an uncited "~60–100 ms" for bcrypt; the treatment invented
+  none. A generous search across ~1,700 lines of control output found exactly one
+  falsifier-adjacent sentence, and it was a global caveat, not a per-finding disclosure.
+  Control output carries no confidence or evidence-grade axis at all, so a code fact and an
+  unmeasured prediction are typeset identically under the same bold **Critical**.
+  **What did not:** breadth. The control reported ~2.5× more findings, avoided both `forbidden`
+  traps unaided — explicitly noticing the already-batched favorites path that `GT-F01` exists to
+  test — and found two real issues this project's own ground truth did not contain.
+- **`GT-A09` and `GT-A10`** in `gin-realworld.json`, both verified against source and both
+  marked as originating from the **control** arm: soft-deleted favorite/follow rows accumulate
+  because `FirstOrCreate` cannot see a tombstone, and `common.Bind` enforces `max=2048` only
+  after reading and decoding the whole request body. The corpus improved because of the arm
+  that was supposed to be the baseline, and that is recorded as evidence against its previous
+  completeness rather than quietly absorbed.
+
+The breadth gap is now the open defect: the output budget allows 10–15 detailed findings and
+these runs reported 4–8. If the methodology suppresses real findings, that is a fault in it,
+not restraint — see `docs/roadmap.md`.
+
 ## [1.0.1] — 2026-09-11
 
 ### Changed
