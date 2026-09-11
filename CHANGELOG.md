@@ -37,6 +37,8 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-11
+
 ### Added — the first evidence that the methodology does (and does not) help
 
 The question this project existed to answer and had never tested: does a strong model
