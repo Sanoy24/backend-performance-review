@@ -81,7 +81,7 @@ jobs:
           python scripts/pr_comment.py --review docs/examples/review.example.json > /dev/null
 
   action-self-test:
-    name: action.yml runs as an actual composite action (docs/roadmap.md — live Action dry run)
+    name: action.yml configuration and verdict matrix
     runs-on: ubuntu-latest
     # This is the gap the first real validation run named explicitly: every script action.yml
     # calls is exercised above, but the composite action file itself — its step sequencing,
@@ -94,23 +94,144 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run this repository's own action against its own example review
+      - name: Build valid full, FAIL, WARN, and UNKNOWN review fixtures
+        run: python tests/fixtures/build_action_reviews.py "$RUNNER_TEMP/action-reviews"
+
+      - name: Full review with advisory configuration succeeds
         id: self_test
         uses: ./
         with:
-          review: docs/examples/review.example.json
+          review: ${{ runner.temp }}/action-reviews/full.json
+          sarif-file: ${{ runner.temp }}/full.sarif
           comment: "false"
           upload-sarif: "false"
           fail-on: never
 
       - name: Confirm the action's own outputs are wired correctly
         run: |
-          test -f "${{ steps.self_test.outputs.sarif-file }}"
+          test -f "${{ runner.temp }}/full.sarif"
           python -c "
           import json
-          d = json.load(open('${{ steps.self_test.outputs.sarif-file }}'))
+          d = json.load(open('${{ runner.temp }}/full.sarif'))
           assert d['version'] == '2.1.0', 'action.yml produced non-SARIF-2.1.0 output'
           assert d['runs'], 'action.yml produced a SARIF file with no runs'
+          assert d['runs'][0]['properties']['verdict'] is None
           "
-          echo "action.yml outputs: verdict='${{ steps.self_test.outputs.verdict }}' findings='${{ steps.self_test.outputs.findings }}'"
+          test "${{ steps.self_test.outputs.verdict }}" = ""
           test "${{ steps.self_test.outputs.findings }}" = "1"
+
+      - name: FAIL remains advisory under fail-on=never
+        id: never_fail
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/fail.json
+          sarif-file: ${{ runner.temp }}/never-fail.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: never
+
+      - name: Confirm advisory FAIL outputs, SARIF, and comment agree
+        run: |
+          test "${{ steps.never_fail.outputs.verdict }}" = "FAIL"
+          python -c "import json; assert json.load(open('${{ runner.temp }}/never-fail.sarif'))['runs'][0]['properties']['verdict'] == 'FAIL'"
+          grep -F "Advisory. This check does not block merges." "$RUNNER_TEMP/perf-comment.md"
+
+      - name: FAIL is rejected under fail-on=fail
+        id: fail_fail
+        continue-on-error: true
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/fail.json
+          sarif-file: ${{ runner.temp }}/fail-fail.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: fail
+
+      - name: Confirm fail-on=fail rejected FAIL
+        run: test "${{ steps.fail_fail.outcome }}" = "failure"
+
+      - name: WARN succeeds under fail-on=fail
+        id: fail_warn
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/warn.json
+          sarif-file: ${{ runner.temp }}/fail-warn.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: fail
+
+      - name: Confirm WARN output and fail-only footer agree
+        run: |
+          test "${{ steps.fail_warn.outputs.verdict }}" = "WARN"
+          grep -F "Merge gate: FAIL blocks" "$RUNNER_TEMP/perf-comment.md"
+
+      - name: WARN is rejected under fail-on=warn
+        id: warn_warn
+        continue-on-error: true
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/warn.json
+          sarif-file: ${{ runner.temp }}/warn-warn.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: warn
+
+      - name: Confirm fail-on=warn rejected WARN
+        run: test "${{ steps.warn_warn.outcome }}" = "failure"
+
+      - name: UNKNOWN never blocks under fail-on=warn
+        id: warn_unknown
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/unknown.json
+          sarif-file: ${{ runner.temp }}/warn-unknown.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: warn
+
+      - name: Confirm UNKNOWN output, SARIF, and comment agree
+        run: |
+          test "${{ steps.warn_unknown.outputs.verdict }}" = "UNKNOWN"
+          python -c "import json; assert json.load(open('${{ runner.temp }}/warn-unknown.sarif'))['runs'][0]['properties']['verdict'] == 'UNKNOWN'"
+          grep -F "PASS and UNKNOWN do not" "$RUNNER_TEMP/perf-comment.md"
+
+      - name: Full mode never blocks under fail-on=warn
+        id: warn_full
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/full.json
+          sarif-file: ${{ runner.temp }}/warn-full.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: warn
+
+      - name: Confirm full-mode output and footer agree
+        run: |
+          test "${{ steps.warn_full.outputs.verdict }}" = ""
+          grep -F "configured warn gate does not apply" "$RUNNER_TEMP/perf-comment.md"
+
+      - name: Invalid fail-on is rejected
+        id: invalid_fail_on
+        continue-on-error: true
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/full.json
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: warning
+
+      - name: Confirm invalid fail-on failed closed
+        run: test "${{ steps.invalid_fail_on.outcome }}" = "failure"
+
+      - name: Invalid boolean-like input is rejected
+        id: invalid_boolean
+        continue-on-error: true
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/full.json
+          comment: truthy
+          upload-sarif: "false"
+          fail-on: never
+
+      - name: Confirm invalid boolean-like input failed closed
+        run: test "${{ steps.invalid_boolean.outcome }}" = "failure"

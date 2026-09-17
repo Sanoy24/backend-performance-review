@@ -39,6 +39,12 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- The composite Action now rejects unknown `fail-on` values and malformed boolean inputs
+  before doing any work, rather than letting typos silently disable uploads, comments, or a
+  requested merge gate. Inputs reach shell steps through environment variables; comment
+  updates match both the marker and `github-actions[bot]`; and comment footers describe the
+  configured gate accurately. Live Action CI covers `never`, `fail`, `warn`, invalid
+  configuration, full mode, and `UNKNOWN`.
 - Review validation is now the single publishability boundary shared by the CLI, SARIF,
   pull-request renderer, repository invariants, and composite Action. It rejects full-review
   verdicts, missing or contradictory change-scoped verdicts, unsupported schema/spec

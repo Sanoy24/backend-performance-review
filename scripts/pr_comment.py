@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 import validate_review
+import action_policy
 
 # The comment body carries em-dashes and arrows. Without this, writing it through a console
 # on a non-UTF-8 codepage mangles them, which is confusing to debug because the file the
@@ -64,7 +65,7 @@ def summary_line(review):
     return "%d %s: %s" % (len(findings), noun, ", ".join(parts))
 
 
-def render(review):
+def render(review, fail_on="never"):
     lines = [MARKER, "## Backend Performance Review", ""]
 
     verdict = validate_review.review_summary(review)["verdict"]
@@ -172,13 +173,15 @@ def render(review):
                      "Every claim is derived from the code._")
         lines.append("")
 
-    lines.append("<sub>Advisory. This check does not block merges.</sub>")
+    lines.append("<sub>%s</sub>" % action_policy.footer_for(review.get("mode"), fail_on))
     return "\n".join(lines).rstrip() + "\n"
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--review", required=True)
+    parser.add_argument("--fail-on", choices=action_policy.FAIL_ON_VALUES, default="never",
+                        help="configured Action gate, reflected accurately in the footer")
     args = parser.parse_args(argv)
     with open(args.review, encoding="utf-8") as handle:
         review = json.load(handle)
@@ -188,7 +191,7 @@ def main(argv=None):
         for problem in problems:
             print("  " + problem, file=sys.stderr)
         return 1
-    sys.stdout.write(render(review))
+    sys.stdout.write(render(review, args.fail_on))
     return 0
 
 
