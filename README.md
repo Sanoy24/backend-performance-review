@@ -21,64 +21,74 @@ Performance principle → observed implementation → technology manifestation
 
 ---
 
-## In sixty seconds
+## Quickstart: your first validated review
 
-> **You:** Review this PR for performance.
-
-> **Agent:** **WARN** — 1 finding: 1 P1.
->
-> **PERF-001 — P1 / High confidence**
-> Building the order list issues one datastore query per order rather than one query for
-> all of them. `src/orders/service.py:84`
->
-> **Matters when:** a single request returns more than a handful of orders. Request rate is
-> unknown, so this is scored on growth, not on measured load.
->
-> **May not matter if:** orders per user are bounded in the low tens by a product constraint
-> not visible in this code.
->
-> **Counter-evidence:** no memoization wraps the lookup; no pagination bounds the route; the
-> ORM is not configured for eager loading here.
->
-> **Suggested:** batch the related lookup into one query — preferred over caching, because it
-> removes the work rather than hiding it.
->
-> **Validation:** query count per request should fall from one-per-row to a constant.
-> *Falsifier: if query count drops and latency does not, this path was not query-bound and
-> the impact was overstated.*
->
-> *No runtime evidence was supplied, so nothing here is measured.*
-
-Fix the query, push, and the check re-runs:
-
-> **Agent:** **PASS** — no performance regression found in the changed paths.
-> 1 improvement: the per-row lookup is now a batched query.
-
-Note what is *absent*: no invented p99, no "add Redis", no severity without a workload to
-justify it, and an explicit statement of what would prove the finding wrong. Every one of
-those omissions is a rule, not an accident — see [Honest limitations](#honest-limitations).
-
-Run it on every pull request with the [GitHub Action](docs/github-action.md). Advisory by
-default; it does not block merges.
-
-Before SARIF, a pull-request comment, or an Action verdict is published, one validator is
-authoritative:
+This path works with any coding agent that can read a local file. Run these two commands from
+the backend repository you want reviewed:
 
 ```bash
-python scripts/validate_review.py --review review.json
+git clone https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
+python ../backend-performance-review/scripts/doctor.py --project . --skill-dir ../backend-performance-review/skills/backend-performance-review --output .
 ```
 
-It accepts schema version `1.0` with methodology spec `backend-performance-review/2.0`,
-derives change-scoped verdicts rather than trusting them, and checks cross-document rules
-such as root-cause links and runtime-evidence citations. The bundled stdlib-only schema
-reader intentionally supports just the subset used by `schemas/*.schema.json`: `type`,
-`enum`, `const`, `pattern`, RFC 3339 `date-time` format, length/numeric/item bounds,
-`uniqueItems`, object/array keywords, `contains`, local and sibling-file `$ref`, `$defs`,
-`allOf`, `anyOf`, and `if`/`then`/`else`. Every supported keyword has a contract test.
+The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
+prompt into your coding agent:
 
-The Action fails closed on invalid configuration: `fail-on` accepts only `never`, `fail`,
-or `warn`, and boolean inputs accept only `true` or `false`. Its pull-request footer states
-the configured gate, including that `UNKNOWN` never blocks and full reviews have no verdict.
+```text
+Follow ../backend-performance-review/skills/backend-performance-review/SKILL.md.
+Review this entire repository for backend performance problems. Do not modify application
+files. Ask the workload questions once, then continue even if I cannot answer them. Write the
+human report to performance-review.md and the machine-readable review to performance-review.json.
+```
+
+You should now have exactly two new review artifacts:
+
+- `performance-review.md` — the evidence, ranking, unknowns, recommendations, and validation
+  plan a person reads.
+- `performance-review.json` — the same review in the schema-validated form automation uses.
+
+Validate the result before trusting or publishing it:
+
+```bash
+python ../backend-performance-review/scripts/validate_review.py --review performance-review.json
+```
+
+Success looks like `performance-review.json is a valid review (N finding(s))`. The Markdown
+should name what was reviewed, distinguish known facts from assumptions, and include a
+validation path for every recommendation. Zero findings is valid; it must still state coverage
+and unknowns. No application file should have changed.
+
+Want automatic discovery, a personal installation, or a platform-specific path instead? Use
+the [installation guide](docs/installation.md). Want this on every pull request after the first
+review works? Add the [GitHub Action](docs/github-action.md), which is advisory by default.
+
+### From a weak finding to a useful one
+
+> **Weak:** “This looks like an N+1 query. Use eager loading.”
+
+> **Evidence-based:** **PERF-001 — P1 / High confidence.** `src/orders/service.py:84`
+> issues one related-row query inside the loop that builds `GET /orders`; no eager-loading or
+> memoization path was found. Query count therefore grows with returned rows. This matters when
+> one response contains more than a handful of orders, but request rate and the maximum page size
+> are unknown. Batch the lookup rather than add a cache. Validate by recording query count per
+> request before and after; **falsifier:** if query count falls and latency does not, this path was
+> not query-bound and the impact was overstated.
+
+The second version provides a location, mechanism, checked counter-evidence, workload condition,
+bounded recommendation, measurement, and falsifier. It invents no latency number.
+
+### If it does not work: two-minute troubleshooting
+
+| Symptom | Fastest check and fix |
+|:--|:--|
+| `python` is not found | Try `python3 --version`. Install Python 3.8+ if neither command works, then rerun the doctor. |
+| Doctor says “no installation found” | Rerun the exact quickstart command with `--skill-dir ../backend-performance-review/skills/backend-performance-review`; do not guess a hidden platform path. |
+| The agent does not start the methodology | Use the exact `Follow ../backend-performance-review/.../SKILL.md` prompt above. Automatic activation is optional; an explicit file path is deterministic. |
+| `performance-review.json` was not created | Ask: `Write the machine-readable review required by schemas/review.schema.json to performance-review.json; do not change application files.` |
+| Validation reports problems | Paste the validator output back to the agent and ask: `Fix only these review-format and consistency errors, then rerun validation. Do not change application files or invent evidence.` |
+
+A short report or zero findings is not itself a failure. It is a problem only when coverage,
+unknowns, or the evidence behind the conclusion are missing.
 
 ---
 
@@ -122,50 +132,21 @@ or APM, or perform security or correctness review. It reads, reasons, and report
 
 ---
 
-## Installation
+## Installation and automatic discovery
 
-From this checkout, verify the environment before or after copying the skill:
+The quickstart above needs no agent-specific installation: it points the agent at `SKILL.md`
+directly. Once that works, choose an automatic-discovery option from the
+**[installation guide](docs/installation.md)**:
 
-```bash
-python scripts/doctor.py --project /path/to/project --output /path/to/project
-```
+- Claude Code plugin, project, or personal scope
+- OpenCode project or personal scope
+- Codex CLI or Antigravity through their shared Agent Skills layout
+- an explicit path for any other coding agent
 
-It prints exact remediation commands for failed checks. Add `--github` only when you need the
-optional GitHub CLI publishing path; authentication and credential contents are never inspected.
-
-### Claude Code — as a plugin
-
-```bash
-/plugin marketplace add Sanoy24/backend-performance-review
-/plugin install backend-performance-review
-```
-
-### Claude Code — as a project or personal skill
-
-Copy the skill directory into either location:
-
-```bash
-# project-scoped (shared with your team via the repo)
-mkdir -p .claude/skills
-cp -r path/to/backend-performance-review/skills/backend-performance-review .claude/skills/
-
-# personal (available in every project)
-cp -r path/to/backend-performance-review/skills/backend-performance-review ~/.claude/skills/
-```
-
-### OpenCode, Antigravity, Codex CLI, and other coding agents
-
-The methodology is vendor-neutral Markdown. Only the YAML frontmatter is Claude-specific, and
-it is ignored elsewhere.
-
-- **OpenCode** reads the same `.claude/skills/<name>/SKILL.md` path Claude Code uses — the
-  copy step above already covers it.
-- **Google Antigravity** and **OpenAI Codex CLI** both discover skills under
-  `.agents/skills/<name>/SKILL.md` — copy or symlink the directory there.
-- **Any other agent**: point it at `skills/backend-performance-review/SKILL.md` and let it
-  follow the reference paths from there.
-
-Full details, exact paths, and how skill discovery works: **[docs/installation.md](docs/installation.md)**.
+The guide owns the exact paths and commands so this page has one golden path instead of several
+competing starts. After copying the skill, rerun `scripts/doctor.py`; add `--github` only when
+you need the optional GitHub publishing path. The doctor never inspects authentication or
+credential contents.
 
 ---
 
@@ -192,6 +173,23 @@ the ranking substantially; declining is fine, and the report will say which conc
 would change if you had answered.
 
 Expect fewer findings than a generic linter produces, each with more behind it.
+
+### Machine-readable validation and publishing
+
+`scripts/validate_review.py` is authoritative before SARIF, a pull-request comment, or an
+Action verdict is published. It accepts schema version `1.0` with methodology spec
+`backend-performance-review/2.0`, derives change-scoped verdicts rather than trusting them,
+and checks cross-document rules such as root-cause links and runtime-evidence citations.
+
+The bundled stdlib-only schema reader intentionally supports just the subset used by
+`schemas/*.schema.json`: `type`, `enum`, `const`, `pattern`, RFC 3339 `date-time` format,
+length/numeric/item bounds, `uniqueItems`, object/array keywords, `contains`, local and
+sibling-file `$ref`, `$defs`, `allOf`, `anyOf`, and `if`/`then`/`else`. Every supported keyword
+has a contract test.
+
+The Action fails closed on invalid configuration: `fail-on` accepts only `never`, `fail`, or
+`warn`, and boolean inputs accept only `true` or `false`. Its pull-request footer states the
+configured gate, including that `UNKNOWN` never blocks and full reviews have no verdict.
 
 ---
 
