@@ -31,6 +31,9 @@ available for a reader who understands what they are getting.
 import argparse
 import json
 import sys
+from pathlib import Path
+
+import validate_review
 
 TOOL_NAME = "backend-performance-review"
 INFORMATION_URI = "https://github.com/Sanoy24/backend-performance-review"
@@ -53,34 +56,12 @@ CATEGORY_DESCRIPTIONS = {
     "cost": "Resource consumption with a direct monetary consequence.",
 }
 
-VERDICT_ORDER = ["PASS", "WARN", "FAIL", "UNKNOWN"]
+SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 
 
-def derive_verdict(review):
-    """Derive the change-scoped verdict from the findings, the way priority is derived from
-    the matrix — so a review cannot quietly claim PASS while carrying a confirmed regression.
-
-    Returns None for a full review, which has no verdict.
-    """
-    if review.get("mode") != "change-scoped":
-        return None
-
-    completeness = review.get("completeness") or {}
-    unknowns = completeness.get("unknowns") or []
-    blocked = [u for u in unknowns
-               if u.get("reason") in ("technology-unsupported", "not-examined")]
-    if blocked:
-        return "UNKNOWN"
-
-    findings = review.get("findings") or []
-    if not findings:
-        return "PASS"
-
-    for finding in findings:
-        if (finding.get("severity") in ("Critical", "High")
-                and finding.get("confidence") in ("Confirmed", "High")):
-            return "FAIL"
-    return "WARN"
+# Kept as a public alias for callers of the original helper; the implementation has one
+# owner so validation, SARIF, comments, and the Action cannot drift apart.
+derive_verdict = validate_review.derive_verdict
 
 
 def rules_for(findings):
@@ -219,8 +200,7 @@ def to_sarif(review, include_adjacent=False):
         rules += adjacent_rules_for(adjacent)
         results += [adjacent_result_for(item) for item in adjacent]
 
-    declared = review.get("verdict")
-    derived = derive_verdict(review)
+    summary = validate_review.review_summary(review)
 
     run = {
         "tool": {"driver": {
@@ -232,8 +212,9 @@ def to_sarif(review, include_adjacent=False):
         "results": results,
         "properties": {
             "mode": review.get("mode"),
-            "verdict": declared,
-            "derivedVerdict": derived,
+            "verdict": summary["verdict"],
+            "declaredVerdict": summary["declared_verdict"],
+            "derivedVerdict": summary["derived_verdict"],
             "reviewConfidence": completeness.get("review_confidence"),
             "evidenceAvailable": completeness.get("evidence_available"),
             "rankingMethod": completeness.get("ranking_method"),
@@ -267,21 +248,19 @@ def main(argv=None):
                         help="also emit SEC-/COR-/MAINT- items (see the module docstring "
                              "for why this is off by default)")
     parser.add_argument("--strict-verdict", action="store_true",
-                        help="fail if a change-scoped review's declared verdict does not "
-                             "match the one derived from its findings")
+                        help="deprecated compatibility flag; verdict consistency is always "
+                             "enforced")
     args = parser.parse_args(argv)
 
     with open(args.review, encoding="utf-8") as handle:
         review = json.load(handle)
 
-    declared, derived = review.get("verdict"), derive_verdict(review)
-    if declared and derived and declared != derived:
-        message = ("verdict mismatch: review declares %s, findings derive %s"
-                   % (declared, derived))
-        if args.strict_verdict:
-            print(message, file=sys.stderr)
-            return 1
-        print("warning: " + message, file=sys.stderr)
+    problems, _summary = validate_review.validate_and_summarize(review, SCHEMA_DIR)
+    if problems:
+        print("review is not publishable:", file=sys.stderr)
+        for problem in problems:
+            print("  " + problem, file=sys.stderr)
+        return 1
 
     json.dump(to_sarif(review, args.include_adjacent), sys.stdout, indent=2)
     sys.stdout.write("\n")

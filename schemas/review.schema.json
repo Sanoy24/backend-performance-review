@@ -131,6 +131,11 @@
         "additionalProperties": false,
         "required": ["kind", "source"],
         "properties": {
+          "id": {
+            "description": "Stable review-local identifier used by findings to cite this artifact.",
+            "type": "string",
+            "pattern": "^RUNTIME-[0-9]{3,}$"
+          },
           "kind": {
             "type": "string",
             "enum": [

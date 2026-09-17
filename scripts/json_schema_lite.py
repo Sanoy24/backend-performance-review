@@ -16,17 +16,18 @@ The trade is explicit: this supports only the JSON Schema subset that
 reader, exactly as `detect_stack.py` documents for its YAML subset. It is not, and should
 not become, a general-purpose validator.
 
-Supported: type, enum, const, pattern, minLength, minimum, maximum, minItems, maxItems,
-uniqueItems, required, properties, additionalProperties, items, contains, $ref (local
-pointers and sibling-file pointers), $defs, allOf, anyOf, if/then/else.
+Supported: type, enum, const, pattern, format (`date-time`), minLength, minimum, maximum,
+minItems, maxItems, uniqueItems, required, properties, additionalProperties, items,
+contains, $ref (local pointers and sibling-file pointers), $defs, allOf, anyOf,
+if/then/else.
 
-Deliberately ignored: format (advisory only — an invalid date-time is not worth a
-dependency), and every keyword not listed above. Unknown keywords are ignored silently,
-which is what the specification requires anyway.
+Every keyword not listed above is ignored silently, which is what the specification
+requires anyway.
 """
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 __all__ = ["validate", "load_schema", "SchemaError"]
@@ -43,6 +44,21 @@ _TYPES = {
     "boolean": bool,
     "null": type(None),
 }
+
+_RFC3339_DATE_TIME = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$")
+
+
+def _is_date_time(value):
+    """Validate the RFC 3339 shape used by JSON Schema without a third-party package."""
+    if not _RFC3339_DATE_TIME.fullmatch(value):
+        return False
+    normalized = value[:-1] + "+00:00" if value[-1] in "Zz" else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return False
+    return parsed.utcoffset() is not None
 
 
 def _is_type(value, name):
@@ -141,6 +157,9 @@ class _Validator:
             minimum_length = schema.get("minLength")
             if minimum_length is not None and len(instance) < minimum_length:
                 errors.append("%s: shorter than minLength %d" % (path or "$", minimum_length))
+            if schema.get("format") == "date-time" and not _is_date_time(instance):
+                errors.append("%s: %r is not an RFC 3339 date-time"
+                              % (path or "$", instance))
 
         if isinstance(instance, (int, float)) and not isinstance(instance, bool):
             if "minimum" in schema and instance < schema["minimum"]:
