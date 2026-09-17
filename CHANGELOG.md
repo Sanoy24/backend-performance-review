@@ -39,6 +39,13 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- Maintained, standard-library workflow recipes now cover Claude Code, Codex CLI, and a
+  vendor-neutral manual flow with one prompt and artifact contract. A complete pull-request
+  workflow uses the official Codex Action's API-key proxy, hands off only the two review
+  artifacts, and validates in a fresh credential-free job before publishing. It disables
+  persisted checkout credentials and stays advisory by default. CI smoke-tests prompt
+  generation, both provider command plans, manual validation, and workflow ordering without
+  paid model calls.
 - README onboarding now follows one vendor-neutral, copy-paste journey from checkout and
   environment diagnosis through an exact agent prompt, two expected artifacts, authoritative
   validation, and a concrete success signal. It also includes five two-minute troubleshooting
