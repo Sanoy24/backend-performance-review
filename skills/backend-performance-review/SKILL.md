@@ -160,10 +160,19 @@ from the matrix — never guess it. Apply the output budget.
 Load: `methodology/bottleneck-analysis.md`.
 
 ### Phase 7 — Report
-Produce the report using `templates/review-report.md`. Every significant recommendation
-needs a validation path. Emit the machine-readable JSON alongside the Markdown (template
-§10, `schemas/review.schema.json`) — the Markdown is authoritative; the JSON is the same
-content in a form that can be diffed and scored. Compute each finding's `stable_id` by
+Produce the report using `templates/review-report.md`. Make its first screen a decision
+surface in this order: overall assessment, at most three actions, at most three
+decision-changing unknowns, and at most three validation commands. Those are projections
+of the complete findings and plans later in the report, never replacements for them. Put
+detailed evidence, counter-evidence, alternatives, trade-offs, and the complete validation
+plan after that summary; do not gain brevity by deleting required reasoning.
+
+Every significant recommendation needs a validation path. Include a copyable
+repository-local command when the evidence supports one, with its purpose and its own
+production-safety label; omit rather than invent a command. Emit the machine-readable JSON
+alongside the Markdown (template §10, `schemas/review.schema.json`) — the Markdown is
+authoritative; the JSON is the same content in a form that can be diffed and scored,
+including any commands under `validation.commands`. Compute each finding's `stable_id` by
 running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <location.file>
 --symbol <location.symbol> --category <category>` — never invent this value by reasoning.
 Two independently-run reviews were found to disagree completely on a hand-computed
@@ -251,7 +260,9 @@ Alternatives:         Other options considered, with the preferred one named and
 Trade-offs:           Complexity, memory, consistency, operational burden, new failure
                       modes.
 Validation:           How to prove it worked. Specific measurements, each labelled
-                      safe-on-production or not-safe-on-production.
+                      safe-on-production or not-safe-on-production. Include concrete
+                      commands with purpose and per-command safety where justified; omit
+                      rather than invent them.
 ```
 
 Findings sharing a root cause are merged, not enumerated.

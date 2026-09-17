@@ -6,8 +6,9 @@ Standard library only. Writes Markdown to stdout.
     python scripts/pr_comment.py --review review.json > comment.md
 
 The comment is short on purpose. A check that appears on every pull request is read in a
-few seconds or not at all, and the full report already exists for anyone who wants it. What
-must survive the compression:
+few seconds or not at all, and the full report already exists for anyone who wants it. Its
+first screen is a decision surface: assessment, top actions, key unknowns, and the first
+validation commands. Detailed finding context follows. What must survive the compression:
 
 - **The verdict, and what it means.** Especially `UNKNOWN`, which readers will otherwise
   pattern-match to `PASS`.
@@ -19,6 +20,7 @@ must survive the compression:
 """
 
 import argparse
+import html
 import json
 import sys
 from pathlib import Path
@@ -51,6 +53,22 @@ VERDICT_MEANING = {
                "it means the review could not look, not that it looked and found nothing.",
 }
 
+UNKNOWN_REASON = {
+    "no-evidence-exists": "no evidence exists",
+    "technology-unsupported": "the technology is not supported deeply enough",
+    "out-of-scope": "it was outside this review's scope",
+    "not-examined": "it was not examined",
+}
+
+
+def compact(value, limit=220):
+    """Keep decision-surface prose to one bounded line; detail remains below."""
+    value = " ".join(str(value or "").split())
+    if len(value) <= limit:
+        return value
+    shortened = value[:limit - 1].rsplit(" ", 1)[0]
+    return (shortened or value[:limit - 1]) + "…"
+
 
 def summary_line(review):
     findings = review.get("findings") or []
@@ -65,6 +83,30 @@ def summary_line(review):
     return "%d %s: %s" % (len(findings), noun, ", ".join(parts))
 
 
+def ranked_findings(review):
+    """Return a stable decision order: priority first, then report-local id."""
+    return sorted(
+        review.get("findings") or [],
+        key=lambda finding: (finding.get("priority") or "P9", finding.get("id") or ""))
+
+
+def first_validation_commands(findings, limit=3):
+    """Collect at most one concrete command per top finding, without duplicates."""
+    result, seen = [], set()
+    for finding in findings:
+        validation = finding.get("validation") or {}
+        for item in validation.get("commands") or []:
+            command = item.get("command", "").strip()
+            if not command or command in seen:
+                continue
+            seen.add(command)
+            result.append((finding, item))
+            break
+        if len(result) == limit:
+            break
+    return result
+
+
 def render(review, fail_on="never"):
     lines = [MARKER, "## Backend Performance Review", ""]
 
@@ -74,9 +116,12 @@ def render(review, fail_on="never"):
                                   VERDICT_MEANING.get(verdict, "")))
         lines.append("")
 
-    findings = review.get("findings") or []
+    findings = ranked_findings(review)
     completeness = review.get("completeness") or {}
+    unknowns = completeness.get("unknowns") or []
 
+    lines.append("### Assessment")
+    lines.append("")
     if not findings:
         # Zero findings is a valid, successful result — but it must never be presented as a
         # clean bill of health, which is a much stronger claim than the review can make.
@@ -84,9 +129,66 @@ def render(review, fail_on="never"):
                      "reviewed — see coverage below before reading it as more than that.")
     else:
         lines.append("%s." % summary_line(review))
+    lines.append("Review confidence: **%s**. Ranking basis: **%s**." % (
+        completeness.get("review_confidence", "not recorded"),
+        completeness.get("ranking_method", "not recorded")))
     lines.append("")
 
-    for finding in sorted(findings, key=lambda f: f.get("priority") or "P9")[:5]:
+    lines.append("### Top actions")
+    lines.append("")
+    if findings:
+        for index, finding in enumerate(findings[:3], 1):
+            lines.append("%d. **%s (%s)** — %s" % (
+                index, finding.get("id", "Finding"), finding.get("priority", "—"),
+                compact(finding.get("recommendation", "Validate before choosing a change."))))
+            if finding.get("conditions"):
+                lines.append("   _Why now:_ %s" % compact(finding["conditions"]))
+    else:
+        lines.append("No code change is recommended from this review. Resolve the highest-value "
+                     "unknown or gather runtime evidence before optimizing.")
+    lines.append("")
+
+    lines.append("### Key unknowns")
+    lines.append("")
+    if unknowns:
+        for unknown in unknowns[:3]:
+            resolution = unknown.get("what_would_resolve_it")
+            lines.append("- **%s** — %s%s" % (
+                compact(unknown.get("subject", "Unknown"), 120),
+                UNKNOWN_REASON.get(unknown.get("reason"), "not determined"),
+                (". Resolve with: " + compact(resolution, 180)) if resolution else ""))
+        if len(unknowns) > 3:
+            lines.append("- _%d further unknown(s) in coverage below._" % (len(unknowns) - 3))
+    else:
+        lines.append("No decision-changing unknowns were recorded; confirm the coverage table "
+                     "before treating that as complete knowledge.")
+    lines.append("")
+
+    lines.append("### Validate first")
+    lines.append("")
+    commands = first_validation_commands(findings[:3])
+    if commands:
+        for finding, item in commands:
+            lines.append("- **%s · %s** — %s" % (
+                finding.get("id", "Finding"), item.get("safety", "safety-not-recorded"),
+                compact(item.get("purpose", "Run this check before changing priority."))))
+            lines.append("<pre><code>%s</code></pre>" % html.escape(item["command"]))
+    elif findings:
+        for finding in findings[:3]:
+            validation = finding.get("validation") or {}
+            lines.append("- **%s · %s** — No executable command was supplied. Measure: %s" % (
+                finding.get("id", "Finding"),
+                validation.get("safety", "safety-not-recorded"),
+                validation.get("metric", "the affected path")))
+    else:
+        lines.append("No finding-specific validation command is warranted. Use the unknowns "
+                     "above to choose the next measurement.")
+    lines.append("")
+
+    if findings:
+        lines.append("### Finding detail")
+        lines.append("")
+    for finding in findings[:5]:
         location = finding.get("location") or {}
         where = location.get("file", "")
         if location.get("line"):
@@ -151,7 +253,6 @@ def render(review, fail_on="never"):
                  % completeness.get("evidence_available", "—"))
     lines.append("| Ranking | %s |" % completeness.get("ranking_method", "—"))
 
-    unknowns = completeness.get("unknowns") or []
     if unknowns:
         lines.append("| Not determined | %d item(s) |" % len(unknowns))
     lines.append("")
