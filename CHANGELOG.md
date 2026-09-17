@@ -39,6 +39,11 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- The default human report and pull-request comment now open with a bounded decision surface:
+  assessment, the top three actions, three key unknowns, and three validation commands before
+  detailed evidence. Finding JSON can carry structured validation commands with purpose and
+  per-command production safety. Render contracts cover zero, one, five, and sixteen findings
+  while retaining the full evidence, counter-evidence, alternatives, and validation sections.
 - Maintained, standard-library workflow recipes now cover Claude Code, Codex CLI, and a
   vendor-neutral manual flow with one prompt and artifact contract. A complete pull-request
   workflow uses the official Codex Action's API-key proxy, hands off only the two review

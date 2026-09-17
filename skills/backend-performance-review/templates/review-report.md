@@ -16,33 +16,46 @@ Guidance in `[brackets]` is for the author and must not appear in the output.
 
 ---
 
-## 1. Executive summary
+## 1. Decision summary
+
+`[First-screen decision surface: under 400 words, excluding commands. Every item points to
+later detail; introduce no claim absent from its finding or validation plan.]`
 
 ### Overall assessment
 
 `[Two to four sentences. What kind of shape is this system in, and what is the single most
 important thing to know? If nothing material was found, say so plainly here — that is a
-valid and complete result.]`
+valid and complete result. State review confidence and, for change-scoped mode, the derived
+verdict in plain language.]`
 
-### Most important findings
+### Top three actions
 
-`[Up to five, one line each, with ID and priority. If there are none, write "No material
-bottlenecks identified by static analysis" and go straight to the unknowns.]`
+`[At most three. Use the highest-priority findings, adjusted only for explicit sequencing
+dependencies. Name the finding, concrete next move, and why now. This projects §8; if there
+are no findings, recommend no code change rather than manufacturing an action.]`
 
-- **PERF-001 (P0)** — <one line>
-- **PERF-002 (P1)** — <one line>
+| Order | Finding | Action | Why now |
+|:--|:--|:--|:--|
+| 1 | **PERF-001 (P0)** | `<concrete next move>` | `<impact, confidence, or dependency>` |
 
-### Highest-risk bottlenecks
+### Key unknowns
 
-`[Where this system is most likely to fail first under growth, whether or not it is failing
-now. Distinguish current bottleneck from scalability risk explicitly.]`
+`[At most three decision-changing unknowns, ordered by value of resolving them. Say what
+decision each answer unlocks. This is a projection of §2 and §4; keep their full ledgers.]`
 
-### Major unknowns
+| Unknown | Decision it changes | How to resolve it |
+|:--|:--|:--|
+| `<unknown>` | `<finding, rank, or change decision>` | `<artifact or measurement>` |
 
-`[Mandatory. This section may not be empty unless full runtime evidence was supplied. List
-what could not be determined and what it would change.]`
+### Validation commands
 
-- <unknown> — would change: <which findings or rankings>
+`[At most three commands that cheaply test the top actions or unknowns. Copy them from §9
+with production safety. Never invent one; if none is justified, give the specific non-command
+measurement procedure.]`
+
+| Finding / unknown | Safety | Command or procedure | Decision it unlocks |
+|:--|:--|:--|:--|
+| `PERF-001` | `safe-on-production` | `<copyable command>` | `<what result changes the decision>` |
 
 ---
 
@@ -236,8 +249,9 @@ work rather than removing it.]`
 costs something.]`
 
 **Validation**
-`[Baseline, measurement, expectation, safety label, falsifier. Predictions derived from code
-may be asserted; latency improvements may not be quantified without measurement.]`
+`[Baseline, measurement, expectation, safety label, falsifier. Do not quantify latency
+without measurement. Include justified repository-local commands with purpose and per-command
+production safety; omit rather than invent one.]`
 
 ---
 
@@ -323,6 +337,8 @@ priority item is sequenced early because it is cheap, say so explicitly.]`
   latency percentages.]`
 - **Falsifier:** `[what result would mean the finding was wrong]`
 - **Guard:** `[test, metric, or alert that prevents regression]`
+- **Commands:**
+  - `[safe-on-production | not-safe-on-production]` `<copyable command>` — `[purpose]`
 
 ### Instrumentation gaps to close first
 
@@ -368,6 +384,8 @@ Three rules this output must satisfy:
   is what makes "is this the finding we saw last month?" answerable.
 - **An empty `counter_evidence` array asserts that a search happened and found nothing.** It
   does not mean the search was skipped. If you did not look, you are not finished.
+- **Validation commands remain structured.** Emit every §1 or §9 command under that finding's
+  `validation.commands` with the same purpose and safety. The JSON does not lose the detail.
 
 ---
 
