@@ -42,6 +42,20 @@ The review file is the machine-readable output described in
 [schemas/review.schema.json](../schemas/review.schema.json), which a review emits alongside
 its Markdown report (report template §10).
 
+### Matching is order-independent
+
+The scorer treats compatible ground-truth items and findings as a bipartite graph. For each
+bucket, it chooses a maximum-cardinality assignment first, then maximizes specificity in this
+order: primary location, an exact symbol on both sides, an exact normalized file path, and the
+primary category. `expected` has priority over `acceptable`, which has priority over
+`forbidden`; that bucket order is part of benchmark semantics, while list order inside any
+bucket is not.
+
+The JSON result's `matching` object records the selected pairs, explains every unmatched item,
+and exposes equal-cardinality/equal-specificity alternatives in `ambiguities`. The text report
+prints those alternatives as `AMBIGUOUS MATCHING` so an annotator can adjudicate them rather
+than letting traversal order decide silently.
+
 ## What it measures, and why separately
 
 | Metric | The failure it detects |
@@ -198,9 +212,14 @@ actually addresses) was incorrectly caught as a restraint failure by category+lo
 matching alone. Fixed by adding the correct `acceptable` item rather than by loosening the
 trap — the trap's original claim is still correctly ruled out; a different, real claim at the
 same file just needed its own entry. `gin-realworld.json` now carries 8 `acceptable` items,
-each traced to a specific, verified claim from one of the two runs, in a deliberate order
-(specific, symbol-bearing items before the broad, symbol-less missing-indexes item) so a
-specific finding at a shared location is not accidentally absorbed by a broader one first.
+each traced to a specific, verified claim from one of the two runs. The maximum-cardinality,
+maximum-specificity assignment now makes their JSON order irrelevant; specific,
+symbol-bearing items win over broad, symbol-less alternatives explicitly.
+
+The two committed treatment reports that contain machine-readable JSON were recomputed after
+this change. Their primary counts did not change: `gin-treatment-2` remains 1 true positive,
+7 tolerated, 0 false positives, and 0 false negatives; `rails-treatment-1` remains 4 true
+positives, 0 tolerated, 0 false positives, and 0 false negatives.
 
 ## Adding a case
 
