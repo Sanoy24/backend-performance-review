@@ -195,15 +195,15 @@ advance:**
   `also_locations` (a list of alternative locations a ground-truth item accepts, alongside
   its primary `location`), and `score.py`'s matcher checks all of them. Covered by
   `tests/test_scoring_harness.py`.
-- **`stable_id_agreement` is not yet a reliable signal.** The two `gin-realworld` runs agreed
-  on the dominant finding's location (once fixed above), severity within one level, and
-  recommendation — and still had **0% `stable_id` agreement**, because `SKILL.md`/the schema
-  describe `stable_id` as "derived from root cause, file, symbol, and mechanism" without
-  mandating a canonical hashing algorithm. Two independently-run agents computing "a hash"
-  from the same inputs are not guaranteed to produce the same bytes. `score.py stability` now
-  documents this explicitly (a `caveats` field in its output, not just a docstring) rather
-  than silently reporting a number that looks meaningful and isn't yet. Specifying a canonical
-  algorithm is open work — see `docs/roadmap.md`.
+- **The original `stable_id_agreement` result is obsolete and not reproducible.** The two
+  `gin-realworld` runs reported 0% agreement because agents invented IDs before the project
+  shipped its canonical file + symbol + category algorithm. The scorer now uses canonical
+  `stable_id` as its primary multiset identity, preserves repeated IDs instead of collapsing
+  them, and reports file/category overlap only as an explicitly approximate diagnostic. The
+  historical 0% figure cannot be recomputed honestly: run A's machine-readable JSON was not
+  retained, a loss already documented in `docs/evaluation.md`; reconstructing its exact
+  locations and symbols from prose would fabricate an input. No replacement live-data number
+  is claimed until two canonical-ID review artifacts exist.
 
 Also real, and instructive on its own: a third finding legitimately different from what a
 `forbidden` trap ruled out (SQLite's single-writer lock causing `SQLITE_BUSY` without

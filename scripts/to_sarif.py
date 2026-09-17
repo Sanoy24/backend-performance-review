@@ -17,8 +17,9 @@ alongside a confirmed one. Priority is exactly the field that exists to prevent 
 
 **`stable_id` becomes the fingerprint.** GitHub tracks an alert across commits by
 `partialFingerprints`. A fingerprint derived from a line number produces a new alert every
-time someone adds an import above the code; `stable_id` is derived from root cause, file,
-symbol, and mechanism precisely so it survives that.
+time someone adds an import above the code. `stable_id` is computed canonically from the
+normalized file, enclosing symbol, and category—never line number or freeform mechanism
+text—so the same inputs produce the same fingerprint across runs.
 
 **Adjacent findings are excluded by default.** `SEC-`/`COR-`/`MAINT-` items are real, but
 this skill has no security or correctness methodology (SKILL.md Hard Rule 8). Publishing

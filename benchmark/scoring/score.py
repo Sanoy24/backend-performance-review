@@ -603,64 +603,157 @@ def recommendation_accuracy(pairs):
 # Stability — two independent runs over the same code
 # --------------------------------------------------------------------------------------
 
-def stability(first, second):
-    """Turns the hand-diffing in docs/evaluation.md §3.18 and §3.21 into a number, so the
-    remaining repositories can be checked cheaply instead of by eye.
+def _stable_id(finding):
+    value = finding.get("stable_id")
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
-    Two known limitations, both found by running this against two real independent reviews
-    of the same repository (not hypothesized in advance) — see benchmark/README.md
-    "Known limitations, found by real use":
 
-    `overlap`/`only_in_a`/`only_in_b` key on (file, category), which UNDERCOUNTS true
-    agreement when two reviews cite the identical mechanism at opposite ends of one call
-    chain (a query's call site versus its definition) — ground truth's `also_locations`
-    exists for exactly this, but there is no ground truth here, only two raw reviews with no
-    external arbiter of "same finding." Two runs disagreeing on file for the same real bug is
-    a live, observed case, not a hypothetical one.
+def _location_category_key(finding):
+    location = finding.get("location") or {}
+    return (normalize_path(location.get("file")), finding.get("category") or "unknown")
 
-    `stable_id_agreement` is close to meaningless as specified today: SKILL.md/the schema
-    describe `stable_id` as "derived from root cause, file, symbol, and mechanism" but do not
-    mandate a canonical algorithm, so two independently-run agents computing "a hash" from
-    the same inputs are not guaranteed to produce the same bytes even when they agree on
-    every input. Confirmed empirically: two real reviews that agreed on the dominant finding's
-    location, severity-within-one-level, and recommendation still had 0% stable_id agreement.
-    Treat this field as informative only until a canonical algorithm is specified.
-    """
-    a, b = first.get("findings", []), second.get("findings", [])
 
-    def key(finding):
-        location = finding.get("location") or {}
-        return (normalize_path(location.get("file")), finding.get("category"))
+def _multiset_comparison(first, second, key_function, label_function):
+    """Compare without collapsing repeated keys; each key owns a list, never one finding."""
+    groups_a = defaultdict(list)
+    groups_b = defaultdict(list)
+    for finding in sorted(first, key=_object_key):
+        key = key_function(finding)
+        if key is not None:
+            groups_a[key].append(finding)
+    for finding in sorted(second, key=_object_key):
+        key = key_function(finding)
+        if key is not None:
+            groups_b[key].append(finding)
 
-    keys_a, keys_b = {key(f) for f in a}, {key(f) for f in b}
-    shared = keys_a & keys_b
-    union = keys_a | keys_b
-
-    by_key_a = {key(f): f for f in a}
-    by_key_b = {key(f): f for f in b}
-    severity_agree = sum(
-        1 for k in shared if by_key_a[k].get("severity") == by_key_b[k].get("severity"))
-    priority_agree = sum(
-        1 for k in shared if by_key_a[k].get("priority") == by_key_b[k].get("priority"))
-    stable_id_agree = sum(
-        1 for k in shared if by_key_a[k].get("stable_id") == by_key_b[k].get("stable_id"))
+    pairs = []
+    only_a = []
+    only_b = []
+    union_count = 0
+    for key in sorted(set(groups_a) | set(groups_b), key=str):
+        left = groups_a.get(key, [])
+        right = groups_b.get(key, [])
+        shared_count = min(len(left), len(right))
+        union_count += max(len(left), len(right))
+        pairs.extend((key, left[index], right[index]) for index in range(shared_count))
+        only_a.extend(label_function(key, finding) for finding in left[shared_count:])
+        only_b.extend(label_function(key, finding) for finding in right[shared_count:])
 
     return {
+        "overlap": round(len(pairs) / union_count, 3) if union_count else None,
+        "shared": len(pairs),
+        "union": union_count,
+        "only_in_a": sorted(only_a),
+        "only_in_b": sorted(only_b),
+        "pairs": pairs,
+        "groups_a": groups_a,
+        "groups_b": groups_b,
+    }
+
+
+def _stable_label(stable_id, finding):
+    return "%s (%s)" % (stable_id, finding.get("id") or "missing-report-id")
+
+
+def _approximate_label(key, finding):
+    path, category = key
+    return "%s (%s; %s)" % (path, category, finding.get("id") or "missing-report-id")
+
+
+def _collision_records(groups):
+    return [
+        {
+            "stable_id": stable_id,
+            "count": len(findings),
+            "findings": sorted((finding.get("id") for finding in findings),
+                               key=lambda value: str(value or "")),
+        }
+        for stable_id, findings in sorted(groups.items())
+        if len(findings) > 1
+    ]
+
+
+def stability(first, second):
+    """Compare two runs using canonical stable IDs without collapsing duplicate findings.
+
+    `overlap` is multiset Jaccard overlap over findings that carry `stable_id`. Findings with
+    no ID are excluded from that primary metric and listed explicitly. A separate
+    `approximate_location_category` diagnostic preserves the historical file/category view,
+    also as a multiset, but never presents it as semantic identity.
+
+    Severity and priority agreement are computed only for stable IDs that occur exactly once
+    in both runs. A repeated stable ID is a visible collision, so arbitrarily pairing those
+    findings would manufacture calibration evidence.
+    """
+    a = sorted(first.get("findings", []), key=_object_key)
+    b = sorted(second.get("findings", []), key=_object_key)
+    identified_a = [finding for finding in a if _stable_id(finding) is not None]
+    identified_b = [finding for finding in b if _stable_id(finding) is not None]
+    missing_a = [finding for finding in a if _stable_id(finding) is None]
+    missing_b = [finding for finding in b if _stable_id(finding) is None]
+
+    stable = _multiset_comparison(identified_a, identified_b, _stable_id, _stable_label)
+    approximate = _multiset_comparison(
+        a, b, _location_category_key, _approximate_label)
+
+    comparable_pairs = [
+        (left, right)
+        for stable_id, left, right in stable["pairs"]
+        if len(stable["groups_a"][stable_id]) == 1
+        and len(stable["groups_b"][stable_id]) == 1
+    ]
+    severity_agree = sum(
+        left.get("severity") == right.get("severity") for left, right in comparable_pairs)
+    priority_agree = sum(
+        left.get("priority") == right.get("priority") for left, right in comparable_pairs)
+    comparable_count = len(comparable_pairs)
+
+    stable_id_overlap = stable["overlap"]
+    collisions = {
+        "run_a": _collision_records(stable["groups_a"]),
+        "run_b": _collision_records(stable["groups_b"]),
+    }
+    return {
         "findings": {"run_a": len(a), "run_b": len(b)},
-        "overlap": round(len(shared) / len(union), 3) if union else None,
-        "shared": len(shared),
-        "only_in_a": sorted("%s (%s)" % k for k in keys_a - keys_b),
-        "only_in_b": sorted("%s (%s)" % k for k in keys_b - keys_a),
-        "severity_agreement": round(severity_agree / len(shared), 3) if shared else None,
-        "priority_agreement": round(priority_agree / len(shared), 3) if shared else None,
-        "stable_id_agreement": round(stable_id_agree / len(shared), 3) if shared else None,
+        "stable_ids_present": {
+            "run_a": len(identified_a), "run_b": len(identified_b),
+        },
+        "missing_stable_ids": {
+            "run_a": [finding.get("id") for finding in missing_a],
+            "run_b": [finding.get("id") for finding in missing_b],
+        },
+        "overlap": stable_id_overlap,
+        "stable_id_overlap": stable_id_overlap,
+        # Deprecated compatibility alias. Stable IDs are now the primary comparison key, so
+        # a second notion of "agreement" would be the same quantity under a misleading name.
+        "stable_id_agreement": stable_id_overlap,
+        "shared": stable["shared"],
+        "only_in_a": stable["only_in_a"],
+        "only_in_b": stable["only_in_b"],
+        "stable_id_collisions": collisions,
+        "calibration_pairs": comparable_count,
+        "calibration_pairs_excluded_by_collision": stable["shared"] - comparable_count,
+        "severity_agreement": (
+            round(severity_agree / comparable_count, 3) if comparable_count else None),
+        "priority_agreement": (
+            round(priority_agree / comparable_count, 3) if comparable_count else None),
+        "approximate_location_category": {
+            "overlap": approximate["overlap"],
+            "shared": approximate["shared"],
+            "union": approximate["union"],
+            "only_in_a": approximate["only_in_a"],
+            "only_in_b": approximate["only_in_b"],
+        },
         "caveats": [
-            "overlap/only_in_a/only_in_b key on (file, category) and will undercount "
-            "agreement when two reviews cite the identical mechanism at different points "
-            "in one call chain; see this function's docstring.",
-            "stable_id_agreement is not yet a reliable signal: no canonical hashing "
-            "algorithm is mandated, so independently-run agents are not guaranteed to "
-            "produce matching ids even for the identical finding.",
+            "Canonical stable_id is derived from normalized file, symbol, and category. "
+            "Two reviews that cite the same mechanism at different points in one call chain "
+            "will still have different IDs and require human adjudication.",
+            "approximate_location_category is diagnostic only: it can overstate agreement "
+            "for distinct mechanisms in one file/category and understate agreement across "
+            "different call-chain citation locations.",
+            "Repeated canonical IDs are retained as separate findings and reported in "
+            "stable_id_collisions; their severity and priority pairs are excluded rather "
+            "than assigned arbitrarily.",
         ],
     }
 
