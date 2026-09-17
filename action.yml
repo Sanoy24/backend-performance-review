@@ -77,40 +77,57 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Validate Action configuration
+      shell: bash
+      env:
+        BPR_FAIL_ON: ${{ inputs.fail-on }}
+        BPR_UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        BPR_COMMENT: ${{ inputs.comment }}
+        BPR_INCLUDE_ADJACENT: ${{ inputs.include-adjacent }}
+        BPR_STRICT_VERDICT: ${{ inputs.strict-verdict }}
+      run: python3 "$GITHUB_ACTION_PATH/scripts/action_policy.py" validate-config
+
     - name: Validate the review against the schema
       shell: bash
+      env:
+        BPR_REVIEW: ${{ inputs.review }}
       run: |
-        python3 "${{ github.action_path }}/scripts/validate_review.py" \
-          --review "${{ inputs.review }}" \
-          --schema-dir "${{ github.action_path }}/schemas"
+        python3 "$GITHUB_ACTION_PATH/scripts/validate_review.py" \
+          --review "$BPR_REVIEW" \
+          --schema-dir "$GITHUB_ACTION_PATH/schemas"
 
     - name: Convert to SARIF
       shell: bash
+      env:
+        BPR_REVIEW: ${{ inputs.review }}
+        BPR_SARIF_FILE: ${{ inputs.sarif-file }}
+        BPR_INCLUDE_ADJACENT: ${{ inputs.include-adjacent }}
       run: |
         # `if`, not `[ ... ] && ...`: this shell runs with `set -e`, so a `&&` chain whose
         # test is false returns 1 and would fail the step whenever the flag is off.
-        args=(--review "${{ inputs.review }}")
-        if [ "${{ inputs.include-adjacent }}" = "true" ]; then
+        args=(--review "$BPR_REVIEW")
+        if [ "$BPR_INCLUDE_ADJACENT" = "true" ]; then
           args+=(--include-adjacent)
         fi
-        if [ "${{ inputs.strict-verdict }}" = "true" ]; then
-          args+=(--strict-verdict)
-        fi
-        python3 "${{ github.action_path }}/scripts/to_sarif.py" "${args[@]}" \
-          > "${{ inputs.sarif-file }}"
+        python3 "$GITHUB_ACTION_PATH/scripts/to_sarif.py" "${args[@]}" \
+          > "$BPR_SARIF_FILE"
 
     - name: Summarize
       id: summarize
       shell: bash
+      env:
+        BPR_REVIEW: ${{ inputs.review }}
+        BPR_FAIL_ON: ${{ inputs.fail-on }}
       run: |
-        python3 "${{ github.action_path }}/scripts/pr_comment.py" \
-          --review "${{ inputs.review }}" > "$RUNNER_TEMP/perf-comment.md"
+        python3 "$GITHUB_ACTION_PATH/scripts/pr_comment.py" \
+          --review "$BPR_REVIEW" \
+          --fail-on "$BPR_FAIL_ON" > "$RUNNER_TEMP/perf-comment.md"
         cat "$RUNNER_TEMP/perf-comment.md" >> "$GITHUB_STEP_SUMMARY"
 
         summary="$RUNNER_TEMP/perf-review-summary.json"
-        python3 "${{ github.action_path }}/scripts/validate_review.py" \
-          --review "${{ inputs.review }}" \
-          --schema-dir "${{ github.action_path }}/schemas" \
+        python3 "$GITHUB_ACTION_PATH/scripts/validate_review.py" \
+          --review "$BPR_REVIEW" \
+          --schema-dir "$GITHUB_ACTION_PATH/schemas" \
           --summary-json > "$summary"
         verdict=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["verdict"] or "")' "$summary")
         findings=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["findings"])' "$summary")
@@ -136,7 +153,7 @@ runs:
         # Update the previous comment rather than adding one per push: a check that
         # accumulates a comment on every commit gets muted, and then deleted.
         existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-          --jq 'map(select(.body | startswith("<!-- backend-performance-review -->"))) | .[0].id // empty')
+          --jq 'map(select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- backend-performance-review -->")))) | .[0].id // empty')
         if [ -n "$existing" ]; then
           gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@"$body" > /dev/null
         else
@@ -145,31 +162,11 @@ runs:
 
     - name: Apply the verdict
       shell: bash
-      run: |
-        # Every branch here must end in a zero status unless it deliberately fails. Under
-        # `set -e` a `[ ... ] && { ... }` whose test is false returns 1, which would have
-        # failed the job precisely when the verdict was acceptable — backwards, and the kind
-        # of bug that looks like the check working.
-        verdict="${{ steps.summarize.outputs.verdict }}"
-        echo "Performance verdict: ${verdict:-none (full review)}"
-
-        case "${{ inputs.fail-on }}" in
-          never)
-            ;;
-          fail)
-            if [ "$verdict" = "FAIL" ]; then
-              echo "::error::Performance verdict: FAIL"
-              exit 1
-            fi
-            ;;
-          warn)
-            if [ "$verdict" = "FAIL" ] || [ "$verdict" = "WARN" ]; then
-              echo "::error::Performance verdict: $verdict"
-              exit 1
-            fi
-            ;;
-          *)
-            echo "::warning::unrecognized fail-on value '${{ inputs.fail-on }}'; treating as never"
-            ;;
-        esac
-        exit 0
+      env:
+        BPR_VERDICT: ${{ steps.summarize.outputs.verdict }}
+        BPR_FAIL_ON: ${{ inputs.fail-on }}
+        BPR_UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        BPR_COMMENT: ${{ inputs.comment }}
+        BPR_INCLUDE_ADJACENT: ${{ inputs.include-adjacent }}
+        BPR_STRICT_VERDICT: ${{ inputs.strict-verdict }}
+      run: python3 "$GITHUB_ACTION_PATH/scripts/action_policy.py" apply-verdict

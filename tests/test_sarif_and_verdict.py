@@ -230,6 +230,16 @@ class PullRequestCommentTests(unittest.TestCase):
         self.assertIn("**FAIL**", body)
         self.assertNotIn("**PASS**", body)
 
+    def test_comment_footer_reflects_the_configured_gate(self):
+        review = change_scoped(verdict="PASS")
+        self.assertIn("does not block merges", pr_comment.render(review, "never"))
+        self.assertIn("FAIL blocks", pr_comment.render(review, "fail"))
+        self.assertIn("WARN and FAIL block", pr_comment.render(review, "warn"))
+
+    def test_full_review_footer_says_a_configured_gate_does_not_apply(self):
+        self.assertIn("configured warn gate does not apply",
+                      pr_comment.render({"mode": "full", "findings": []}, "warn"))
+
     def test_the_absence_of_runtime_evidence_is_stated(self):
         body = pr_comment.render({"findings": [finding()], "runtime_evidence": []})
         self.assertIn("No runtime evidence was supplied", body)

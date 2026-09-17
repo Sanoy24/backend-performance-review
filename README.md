@@ -76,6 +76,10 @@ reader intentionally supports just the subset used by `schemas/*.schema.json`: `
 `uniqueItems`, object/array keywords, `contains`, local and sibling-file `$ref`, `$defs`,
 `allOf`, `anyOf`, and `if`/`then`/`else`. Every supported keyword has a contract test.
 
+The Action fails closed on invalid configuration: `fail-on` accepts only `never`, `fail`,
+or `warn`, and boolean inputs accept only `true` or `false`. Its pull-request footer states
+the configured gate, including that `UNKNOWN` never blocks and full reviews have no verdict.
+
 ---
 
 ## Why this exists
