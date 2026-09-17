@@ -47,6 +47,10 @@ jobs:
         run: |
           python -I skills/backend-performance-review/scripts/detect_stack.py . --pretty > /dev/null
 
+      - name: Run the installation doctor at the minimum supported Python version
+        shell: bash
+        run: python -I scripts/doctor.py --project . --output .
+
   detection-regressions:
     name: Detection regression fixtures (docs/evaluation.md §4)
     runs-on: ubuntu-latest

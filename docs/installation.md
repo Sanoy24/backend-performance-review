@@ -2,6 +2,25 @@
 
 How the skill is packaged, discovered, and invoked — in Claude Code and elsewhere.
 
+## Quick installation check
+
+From a clone or downloaded copy of this repository, run:
+
+```bash
+python scripts/doctor.py --project /path/to/project --output /path/to/project
+```
+
+The doctor checks Python 3.8+, every documented project and personal skill location,
+`SKILL.md`, registry readability and load targets, and whether the output directory is
+writable. Add `--github` when the workflow will use the GitHub CLI, or `--skill-dir PATH`
+for a plugin/cache location outside the documented copy layouts. `--json` produces a
+machine-readable result.
+
+Every failure includes a remediation command and exits non-zero. The doctor reads only the
+installed `SKILL.md` and `registry.yaml`; it does not scan the application, inspect credential
+contents, or run `gh auth status`. Its output check creates and immediately deletes one small
+temporary file in the selected directory.
+
 ---
 
 ## 1. Conventions verification record
