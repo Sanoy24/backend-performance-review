@@ -124,6 +124,15 @@ or APM, or perform security or correctness review. It reads, reasons, and report
 
 ## Installation
 
+From this checkout, verify the environment before or after copying the skill:
+
+```bash
+python scripts/doctor.py --project /path/to/project --output /path/to/project
+```
+
+It prints exact remediation commands for failed checks. Add `--github` only when you need the
+optional GitHub CLI publishing path; authentication and credential contents are never inspected.
+
 ### Claude Code — as a plugin
 
 ```bash

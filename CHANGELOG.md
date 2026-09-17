@@ -37,6 +37,14 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/doctor.py`, a standard-library installation diagnostic for Python compatibility,
+  project and personal skill discovery, `SKILL.md`/registry integrity, writable review-output
+  locations, and optional GitHub CLI availability. It prints remediation commands, supports
+  JSON output and explicit plugin/cache paths, never reads application secrets or credential
+  contents, and now runs in CI on Linux, macOS, and Windows at Python 3.8.
+
 ### Fixed
 
 - The composite Action now rejects unknown `fail-on` values and malformed boolean inputs
