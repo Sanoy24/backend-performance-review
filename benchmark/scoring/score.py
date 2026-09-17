@@ -441,7 +441,9 @@ TEXT_FIELDS = ("problem", "evidence", "impact", "conditions", "recommendation",
                "trade_offs", "validation", "why_this_might_not_matter")
 
 SKIP_DIRS = {".git", "node_modules", "vendor", "dist", "build", "target",
-             ".venv", "venv", "__pycache__", ".idea", ".gradle", ".next"}
+             ".venv", "venv", "__pycache__", ".idea", ".gradle", ".next",
+             ".claude", ".agents", ".opencode", ".codex"}
+SKIP_DIR_NAMES = {name.casefold() for name in SKIP_DIRS}
 
 MAX_SCANNED_FILE_BYTES = 2_000_000
 
@@ -477,11 +479,17 @@ def repo_number_tokens(repo_root):
     human's attention, and the count is a floor, never a total.
     """
     tokens = set()
-    root = os.path.abspath(repo_root)
+    root = os.path.realpath(os.path.abspath(repo_root))
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        dirnames[:] = [
+            name for name in dirnames
+            if name.casefold() not in SKIP_DIR_NAMES
+            and _is_within_repo(os.path.join(dirpath, name), root)
+        ]
         for name in filenames:
             path = os.path.join(dirpath, name)
+            if not _is_within_repo(path, root):
+                continue
             try:
                 if os.path.getsize(path) > MAX_SCANNED_FILE_BYTES:
                     continue
@@ -491,6 +499,16 @@ def repo_number_tokens(repo_root):
                 continue
             tokens.update(DIGITS.findall(text))
     return tokens
+
+
+def _is_within_repo(path, root):
+    """Do not let a repository symlink make numeric evidence come from outside it."""
+    resolved_path = os.path.realpath(os.path.abspath(path))
+    resolved_root = os.path.realpath(os.path.abspath(root))
+    try:
+        return os.path.commonpath([resolved_path, resolved_root]) == resolved_root
+    except ValueError:
+        return False
 
 
 def _rate(count, total):

@@ -37,6 +37,17 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Fixed
+
+- `detect_stack.py` no longer treats project-scoped agent installations under `.claude`,
+  `.agents`, `.opencode`, or `.codex` as application evidence. The scanner also excludes its
+  own resolved skill root when it lives under the target repository and refuses to read file
+  or directory symlink targets outside that repository. This prevents the installed registry
+  and technology references from falsely detecting every technology the skill knows about.
+- The benchmark's repository-number scan applies the same agent-state and external-symlink
+  boundary, so numbers mentioned only by an installed skill cannot make an unsupported
+  performance claim appear sourced.
+
 ## [1.1.0] — 2026-09-11
 
 ### Added — the first evidence that the methodology does (and does not) help
