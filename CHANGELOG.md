@@ -39,6 +39,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Benchmark scoring now uses maximum-cardinality, maximum-specificity bipartite assignment
+  instead of first-match traversal. Reordering findings or `expected`, `acceptable`, and
+  `forbidden` annotations can no longer change the score; equal-score assignments are surfaced
+  for adjudication, and every unmatched item receives a deterministic explanation. The two
+  committed machine-readable treatment reports were recomputed with no primary count changes.
 - `detect_stack.py` no longer treats project-scoped agent installations under `.claude`,
   `.agents`, `.opencode`, or `.codex` as application evidence. The scanner also excludes its
   own resolved skill root when it lives under the target repository and refuses to read file

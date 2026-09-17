@@ -8,6 +8,7 @@ Run with: python -m unittest discover -s tests
 """
 
 import copy
+import itertools
 import json
 import sys
 import tempfile
@@ -23,6 +24,7 @@ import json_schema_lite as schema_lite  # noqa: E402
 
 EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
 FIXTURE = ROOT / "tests" / "fixtures" / "example-ground-truth.json"
+PERMUTATION_FIXTURE = ROOT / "tests" / "fixtures" / "permutation-matching-case.json"
 SCHEMAS = ROOT / "schemas"
 
 
@@ -209,6 +211,138 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(result["per_category"]["data-access"]["tp"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["fn"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["recall"], 0.0)
+
+
+class OptimalAssignmentTests(unittest.TestCase):
+    """Matching is a graph assignment problem, not a first-compatible-item search."""
+
+    def setUp(self):
+        case = json.loads(PERMUTATION_FIXTURE.read_text(encoding="utf-8"))
+        self.annotation = case["truth"]
+        self.review = case["review"]
+
+    def test_optimal_assignment_finds_two_matches_where_greedy_finds_one(self):
+        result = scorer.score(self.annotation, self.review)
+
+        self.assertEqual(result["counts"]["true_positives"], 2)
+        self.assertEqual(result["counts"]["false_negatives"], 0)
+        self.assertEqual(result["counts"]["false_positives"], 0)
+
+    def test_finding_and_expected_permutations_do_not_change_output(self):
+        baseline = scorer.score(self.annotation, self.review)
+
+        for expected in itertools.permutations(self.annotation["expected"]):
+            for findings in itertools.permutations(self.review["findings"]):
+                annotation = copy.deepcopy(self.annotation)
+                review = copy.deepcopy(self.review)
+                annotation["expected"] = list(expected)
+                review["findings"] = list(findings)
+                self.assertEqual(scorer.score(annotation, review), baseline)
+
+    def test_acceptable_and_forbidden_permutations_do_not_change_output(self):
+        broad = {
+            "id": "GT-BROAD", "location": {"file": "shared.py"},
+            "category": "data-access", "mechanism": "broad",
+        }
+        specific = {
+            "id": "GT-SPECIFIC", "location": {"file": "shared.py", "symbol": "wanted"},
+            "category": "data-access", "mechanism": "specific",
+        }
+        findings = [
+            finding(id="PERF-SPECIFIC", location={"file": "shared.py", "symbol": "wanted"}),
+            finding(id="PERF-OTHER", location={"file": "shared.py", "symbol": "other"}),
+        ]
+
+        for bucket, count_key in (("acceptable", "tolerated"),
+                                  ("forbidden", "forbidden_reported")):
+            annotation = truth(expected=[])
+            annotation[bucket] = [broad, specific]
+            if bucket == "forbidden":
+                for item in annotation[bucket]:
+                    item["why_not"] = "bounded fixture"
+            baseline = scorer.score(annotation, {"findings": findings})
+            self.assertEqual(baseline["counts"][count_key], 2)
+
+            for items_order in itertools.permutations(annotation[bucket]):
+                for findings_order in itertools.permutations(findings):
+                    permuted = copy.deepcopy(annotation)
+                    permuted[bucket] = list(items_order)
+                    self.assertEqual(
+                        scorer.score(permuted, {"findings": list(findings_order)}), baseline)
+
+    def test_equal_score_assignments_are_reported_for_adjudication(self):
+        annotation = truth(expected=[
+            {"id": "GT-A", "location": {"file": "shared.py"},
+             "category": "data-access", "mechanism": "first"},
+            {"id": "GT-B", "location": {"file": "shared.py"},
+             "category": "data-access", "mechanism": "second"},
+        ])
+        review = {"findings": [
+            finding(id="PERF-A", location={"file": "shared.py"}),
+            finding(id="PERF-B", location={"file": "shared.py"}),
+        ]}
+
+        ambiguities = scorer.score(annotation, review)["matching"]["ambiguities"]
+
+        self.assertEqual(len(ambiguities), 1)
+        self.assertEqual(ambiguities[0]["bucket"], "expected")
+        self.assertEqual(ambiguities[0]["reason"],
+                         "equal_cardinality_and_specificity")
+        self.assertNotEqual(ambiguities[0]["selected"], ambiguities[0]["alternative"])
+        self.assertIn("AMBIGUOUS MATCHING", scorer.render(scorer.score(annotation, review)))
+
+    def test_primary_symbol_matches_win_when_cardinality_is_equal(self):
+        annotation = truth(expected=[
+            {
+                "id": "GT-A", "location": {"file": "a.py", "symbol": "A"},
+                "also_locations": [{"file": "b.py", "symbol": "B"}],
+                "category": "data-access", "mechanism": "first",
+            },
+            {
+                "id": "GT-B", "location": {"file": "b.py", "symbol": "B"},
+                "also_locations": [{"file": "a.py", "symbol": "A"}],
+                "category": "data-access", "mechanism": "second",
+            },
+        ])
+        review = {"findings": [
+            finding(id="PERF-A", location={"file": "a.py", "symbol": "A"}),
+            finding(id="PERF-B", location={"file": "b.py", "symbol": "B"}),
+        ]}
+
+        assignments = scorer.score(annotation, review)["matching"]["assignments"]["expected"]
+
+        self.assertEqual([(pair["item"], pair["finding"]) for pair in assignments], [
+            ("GT-A", "PERF-A"), ("GT-B", "PERF-B"),
+        ])
+        self.assertTrue(all(pair["specificity"]["primary_location"] for pair in assignments))
+        self.assertTrue(all(pair["specificity"]["exact_symbol"] for pair in assignments))
+
+    def test_every_unmatched_item_has_a_deterministic_explanation(self):
+        annotation = truth(
+            expected=[{
+                "id": "GT-MISS", "location": {"file": "missing.py"},
+                "category": "memory", "mechanism": "not found",
+            }],
+            acceptable=[{
+                "id": "GT-OPTIONAL", "location": {"file": "optional.py"},
+                "category": "serialization", "mechanism": "not reported",
+            }],
+            forbidden=[{
+                "id": "GT-TRAP", "location": {"file": "trap.py"},
+                "category": "concurrency", "why_not": "bounded fixture",
+            }],
+        )
+        review = {"findings": [
+            finding(id="PERF-UNKNOWN", category="io", location={"file": "unknown.py"}),
+        ]}
+
+        unmatched = scorer.score(annotation, review)["matching"]["unmatched"]
+
+        self.assertEqual(unmatched["expected"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["acceptable"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["forbidden"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["findings"][0]["reason"],
+                         "no_compatible_ground_truth_item")
 
 
 class CalibrationTests(unittest.TestCase):
