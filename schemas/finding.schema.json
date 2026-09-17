@@ -250,6 +250,11 @@
           "description": "When the runtime artifact was captured. A six-month-old trace is weaker evidence than a fresh one, and the reader cannot tell without this.",
           "type": "string",
           "format": "date-time"
+        },
+        "runtime_evidence_id": {
+          "description": "For kind=runtime, the review.runtime_evidence artifact this statement cites.",
+          "type": "string",
+          "pattern": "^RUNTIME-[0-9]{3,}$"
         }
       }
     },

@@ -10,7 +10,10 @@ Run with: python -m unittest discover -s tests
 
 import json
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +24,7 @@ import pr_comment  # noqa: E402
 import validate_review  # noqa: E402
 
 EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
+SEMANTIC_CASES = ROOT / "tests" / "fixtures" / "semantic-validation-cases.json"
 
 
 def finding(**overrides):
@@ -192,7 +196,8 @@ class SarifConversionTests(unittest.TestCase):
         review = change_scoped(verdict="PASS",
                                findings=[finding(severity="Critical", confidence="High")])
         sarif = to_sarif.to_sarif(review)
-        self.assertEqual(sarif["runs"][0]["properties"]["verdict"], "PASS")
+        self.assertEqual(sarif["runs"][0]["properties"]["verdict"], "FAIL")
+        self.assertEqual(sarif["runs"][0]["properties"]["declaredVerdict"], "PASS")
         self.assertEqual(sarif["runs"][0]["properties"]["derivedVerdict"], "FAIL")
 
 
@@ -213,8 +218,17 @@ class PullRequestCommentTests(unittest.TestCase):
         self.assertIn("Low", body)
 
     def test_unknown_is_spelled_out_as_not_a_pass(self):
-        body = pr_comment.render(change_scoped(verdict="UNKNOWN"))
+        body = pr_comment.render(change_scoped(
+            verdict="UNKNOWN",
+            completeness={"unknowns": [
+                {"subject": "the changed worker", "reason": "not-examined"}]}))
         self.assertIn("not** a pass", body)
+
+    def test_comment_uses_the_derived_verdict_not_a_contradictory_declaration(self):
+        body = pr_comment.render(change_scoped(
+            verdict="PASS", findings=[finding(severity="High", confidence="High")]))
+        self.assertIn("**FAIL**", body)
+        self.assertNotIn("**PASS**", body)
 
     def test_the_absence_of_runtime_evidence_is_stated(self):
         body = pr_comment.render({"findings": [finding()], "runtime_evidence": []})
@@ -285,7 +299,8 @@ class ReviewValidationTests(unittest.TestCase):
         review = self.valid()
         review["findings"][0]["confidence"] = "Confirmed"
         problems = validate_review.validate(review, self.SCHEMAS)
-        self.assertTrue(any("no runtime evidence" in p for p in problems), problems)
+        self.assertTrue(any("cites no valid runtime artifact" in p for p in problems),
+                        problems)
 
     def test_a_dangling_root_cause_reference_is_caught(self):
         review = self.valid()
@@ -331,6 +346,70 @@ class ReviewValidationTests(unittest.TestCase):
         del review["findings"][0]["counter_evidence"]
         problems = validate_review.validate(review, self.SCHEMAS)
         self.assertTrue(any("counter_evidence" in p for p in problems), problems)
+
+    def test_semantic_validation_negative_fixtures(self):
+        cases = json.loads(SEMANTIC_CASES.read_text(encoding="utf-8"))
+        for case in cases:
+            with self.subTest(case=case["name"]):
+                review = self.valid()
+                for operation in case["operations"]:
+                    parts = operation["path"].strip("/").split("/")
+                    parent = review
+                    for part in parts[:-1]:
+                        parent = parent[int(part)] if isinstance(parent, list) else parent[part]
+                    key = parts[-1]
+                    if operation["op"] == "set":
+                        if isinstance(parent, list):
+                            parent[int(key)] = operation["value"]
+                        else:
+                            parent[key] = operation["value"]
+                    elif operation["op"] == "delete":
+                        if isinstance(parent, list):
+                            del parent[int(key)]
+                        else:
+                            del parent[key]
+                    elif operation["op"] == "append":
+                        parent[key].append(operation["value"])
+                    else:
+                        self.fail("unknown fixture operation %s" % operation["op"])
+                problems = validate_review.validate(review, self.SCHEMAS)
+                self.assertTrue(any(case["problem"] in item for item in problems), problems)
+
+    def test_confirmed_finding_with_a_matching_runtime_citation_is_valid(self):
+        review = self.valid()
+        finding = review["findings"][0]
+        finding["confidence"] = "Confirmed"
+        finding["priority"] = "P0"
+        review["runtime_evidence"] = [{
+            "id": "RUNTIME-001", "kind": "profile", "source": "profile.json"}]
+        finding["evidence"].append({
+            "statement": "The profile attributes 41% of samples to this query loop.",
+            "kind": "runtime", "runtime_evidence_id": "RUNTIME-001"})
+        self.assertEqual(validate_review.validate(review, self.SCHEMAS), [])
+
+    def test_malformed_nested_values_are_reported_without_crashing(self):
+        review = self.valid()
+        review["reproducibility"] = "not an object"
+        review["findings"][0]["location"] = "not an object"
+        problems = validate_review.validate(review, self.SCHEMAS)
+        self.assertTrue(any("expected type object" in problem for problem in problems),
+                        problems)
+
+    def test_publishers_refuse_a_review_with_a_false_declared_verdict(self):
+        review = self.valid()
+        review["mode"] = "change-scoped"
+        review["verdict"] = "PASS"  # Its High/High finding derives FAIL.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for publisher in (to_sarif.main, pr_comment.main):
+                with self.subTest(publisher=publisher.__module__):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = publisher(["--review", str(path)])
+                    self.assertEqual(result, 1)
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertIn("verdict mismatch", stderr.getvalue())
 
 
 if __name__ == "__main__":

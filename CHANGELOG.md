@@ -39,6 +39,14 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Review validation is now the single publishability boundary shared by the CLI, SARIF,
+  pull-request renderer, repository invariants, and composite Action. It rejects full-review
+  verdicts, missing or contradictory change-scoped verdicts, unsupported schema/spec
+  versions, inconsistent two-way root-cause links, and runtime citations that do not resolve
+  to a declared artifact. Published verdicts are always derived from review contents.
+- The stdlib JSON Schema reader now enforces RFC 3339 `date-time` fields instead of silently
+  treating `format` as advisory. Its exact supported keyword subset is documented and covered
+  by contract tests, while semantic-validation failures have one negative fixture per rule.
 - Stability scoring now uses canonical `stable_id` values as a multiset instead of collapsing
   findings into a dictionary keyed by `(file, category)`. Repeated IDs remain separate and are
   reported as collisions, severity/priority comparisons exclude ambiguous collision pairs,

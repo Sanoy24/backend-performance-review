@@ -1,0 +1,131 @@
+[
+  {
+    "name": "invalid generated timestamp",
+    "operations": [
+      {"op": "set", "path": "/reproducibility/generated_at", "value": "yesterday"}
+    ],
+    "problem": "RFC 3339 date-time"
+  },
+  {
+    "name": "full review declares verdict",
+    "operations": [
+      {"op": "set", "path": "/verdict", "value": "PASS"}
+    ],
+    "problem": "full reviews must not declare verdict"
+  },
+  {
+    "name": "change-scoped review omits verdict",
+    "operations": [
+      {"op": "set", "path": "/mode", "value": "change-scoped"}
+    ],
+    "problem": "must declare the mechanically derived verdict"
+  },
+  {
+    "name": "declared verdict contradicts derived verdict",
+    "operations": [
+      {"op": "set", "path": "/mode", "value": "change-scoped"},
+      {"op": "set", "path": "/verdict", "value": "PASS"}
+    ],
+    "problem": "verdict mismatch"
+  },
+  {
+    "name": "unsupported schema version",
+    "operations": [
+      {"op": "set", "path": "/schema_version", "value": "2.0"}
+    ],
+    "problem": "See CHANGELOG.md for migration guidance"
+  },
+  {
+    "name": "unsupported methodology spec",
+    "operations": [
+      {"op": "set", "path": "/reproducibility/spec", "value": "backend-performance-review/1.0"}
+    ],
+    "problem": "unsupported methodology spec"
+  },
+  {
+    "name": "finding points to missing root cause",
+    "operations": [
+      {"op": "set", "path": "/findings/0/root_cause_id", "value": "ROOT-999"}
+    ],
+    "problem": "no root_causes[] entry declares"
+  },
+  {
+    "name": "root cause points to missing finding",
+    "operations": [
+      {"op": "append", "path": "/root_causes/0/findings", "value": "PERF-999"}
+    ],
+    "problem": "no findings[] entry declares"
+  },
+  {
+    "name": "finding is absent from its root cause reverse link",
+    "operations": [
+      {"op": "set", "path": "/root_causes/0/findings", "value": []}
+    ],
+    "problem": "does not list PERF-001 in findings[]"
+  },
+  {
+    "name": "root cause reverse link points to a different cause",
+    "operations": [
+      {"op": "append", "path": "/root_causes", "value": {"id": "ROOT-002", "description": "Another cause", "findings": ["PERF-001"]}}
+    ],
+    "problem": "ROOT-002 lists PERF-001"
+  },
+  {
+    "name": "root cause identifiers are unique",
+    "operations": [
+      {"op": "append", "path": "/root_causes", "value": {"id": "ROOT-001", "description": "Duplicate cause", "findings": []}}
+    ],
+    "problem": "duplicate root cause id ROOT-001"
+  },
+  {
+    "name": "runtime evidence omits artifact citation",
+    "operations": [
+      {"op": "append", "path": "/findings/0/evidence", "value": {"statement": "Profile sample", "kind": "runtime"}}
+    ],
+    "problem": "runtime evidence without runtime_evidence_id"
+  },
+  {
+    "name": "runtime evidence cites an unknown artifact",
+    "operations": [
+      {"op": "append", "path": "/findings/0/evidence", "value": {"statement": "Profile sample", "kind": "runtime", "runtime_evidence_id": "RUNTIME-999"}}
+    ],
+    "problem": "no review.runtime_evidence[] artifact declares"
+  },
+  {
+    "name": "confirmed finding has no valid runtime citation",
+    "operations": [
+      {"op": "set", "path": "/findings/0/confidence", "value": "Confirmed"},
+      {"op": "set", "path": "/findings/0/priority", "value": "P0"}
+    ],
+    "problem": "cites no valid runtime artifact"
+  },
+  {
+    "name": "static evidence carries a runtime artifact citation",
+    "operations": [
+      {"op": "set", "path": "/findings/0/evidence/0/runtime_evidence_id", "value": "RUNTIME-001"}
+    ],
+    "problem": "on non-runtime evidence"
+  },
+  {
+    "name": "runtime artifact identifiers are unique",
+    "operations": [
+      {"op": "append", "path": "/runtime_evidence", "value": {"id": "RUNTIME-001", "kind": "profile", "source": "profile-a.json"}},
+      {"op": "append", "path": "/runtime_evidence", "value": {"id": "RUNTIME-001", "kind": "profile", "source": "profile-b.json"}}
+    ],
+    "problem": "duplicate runtime evidence id RUNTIME-001"
+  },
+  {
+    "name": "review runtime artifact timestamp is invalid",
+    "operations": [
+      {"op": "append", "path": "/runtime_evidence", "value": {"id": "RUNTIME-001", "kind": "profile", "source": "profile.json", "timestamp": "not-a-time"}}
+    ],
+    "problem": "RFC 3339 date-time"
+  },
+  {
+    "name": "finding evidence timestamp is invalid",
+    "operations": [
+      {"op": "set", "path": "/findings/0/evidence/0/timestamp", "value": "2026-99-99T00:00:00Z"}
+    ],
+    "problem": "RFC 3339 date-time"
+  }
+]

@@ -61,6 +61,21 @@ those omissions is a rule, not an accident — see [Honest limitations](#honest-
 Run it on every pull request with the [GitHub Action](docs/github-action.md). Advisory by
 default; it does not block merges.
 
+Before SARIF, a pull-request comment, or an Action verdict is published, one validator is
+authoritative:
+
+```bash
+python scripts/validate_review.py --review review.json
+```
+
+It accepts schema version `1.0` with methodology spec `backend-performance-review/2.0`,
+derives change-scoped verdicts rather than trusting them, and checks cross-document rules
+such as root-cause links and runtime-evidence citations. The bundled stdlib-only schema
+reader intentionally supports just the subset used by `schemas/*.schema.json`: `type`,
+`enum`, `const`, `pattern`, RFC 3339 `date-time` format, length/numeric/item bounds,
+`uniqueItems`, object/array keywords, `contains`, local and sibling-file `$ref`, `$defs`,
+`allOf`, `anyOf`, and `if`/`then`/`else`. Every supported keyword has a contract test.
+
 ---
 
 ## Why this exists
