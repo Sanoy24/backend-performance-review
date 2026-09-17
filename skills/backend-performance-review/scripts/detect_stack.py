@@ -60,7 +60,12 @@ SKIP_DIRS = {
     ".ruff_cache", ".tox", "target", "build", "dist", "out", ".next", ".nuxt",
     ".gradle", ".idea", ".vscode", "coverage", "htmlcov", ".terraform",
     "site-packages", "Pods", "DerivedData",
+    # Project-scoped agent installations contain this skill's registry and every technology
+    # reference. Treating those files as application evidence makes the detector report the
+    # technologies it knows about rather than the technologies the target uses.
+    ".claude", ".agents", ".opencode", ".codex",
 }
+SKIP_DIR_NAMES = {name.casefold() for name in SKIP_DIRS}
 
 # Files whose CONTENT is never read. Presence is reported; contents are not.
 SECRET_PATTERNS = [
@@ -287,7 +292,21 @@ def wants_content(name, rel_path):
     return content_kind(name, rel_path) is not None
 
 
-def scan(repo, max_bytes):
+def _is_within(path, root):
+    """Whether path resolves inside root, including root itself.
+
+    `commonpath` raises on different Windows drives. That is an outside path, not an error a
+    read-only discovery accelerator should surface to its caller.
+    """
+    resolved_path = os.path.realpath(os.path.abspath(path))
+    resolved_root = os.path.realpath(os.path.abspath(root))
+    try:
+        return os.path.commonpath([resolved_path, resolved_root]) == resolved_root
+    except ValueError:
+        return False
+
+
+def scan(repo, max_bytes, excluded_roots=None):
     """Return (records, evidence_files, secret_files, warnings).
 
     records is a list of (rel_path, text, kind) tuples — one per filename (kind
@@ -296,7 +315,17 @@ def scan(repo, max_bytes):
     Keeping matches attributed to the specific file they came from, rather than one
     flattened corpus string, is what lets detect() report *which* file supports a match
     and grade manifest evidence above an incidental YAML hit.
+
+    `excluded_roots` removes a skill installation or other tool-owned tree even when it is
+    installed somewhere that is not one of the standard agent-state directories.
     """
+    repo = os.path.realpath(os.path.abspath(repo))
+    excluded = []
+    for candidate in excluded_roots or []:
+        resolved = os.path.realpath(os.path.abspath(candidate))
+        if _is_within(resolved, repo):
+            excluded.append(resolved)
+
     records = []
     evidence = []
     secrets = []
@@ -304,15 +333,36 @@ def scan(repo, max_bytes):
     total = 0
     seen = 0
 
+    if any(os.path.normcase(repo) == os.path.normcase(path) for path in excluded):
+        return records, evidence, secrets, warnings
+
     for dirpath, dirnames, filenames in os.walk(repo):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".egg")]
+        kept_dirs = []
+        for name in dirnames:
+            full_dir = os.path.join(dirpath, name)
+            resolved_dir = os.path.realpath(full_dir)
+            if name.casefold() in SKIP_DIR_NAMES or name.startswith(".egg"):
+                continue
+            if not _is_within(resolved_dir, repo):
+                continue
+            if any(_is_within(resolved_dir, path) for path in excluded):
+                continue
+            kept_dirs.append(name)
+        dirnames[:] = kept_dirs
+
         for name in filenames:
+            full = os.path.join(dirpath, name)
+            resolved_full = os.path.realpath(full)
+            if not _is_within(resolved_full, repo):
+                continue
+            if any(_is_within(resolved_full, path) for path in excluded):
+                continue
+
             seen += 1
             if seen > MAX_FILES:
                 warnings.append("file limit reached (%d); scan is partial" % MAX_FILES)
                 return records, evidence, secrets, warnings
 
-            full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, repo).replace(os.sep, "/")
             records.append((rel, rel, "filename"))
 
@@ -685,7 +735,10 @@ def main(argv=None):
     registry_path = os.path.normpath(registry_path)
 
     entries, warnings = parse_registry(registry_path)
-    records, evidence, secrets, scan_warnings = scan(repo, args.max_bytes)
+    skill_root = os.path.realpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), os.pardir))
+    records, evidence, secrets, scan_warnings = scan(
+        repo, args.max_bytes, excluded_roots=[skill_root])
     warnings.extend(scan_warnings)
 
     detected, references, tiers, notes = detect(records, entries)

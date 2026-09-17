@@ -10,6 +10,7 @@ Run with: python -m unittest discover -s tests
 import copy
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -449,6 +450,19 @@ class DisciplineMetricTests(unittest.TestCase):
         review = {"findings": [finding(problem="The page size of 20 items bounds the loop.")]}
         result = scorer.discipline(review, repo_tokens={"20"})
         self.assertEqual(result["rates"]["unsourced_number"], 0.0)
+
+    def test_agent_installation_numbers_are_not_repository_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "service.py").write_text("PAGE_SIZE = 20\n", encoding="utf-8")
+            skill = root / ".claude" / "skills" / "backend-performance-review"
+            skill.mkdir(parents=True)
+            (skill / "reference.md").write_text(
+                "A generic example mentions 800ms.\n", encoding="utf-8")
+
+            tokens = scorer.repo_number_tokens(root)
+            self.assertIn("20", tokens)
+            self.assertNotIn("800", tokens)
 
     def test_a_bare_number_with_no_unit_is_never_flagged(self):
         # Line numbers, versions and counts are not performance claims. Flagging them would
