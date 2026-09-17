@@ -67,6 +67,9 @@ jobs:
       - name: Run the fixture corpus and the scoring harness tests
         run: python -m unittest discover -s tests -v
 
+      - name: Smoke-test maintained workflow recipes without model calls
+        run: python -m unittest discover -s tests -p test_workflow_recipes.py -v
+
       - name: Verify the scoring harness runs on the committed example review
         run: |
           python benchmark/scoring/score.py score \

@@ -62,6 +62,29 @@ Want automatic discovery, a personal installation, or a platform-specific path i
 the [installation guide](docs/installation.md). Want this on every pull request after the first
 review works? Add the [GitHub Action](docs/github-action.md), which is advisory by default.
 
+### Maintained workflow recipes
+
+All supported recipes use the same prompt, expect the same two artifacts, and finish at the
+same validator. The runner is Python 3.8+ and standard-library only:
+
+| Flow | Command from the repository being reviewed |
+|:--|:--|
+| Vendor-neutral/manual | `python ../backend-performance-review/scripts/workflow_recipe.py prompt --project . --prompt-file performance-review.prompt.txt` |
+| Codex CLI | `python ../backend-performance-review/scripts/workflow_recipe.py run --agent codex --project .` |
+| Claude Code | `python ../backend-performance-review/scripts/workflow_recipe.py run --agent claude --project .` |
+
+For the manual flow, paste `performance-review.prompt.txt` into any agent, save the two named
+outputs, then run `python ../backend-performance-review/scripts/workflow_recipe.py validate
+--project .`. Add `--mode change-scoped --base-ref origin/main` to any recipe for a branch or
+pull-request review.
+
+The prompt, both no-call command plans, the manual validation path, the two-job workflow
+contract, and deterministic publishing are **officially exercised in CI without model calls**.
+The authenticated Claude Code and Codex model calls are **documentation-only in this project**:
+CI deliberately does not hold vendor credentials or spend a user's model budget. See the
+[installation guide's workflow section](docs/installation.md#5-maintained-execution-recipes)
+for setup, safety boundaries, and the copyable pull-request workflow.
+
 ### From a weak finding to a useful one
 
 > **Weak:** “This looks like an N+1 query. Use eager loading.”
