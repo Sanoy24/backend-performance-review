@@ -2,6 +2,10 @@
 
 How the skill is packaged, discovered, and invoked — in Claude Code and elsewhere.
 
+For the shortest vendor-neutral path from checkout to a validated first review, start with
+the [README quickstart](../README.md#quickstart-your-first-validated-review). Return here when
+you want automatic discovery or a personal installation.
+
 ## Quick installation check
 
 From a clone or downloaded copy of this repository, run:

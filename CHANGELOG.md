@@ -39,6 +39,11 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- README onboarding now follows one vendor-neutral, copy-paste journey from checkout and
+  environment diagnosis through an exact agent prompt, two expected artifacts, authoritative
+  validation, and a concrete success signal. It also includes five two-minute troubleshooting
+  paths and shows a generic finding transformed into an evidence-based one; platform-specific
+  discovery commands remain in the installation guide.
 - `scripts/doctor.py`, a standard-library installation diagnostic for Python compatibility,
   project and personal skill discovery, `SKILL.md`/registry integrity, writable review-output
   locations, and optional GitHub CLI availability. It prints remediation commands, supports
