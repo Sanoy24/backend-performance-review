@@ -39,6 +39,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Stability scoring now uses canonical `stable_id` values as a multiset instead of collapsing
+  findings into a dictionary keyed by `(file, category)`. Repeated IDs remain separate and are
+  reported as collisions, severity/priority comparisons exclude ambiguous collision pairs,
+  missing IDs are explicit, and the former location/category view is retained only as a named
+  approximation. Stale claims that no canonical algorithm exists were removed.
 - Benchmark scoring now uses maximum-cardinality, maximum-specificity bipartite assignment
   instead of first-match traversal. Reordering findings or `expected`, `acceptable`, and
   `forbidden` annotations can no longer change the score; equal-score assignments are surfaced

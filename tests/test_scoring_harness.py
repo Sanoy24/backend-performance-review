@@ -18,9 +18,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmark" / "scoring"))
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "skills" / "backend-performance-review" / "scripts"))
 
 import score as scorer  # noqa: E402
 import json_schema_lite as schema_lite  # noqa: E402
+import compute_stable_id as stable_ids  # noqa: E402
 
 EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
 FIXTURE = ROOT / "tests" / "fixtures" / "example-ground-truth.json"
@@ -39,6 +41,8 @@ def finding(**overrides):
         "recommendation": "Batch the related lookup into a single query.",
     }
     base.update(overrides)
+    if "stable_id" not in overrides:
+        base["stable_id"] = stable_ids.compute_for_finding(base)
     return base
 
 
@@ -435,19 +439,18 @@ class StabilityTests(unittest.TestCase):
     """Turns docs/evaluation.md §3.18's hand diff into a number."""
 
     def test_caveats_are_always_present(self):
-        # Discovered by running two real independent reviews of the same repository: the
-        # (file, category) key undercounts agreement across a call-chain citation choice,
-        # and stable_id_agreement is not yet meaningful with no canonical hash algorithm
-        # specified. Both must stay visible in the output, not just in a docstring nobody
-        # reading the JSON would see.
+        # A canonical ID now exists. The remaining caveat is semantic: two reviews may cite
+        # opposite ends of one call chain, which changes the location-derived ID.
         result = scorer.stability({"findings": []}, {"findings": []})
         self.assertIn("caveats", result)
-        self.assertTrue(len(result["caveats"]) >= 2)
+        self.assertTrue(any("call chain" in caveat for caveat in result["caveats"]))
+        self.assertFalse(any("no canonical" in caveat for caveat in result["caveats"]))
 
     def test_identical_runs_are_fully_stable(self):
         run = {"findings": [finding()]}
         result = scorer.stability(run, copy.deepcopy(run))
         self.assertEqual(result["overlap"], 1.0)
+        self.assertEqual(result["stable_id_overlap"], 1.0)
         self.assertEqual(result["severity_agreement"], 1.0)
         self.assertEqual(result["priority_agreement"], 1.0)
 
@@ -465,6 +468,50 @@ class StabilityTests(unittest.TestCase):
         self.assertEqual(result["overlap"], 1.0, "same location and category")
         self.assertEqual(result["severity_agreement"], 0.0)
         self.assertEqual(result["priority_agreement"], 0.0)
+
+    def test_two_findings_with_one_stable_id_are_not_collapsed(self):
+        # The canonical algorithm deliberately collides for two distinct findings sharing a
+        # file, symbol, and category. Stability must preserve multiplicity even in that case.
+        first_finding = finding(location={"file": "shared.py", "symbol": "shared"})
+        second_finding = finding(id="PERF-002",
+                                 location={"file": "shared.py", "symbol": "shared"})
+        self.assertEqual(first_finding["stable_id"], second_finding["stable_id"])
+
+        result = scorer.stability(
+            {"findings": [first_finding, second_finding]},
+            {"findings": [copy.deepcopy(first_finding)]},
+        )
+
+        self.assertEqual(result["overlap"], 0.5)
+        self.assertEqual(result["shared"], 1)
+        self.assertEqual(len(result["only_in_a"]), 1)
+        self.assertEqual(result["stable_id_collisions"]["run_a"][0]["count"], 2)
+        self.assertEqual(result["approximate_location_category"]["overlap"], 0.5)
+
+    def test_canonical_ids_from_identical_inputs_agree_across_runs(self):
+        run_a = finding(id="PERF-001", location={
+            "file": "src/orders/service.py", "line": 10, "symbol": "OrderService.list",
+        })
+        run_b = finding(id="PERF-900", location={
+            "file": "SRC\\ORDERS\\SERVICE.PY", "line": 999, "symbol": "OrderService.list",
+        })
+        self.assertEqual(run_a["stable_id"], run_b["stable_id"])
+
+        result = scorer.stability({"findings": [run_a]}, {"findings": [run_b]})
+
+        self.assertEqual(result["stable_id_overlap"], 1.0)
+        self.assertEqual(result["shared"], 1)
+
+    def test_findings_without_stable_ids_use_only_the_named_approximation(self):
+        run_a = finding(stable_id=None)
+        run_b = finding(id="PERF-900", stable_id=None)
+
+        result = scorer.stability({"findings": [run_a]}, {"findings": [run_b]})
+
+        self.assertIsNone(result["overlap"])
+        self.assertEqual(result["missing_stable_ids"]["run_a"], ["PERF-001"])
+        self.assertEqual(result["missing_stable_ids"]["run_b"], ["PERF-900"])
+        self.assertEqual(result["approximate_location_category"]["overlap"], 1.0)
 
 
 class ShippedExampleTests(unittest.TestCase):
