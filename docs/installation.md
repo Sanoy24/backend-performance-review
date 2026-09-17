@@ -190,8 +190,14 @@ Properties worth knowing before you run it on someone else's code:
   `credentials*`, `*.tfvars`, `secrets.*`, SSH private keys, `.netrc`. Their paths are
   reported so the reviewer knows they exist; their contents are not read and never appear in
   output.
-- It skips vendor and build directories, caps per-file and total bytes read, and caps file
-  count. On a very large repository the scan may be partial, and it says so in `warnings`.
+- It skips vendor, build, and agent-state directories (`.claude`, `.agents`, `.opencode`,
+  `.codex`). The last group is load-bearing for project-scoped installation: a copied skill
+  contains every registry token and technology reference, but those files are tooling rather
+  than evidence about the application being reviewed.
+- It does not follow a file or directory symlink outside the target repository, and explicitly
+  excludes its own resolved skill directory if installed somewhere else beneath the target.
+- It caps per-file and total bytes read, and caps file count. On a very large repository the
+  scan may be partial, and it says so in `warnings`.
 
 Output is JSON on stdout; diagnostics go to stderr.
 
