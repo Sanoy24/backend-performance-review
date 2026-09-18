@@ -130,8 +130,12 @@ confidence any finding in this review can reach. Do it now, not at the end.
 Load: `methodology/discovery.md`.
 
 ### Phase 2 — Workload
-Extract repo-derived workload signals, then ask the user the bounded workload interview
-(at most 7 questions, asked once, in one message — see `methodology/workload.md`).
+Extract repo-derived workload signals and use manifests, configuration, deployment files,
+observability artifacts, and code to answer question candidates before asking the user.
+Then apply the decision-change gate in `methodology/workload.md`: a question survives only
+when plausible answers can change severity, confidence, or recommendation. Rank survivors
+by expected decision value and ask zero to seven once, in one message. Seven is a maximum,
+not a quota.
 
 If the user cannot or will not answer: **proceed anyway**. Do not block. Record the
 unknowns and cap workload-dependent findings at `Medium` confidence.

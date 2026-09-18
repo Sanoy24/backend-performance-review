@@ -99,7 +99,32 @@
               "answer": { "type": "string" },
               "source": {
                 "type": "string",
-                "enum": ["user", "repository", "derived"]
+                "enum": ["user", "repository", "derived", "unanswered"]
+              },
+              "asked": {
+                "description": "True only when this question was included in the bounded user interview. Repository-derived inputs are false.",
+                "type": "boolean"
+              },
+              "evidence_checked": {
+                "description": "Repository files or artifacts checked before resolving this input or deciding it still needed a human answer.",
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "decision_dimensions": {
+                "description": "Decisions that plausible answers can change. Required semantically when asked is true.",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": ["severity", "confidence", "recommendation"]
+                }
+              },
+              "expected_decision_value": {
+                "description": "Ordinal interview rank. Required semantically when asked is true; never fabricate a numeric probability.",
+                "type": "string",
+                "enum": ["highest", "high", "medium", "low"]
               }
             }
           }
@@ -266,6 +291,21 @@
         "properties": {
           "question": { "type": "string" },
           "what_it_would_change": { "type": "string" },
+          "decision_dimensions": {
+            "description": "Severity, confidence, or recommendation decisions this unresolved question can change.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["severity", "confidence", "recommendation"]
+            }
+          },
+          "expected_decision_value": {
+            "description": "Ordinal value used to rank this question in descending order.",
+            "type": "string",
+            "enum": ["highest", "high", "medium", "low"]
+          },
           "affects": {
             "type": "array",
             "items": { "type": "string", "pattern": "^PERF-[0-9]{3,}$" }
