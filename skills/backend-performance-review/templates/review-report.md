@@ -123,7 +123,8 @@ resources named explicitly — they determine blast radius throughout the report
 
 ## 4. Workload model
 
-**Known** `[cited — from repository files or supplied by the user]`
+**Known** `[cited — infer repository-answerable workload facts before asking; record the
+source and evidence checked in workload.inputs]`
 
 - <fact> — source: <file:line or "user-supplied">
 
@@ -146,12 +147,12 @@ the heading, because an empty Measured list is why almost nothing here is `Confi
 
 ### Questions that would change the ranking
 
-`[Unanswered questions worth asking, most valuable first. More useful than "more information
-is needed", and it turns an unanswered interview into a cheap, specific next step.]`
+`[Only unanswered questions that can change severity, confidence, or recommendation, ranked
+by expected decision value. Zero is valid; seven is the interview maximum, not a quota.]`
 
-| # | Question | What it would change |
-|:--|:--|:--|
-| 1 | `[question]` | `[which findings move, and where to]` |
+| # | Value | Question | Decision dimensions | What it would change |
+|:--|:--|:--|:--|:--|
+| 1 | `highest / high / medium / low` | `[question]` | `severity / confidence / recommendation` | `[which findings move, and where to]` |
 
 ---
 

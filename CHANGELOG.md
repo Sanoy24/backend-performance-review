@@ -39,6 +39,12 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- Workload interviews now use an auditable adaptive gate: repository and derived evidence
+  answer candidates first, only questions that can change severity, confidence, or
+  recommendation survive, and survivors are ranked by ordinal expected decision value.
+  Machine-readable inputs record whether a question was asked and what evidence was checked;
+  validation enforces decision metadata, descending value order, and the seven-question
+  maximum while allowing a zero-question interview.
 - Analysis now separates broad discovery from report selection through a private candidate
   ledger, an explicit critical-path and shared-resource coverage sweep, recorded dispositions,
   root-cause merging, and only then scoring and the output budget. Plausible discarded
