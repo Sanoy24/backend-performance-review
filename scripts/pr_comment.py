@@ -253,6 +253,14 @@ def render(review, fail_on="never"):
                  % completeness.get("evidence_available", "—"))
     lines.append("| Ranking | %s |" % completeness.get("ranking_method", "—"))
 
+    for label, prefix in (("Critical paths", "critical_paths"),
+                          ("Shared resources", "shared_resources")):
+        identified = completeness.get(prefix + "_identified")
+        analyzed = completeness.get(prefix + "_analyzed")
+        if (isinstance(identified, int) and not isinstance(identified, bool)
+                and isinstance(analyzed, int) and not isinstance(analyzed, bool)):
+            lines.append("| %s analyzed | %d / %d |" % (label, analyzed, identified))
+
     if unknowns:
         lines.append("| Not determined | %d item(s) |" % len(unknowns))
     lines.append("")

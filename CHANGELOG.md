@@ -39,6 +39,12 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- Analysis now separates broad discovery from report selection through a private candidate
+  ledger, an explicit critical-path and shared-resource coverage sweep, recorded dispositions,
+  root-cause merging, and only then scoring and the output budget. Plausible discarded
+  candidates can retain evidence, affected path, and a revisit condition in
+  `considered_not_reported`; completeness can record analyzed/identified shared resources,
+  and validation rejects impossible or silently incomplete coverage counts.
 - The default human report and pull-request comment now open with a bounded decision surface:
   assessment, the top three actions, three key unknowns, and three validation commands before
   detailed evidence. Finding JSON can carry structured validation commands with purpose and

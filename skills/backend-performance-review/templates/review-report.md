@@ -84,6 +84,7 @@ engine-specific reference exists in this version."]`
 |:--|:--|
 | **Repository coverage** | `[What was examined. State it honestly or omit it — an estimated percentage is an invented number]` |
 | **Critical paths** | `[analyzed] / [identified]` |
+| **Shared resources** | `[analyzed] / [identified]` |
 | **Technology support** | `[Deep / Conceptual / Generic, per technology]` |
 | **Runtime evidence** | `[What was supplied, or None]` |
 | **Overall review confidence** | **High / Medium / Low** |
@@ -264,8 +265,8 @@ production safety; omit rather than invent one.]`
 
 ### Considered and not reported
 
-`[One or two lines on candidates that were evaluated and discarded, with the reason. This
-demonstrates the review had a filter, and it pre-empts "why didn't you mention X".]`
+`[Only plausible, material discards worth revisiting. Give path/resource, evidence checked,
+discard reason, and revisit condition; leave obvious noise in the private candidate ledger.]`
 
 ### Adjacent findings — outside performance scope
 

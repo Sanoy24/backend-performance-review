@@ -127,5 +127,26 @@
       {"op": "set", "path": "/findings/0/evidence/0/timestamp", "value": "2026-99-99T00:00:00Z"}
     ],
     "problem": "RFC 3339 date-time"
+  },
+  {
+    "name": "coverage cannot analyze more critical paths than it identified",
+    "operations": [
+      {"op": "set", "path": "/completeness/critical_paths_analyzed", "value": 5}
+    ],
+    "problem": "critical paths coverage analyzes 5 but identifies only 4"
+  },
+  {
+    "name": "shared resource coverage counts are a pair",
+    "operations": [
+      {"op": "set", "path": "/completeness/shared_resources_identified", "value": 2}
+    ],
+    "problem": "shared resources coverage must declare both"
+  },
+  {
+    "name": "incomplete coverage must remain visible as an unknown",
+    "operations": [
+      {"op": "set", "path": "/completeness/critical_paths_analyzed", "value": 3}
+    ],
+    "problem": "without a completeness unknown whose reason is not-examined"
   }
 ]
