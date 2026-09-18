@@ -153,9 +153,15 @@ Determine which layers are actually present. Load only their references, resolve
 In order, for present layers only:
 `application → data access → database → cache → distributed → infrastructure`
 
+Accumulate observations in the private candidate ledger defined by
+`methodology/bottleneck-analysis.md`; do not score, recommend, or apply the output budget
+during discovery.
+
 ### Phase 6 — Synthesis
-Merge findings that share a root cause. Score Severity and Confidence. Derive Priority
-from the matrix — never guess it. Apply the output budget.
+Complete the critical-path and shared-resource coverage sweep. Give every candidate a
+disposition, then merge promoted candidates that share a root cause. Score Severity and
+Confidence and derive Priority from the matrix — never guess it. Apply the output budget
+only after discovery, disposition, and root-cause merging are complete.
 
 Load: `methodology/bottleneck-analysis.md`.
 
@@ -271,7 +277,8 @@ Findings sharing a root cause are merged, not enumerated.
 
 Full format for the top 10–15 findings by priority. Everything else goes in one ranked
 table: ID, severity, confidence, priority, location, one-line summary. Deduplicate
-*before* capping.
+*before* capping. The budget controls presentation depth only: it never limits candidate
+discovery, deletes a surviving finding, or turns a finding into `considered_not_reported`.
 
 ## Reference routing
 

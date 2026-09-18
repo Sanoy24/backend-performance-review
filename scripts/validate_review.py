@@ -144,6 +144,32 @@ def _semantic_problems(review):
                 "verdict mismatch: review declares %s, but its contents derive %s"
                 % (declared_verdict, derived_verdict))
 
+    completeness = _object(review.get("completeness"))
+    unknowns = [item for item in _array(completeness.get("unknowns"))
+                if isinstance(item, dict)]
+    records_incomplete_coverage = any(
+        item.get("reason") == "not-examined" for item in unknowns)
+    for label, prefix in (("critical paths", "critical_paths"),
+                          ("shared resources", "shared_resources")):
+        identified = completeness.get(prefix + "_identified")
+        analyzed = completeness.get(prefix + "_analyzed")
+        identified_is_int = isinstance(identified, int) and not isinstance(identified, bool)
+        analyzed_is_int = isinstance(analyzed, int) and not isinstance(analyzed, bool)
+        if identified_is_int != analyzed_is_int:
+            problems.append(
+                "%s coverage must declare both %s_identified and %s_analyzed"
+                % (label, prefix, prefix))
+        elif identified_is_int and analyzed_is_int:
+            if analyzed > identified:
+                problems.append(
+                    "%s coverage analyzes %d but identifies only %d"
+                    % (label, analyzed, identified))
+            elif analyzed < identified and not records_incomplete_coverage:
+                problems.append(
+                    "%s coverage analyzes %d of %d without a completeness unknown whose "
+                    "reason is not-examined"
+                    % (label, analyzed, identified))
+
     findings = [item for item in _array(review.get("findings")) if isinstance(item, dict)]
     finding_by_id = {}
     for finding in findings:
