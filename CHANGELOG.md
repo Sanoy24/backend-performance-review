@@ -39,6 +39,12 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- Optional structural-discovery evidence now has a vendor-neutral, versioned contract for
+  call edges, query shapes, and changed paths, with file/symbol provenance at both endpoints
+  and the relationship site. A stdlib validator rejects malformed or unsafe paths and,
+  when given a target root, paths outside that repository. The skill treats output as
+  advisory and keeps manual discovery complete; each producer must pass an independent
+  paired benchmark before any default recommendation.
 - Workload interviews now use an auditable adaptive gate: repository and derived evidence
   answer candidates first, only questions that can change severity, confidence, or
   recommendation survive, and survivors are ranked by ordinal expected decision value.
