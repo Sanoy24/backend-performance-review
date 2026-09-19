@@ -53,6 +53,7 @@ TIERS = ("common", "category", "technology", "full")
 PAIRS = (("category_only", "category_technology"),
          ("category_technology", "full_routed"))
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
 
 
 class AblationError(ValueError):
@@ -174,6 +175,108 @@ def _nonnegative_number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
 
 
+def _trials(case):
+    trials = case.get("trials")
+    if not isinstance(trials, list) or not trials:
+        raise AblationError("%s: no trials; record execution order first" % case["id"])
+    seen = set()
+    for trial in trials:
+        if not isinstance(trial, dict) or not isinstance(trial.get("id"), str):
+            raise AblationError("%s: trial needs an id" % case["id"])
+        if trial["id"] in seen:
+            raise AblationError("%s: duplicate trial id %s" % (case["id"], trial["id"]))
+        seen.add(trial["id"])
+        order = trial.get("order")
+        if not isinstance(order, list) or set(order) != set(ARMS) or len(order) != len(ARMS):
+            raise AblationError("%s/%s: record the three-arm execution order"
+                                % (case["id"], trial["id"]))
+    return trials
+
+
+def export_run_packs(manifest, destination, root=ROOT):
+    """Write opaque, reference-limited review packages; never include ground truth."""
+    plan = prepare(manifest, root)
+    destination = Path(destination)
+    if destination.exists():
+        raise AblationError("export destination already exists: %s" % destination)
+    if not destination.parent.is_dir():
+        raise AblationError("export destination parent does not exist: %s" % destination.parent)
+
+    assignments = []
+    for case, planned in zip(manifest["cases"], plan["cases"]):
+        if not SAFE_ID.fullmatch(case["id"]):
+            raise AblationError("case id is not a safe package name: %s" % case["id"])
+        repository = _load(root, case["truth"])["repository"]
+        if not repository.get("url"):
+            raise AblationError("%s: ground truth needs a repository URL for run packs"
+                                % case["id"])
+        for trial in _trials(case):
+            if not SAFE_ID.fullmatch(trial["id"]):
+                raise AblationError("trial id is not a safe package name: %s" % trial["id"])
+            assignments.append((case, planned, repository, trial))
+
+    prompt = _path(root, manifest["prompt"]).read_bytes()
+    if hashlib.sha256(prompt).hexdigest() != plan["prompt_sha256"]:
+        raise AblationError("common prompt changed during export")
+    helpers = ("schemas/review.schema.json", "schemas/finding.schema.json",
+               "skills/backend-performance-review/templates/review-report.md",
+               "skills/backend-performance-review/scripts/compute_stable_id.py")
+    helper_contents = {helper: _path(root, helper).read_bytes() for helper in helpers}
+    reference_contents = {}
+    for _, planned, _, _ in assignments:
+        for bundle in planned["bundles"].values():
+            for reference in bundle["files"]:
+                raw = reference["path"]
+                if raw not in reference_contents:
+                    content = _path(root, raw).read_bytes()
+                    if hashlib.sha256(content).hexdigest() != reference["sha256"]:
+                        raise AblationError("reference changed during export: %s" % raw)
+                    reference_contents[raw] = content
+
+    destination.mkdir()
+    coordinator = {"status": "unrun", "model": plan["model"],
+                   "prompt_sha256": plan["prompt_sha256"], "slots": []}
+    for case, planned, repository, trial in assignments:
+        for position, arm in enumerate(trial["order"], start=1):
+            slot = "slot-%d" % position
+            relative = Path(case["id"]) / trial["id"] / slot
+            package = destination / relative
+            package.mkdir(parents=True)
+            (package / "prompt.txt").write_bytes(prompt)
+            for helper in helpers:
+                target = package / helper
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(helper_contents[helper])
+            bundle = planned["bundles"][arm]
+            for reference in bundle["files"]:
+                target = package / reference["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(reference_contents[reference["path"]])
+            task = (
+                "# Independent performance review\n\n"
+                "Review %s at commit %s with model %s. Obtain a separate, read-only "
+                "checkout of that exact commit.\n\n"
+                "Read only the supplied skill files under skills/backend-performance-review/; "
+                "do not read the benchmark checkout, other reference files, ground truth, "
+                "or another review. The detector is intentionally absent; inspect the "
+                "target repository directly.\n\n"
+                "Use prompt.txt as the common request. Return a Markdown report and "
+                "review.json conforming to schemas/review.schema.json. Use the bundled "
+                "report template and compute_stable_id.py for stable IDs. Record actual model usage, "
+                "elapsed time, and cost from their respective sources; do not estimate them.\n"
+            ) % (repository["url"], repository["commit"], plan["model"])
+            (package / "TASK.md").write_text(task, encoding="utf-8")
+            coordinator["slots"].append({
+                "case": case["id"], "trial": trial["id"], "slot": slot,
+                "package": relative.as_posix(), "arm": arm,
+                "repository": repository["name"], "commit": repository["commit"],
+                "bundle_sha256": bundle["sha256"],
+            })
+    (destination / "coordinator.json").write_text(
+        json.dumps(coordinator, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return coordinator
+
+
 def _arm_result(root, run, truth, model, prompt_hash, bundle_hash):
     if not isinstance(run, dict):
         raise AblationError("each arm needs a run record")
@@ -253,20 +356,8 @@ def compare(manifest, root=ROOT):
     output = []
     for case, planned in zip(manifest["cases"], plan["cases"]):
         truth = _load(root, case["truth"])
-        trials = case.get("trials")
-        if not isinstance(trials, list) or not trials:
-            raise AblationError("%s: no trials; run --plan-only first" % case["id"])
         records = []
-        trial_ids = set()
-        for trial in trials:
-            if not isinstance(trial, dict) or not isinstance(trial.get("id"), str):
-                raise AblationError("%s: trial needs an id" % case["id"])
-            if trial["id"] in trial_ids:
-                raise AblationError("%s: duplicate trial id %s" % (case["id"], trial["id"]))
-            trial_ids.add(trial["id"])
-            if not isinstance(trial.get("order"), list) or set(trial["order"]) != set(ARMS) or len(trial["order"]) != len(ARMS):
-                raise AblationError("%s/%s: record the three-arm execution order"
-                                    % (case["id"], trial["id"]))
+        for trial in _trials(case):
             arms = trial.get("arms")
             if not isinstance(arms, dict) or set(arms) != set(ARMS):
                 raise AblationError("%s/%s: all three arms are required"
@@ -322,14 +413,18 @@ def compare(manifest, root=ROOT):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--plan-only", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--plan-only", action="store_true")
+    mode.add_argument("--export-dir", type=Path,
+                      help="new directory for opaque, blinded reviewer packages")
     parser.add_argument("--checkout", type=Path, default=ROOT,
                         help="checkout containing the references and review artifacts")
     args = parser.parse_args(argv)
     try:
         manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-        result = (prepare(manifest, args.checkout) if args.plan_only
-                  else compare(manifest, args.checkout))
+        result = (export_run_packs(manifest, args.export_dir, args.checkout)
+                  if args.export_dir else prepare(manifest, args.checkout)
+                  if args.plan_only else compare(manifest, args.checkout))
     except (OSError, UnicodeError, json.JSONDecodeError, AblationError) as exc:
         print("Reference ablation: %s" % exc, file=sys.stderr)
         return 2

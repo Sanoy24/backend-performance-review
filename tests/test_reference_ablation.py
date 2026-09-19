@@ -31,6 +31,14 @@ class ReferenceAblationTests(unittest.TestCase):
         for name in ("review.schema.json", "finding.schema.json",
                      "ground-truth.schema.json"):
             self._copy(ROOT / "schemas" / name, self.root / "schemas" / name)
+        self._copy(ROOT / "skills" / "backend-performance-review" / "scripts"
+                   / "compute_stable_id.py",
+                   self.root / "skills" / "backend-performance-review" / "scripts"
+                   / "compute_stable_id.py")
+        self._copy(ROOT / "skills" / "backend-performance-review" / "templates"
+                   / "review-report.md",
+                   self.root / "skills" / "backend-performance-review" / "templates"
+                   / "review-report.md")
 
         references = {
             "common": ["skills/backend-performance-review/SKILL.md"],
@@ -44,6 +52,9 @@ class ReferenceAblationTests(unittest.TestCase):
 
         truth = ROOT / "tests" / "fixtures" / "example-ground-truth.json"
         self._copy(truth, self.root / "truth.json")
+        annotated = json.loads((self.root / "truth.json").read_text(encoding="utf-8"))
+        annotated["repository"]["url"] = "https://example.com/orders.git"
+        self._write("truth.json", json.dumps(annotated))
         example = json.loads((ROOT / "docs" / "examples" / "review.example.json").read_text(
             encoding="utf-8"))
         example["reproducibility"]["model"] = "same-model"
@@ -195,6 +206,52 @@ class ReferenceAblationTests(unittest.TestCase):
             capture_output=True, text=True, check=False)
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["status"], "plan_only")
+
+    def test_export_packages_hide_truth_and_unassigned_references(self):
+        destination = self.root / "run-packs"
+        result = ablation.export_run_packs(self.manifest, destination, self.root)
+        self.assertEqual(result["status"], "unrun")
+        self.assertEqual([slot["arm"] for slot in result["slots"]], list(ablation.ARMS))
+        category = destination / "orders-fixture" / "first" / "slot-1"
+        technology = destination / "orders-fixture" / "first" / "slot-2"
+        full = destination / "orders-fixture" / "first" / "slot-3"
+        self.assertTrue((category / "skills/backend-performance-review/SKILL.md").is_file())
+        self.assertFalse((category / "skills/backend-performance-review/technology/example.md").exists())
+        self.assertTrue((technology / "skills/backend-performance-review/technology/example.md").is_file())
+        self.assertFalse((technology / "skills/backend-performance-review/runtimes/example.md").exists())
+        self.assertTrue((full / "skills/backend-performance-review/runtimes/example.md").is_file())
+        for package in (category, technology, full):
+            self.assertFalse((package / "truth.json").exists())
+            self.assertFalse((package / "coordinator.json").exists())
+            self.assertTrue((package / "schemas/review.schema.json").is_file())
+            self.assertTrue((package / "skills/backend-performance-review/templates/review-report.md").is_file())
+            self.assertIn("read-only", (package / "TASK.md").read_text(encoding="utf-8"))
+        self.assertTrue((destination / "coordinator.json").is_file())
+
+    def test_export_does_not_overwrite_an_existing_directory(self):
+        destination = self.root / "existing"
+        destination.mkdir()
+        with self.assertRaisesRegex(ablation.AblationError, "already exists"):
+            ablation.export_run_packs(self.manifest, destination, self.root)
+
+    def test_export_rejects_unsafe_trial_id_before_writing(self):
+        self.manifest["cases"][0]["trials"][0]["id"] = "../outside"
+        destination = self.root / "run-packs"
+        with self.assertRaisesRegex(ablation.AblationError, "safe package name"):
+            ablation.export_run_packs(self.manifest, destination, self.root)
+        self.assertFalse(destination.exists())
+
+    def test_cli_exports_packs_without_running_reviews(self):
+        self._write("manifest.json", json.dumps(self.manifest))
+        destination = self.root / "cli-packs"
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "benchmark" / "reference_ablation.py"),
+             "--manifest", str(self.root / "manifest.json"),
+             "--checkout", str(self.root), "--export-dir", str(destination)],
+            capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["status"], "unrun")
+        self.assertTrue((destination / "orders-fixture/first/slot-1/TASK.md").is_file())
 
 
 if __name__ == "__main__":
