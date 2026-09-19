@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "dataset_version": "0.1.0",
+  "cases": {
+    "aspnetcore-realworld": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "9f3adfd5b5c165b779ed7a8eac6225fc66b78fe088a3dcb69709fb838b0d50bb", "origin": "baseline-existing-corpus"}]
+    },
+    "fastapi-full-stack-template": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "75c88ca5d3ac83ceddff9ce942aba39a8120969084e5b4d730875cb24bda3fdf", "origin": "baseline-existing-corpus"}]
+    },
+    "gin-realworld": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "50e2eab4540e69e868e179d795101208d1cae49abafd19c96fd69e514b77ed74", "origin": "baseline-existing-corpus"}]
+    },
+    "gin-realworld-pr49-change-scoped": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "d366795031bf234e0aa4cae5d2087bc84c0f96e07f827e741011c3a0c999707e", "origin": "baseline-existing-corpus"}]
+    },
+    "github-signature-verifier": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "6a1029da3707490f44b613312ba9bf34f4c9866260cca25feb34cb29a5046155", "origin": "baseline-existing-corpus"}]
+    },
+    "node-express-realworld-prisma-postgres": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "29986891b4eea92acfe035c61c18ce2c2ac0d160f1f5567a4e6ac4df753d9244", "origin": "baseline-existing-corpus"}]
+    },
+    "rails-realworld": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "bd60d616a83a7edf8eeaac7501ed2a552232697f0cdce459813cb51397fb3e75", "origin": "baseline-existing-corpus"}]
+    },
+    "realworld-axum-sqlx": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "6fdc475efc4b8df9dfe7f956fb6d7c9b9d5785b346ed60dfe29e402745ec21e1", "origin": "baseline-existing-corpus"}]
+    },
+    "spring-boot-realworld": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "0666431ef6f9be04d49d7342ef008995dab58bd60849121cebc7bb0e95b7e7e6", "origin": "baseline-existing-corpus"}]
+    },
+    "urlshortener": {
+      "split": "development",
+      "pre_registered_before_review": false,
+      "license": {"spdx": null, "evidence_url": null},
+      "annotations": [{"version": 1, "sha256": "e5e5b4fc3631c0c2cd670223c87adbe69492f7f5c06873d2bbde9848ae5f0166", "origin": "baseline-existing-corpus"}]
+    }
+  }
+}

@@ -16,7 +16,9 @@ This directory is the machinery for doing it by computation instead.
 
 ```
 benchmark/
-├── ground-truth/     expert annotations, one file per repository at one commit
+├── dataset.json       case split and annotation-version registry
+├── dataset.py         registry validation and held-out eligibility gate
+├── ground-truth/     annotations, one file per repository/case
 ├── scoring/score.py  precision, recall, calibration, restraint, stability
 ├── ab-comparison.md  protocol: does the methodology beat asking the model plainly?
 └── ab-results/       results of that comparison, once adjudicated
@@ -26,9 +28,29 @@ benchmark/
 directory exists to serve. Precision and recall say how good a review is; only a control arm
 says whether the *methodology* is what made it good.
 
-`ground-truth/` is empty on purpose. Annotations are the expensive part, and committing
-placeholder ones would put fabricated truth into a repository whose first rule is not to
-fabricate. See "What to annotate first" below.
+`ground-truth/` currently contains ten treatment-derived development cases, not a locked
+evaluation set. Annotations are the expensive part; a missing held-out set is more honest
+than relabeling an existing review as independent truth. See "What to annotate first" below.
+
+## Dataset split and annotation versions
+
+Run `python benchmark/dataset.py` to validate the versioned registry. It currently reports
+ten `development` cases, zero `held_out` cases, and `held_out_ready: false`. The dataset
+version is independent of the scorer and skill versions. Each case's annotation history
+records its content hash and origin; a changed truth file fails validation until a new
+annotation version records the new hash, reason, and affected run IDs. Repository name,
+source URL, and commit live in the truth file. License metadata is explicitly unverified
+for the historical cases; several also lack a full commit SHA. They remain useful
+development fixtures, not held-out accuracy evidence.
+
+`score.py score --truth ...` remains exploratory. The guarded
+`score.py evaluate --case <id> --review <review.json> --json` command accepts only a
+pre-registered held-out case with independent annotation origin, a full commit, documented
+license metadata, and a schema-valid review of that same commit. A human must verify the
+recorded license evidence before using a case publicly. The command rejects review files
+under the historical `benchmark/ab-results/` treatment directory. No committed case is
+eligible yet. Reviewer isolation and provenance still require an independent run protocol;
+the command alone does not make a review blind.
 
 ## Running it
 
