@@ -42,6 +42,8 @@ value and `[Unreleased]` accumulates.
 - A versioned benchmark registry explicitly classifies the ten historical annotations as
   development-only, tracks annotation digests and change origins, and gates held-out scoring
   on independent truth, pinned commits, source metadata, and matching review provenance.
+- Exploratory raw scoring now labels its evidence tier and registered development provenance;
+  registered held-out truth, including an unchanged copy, must use the guarded evaluator.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while

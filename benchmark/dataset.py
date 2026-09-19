@@ -153,6 +153,37 @@ def require_held_out(case_id, root=ROOT, manifest_path=None):
     }
 
 
+def classify_truth(path, root=ROOT, manifest_path=None):
+    """Identify registered truth by canonical path or current annotation digest.
+
+    This protects the exploratory scorer from accidentally consuming a copy of held-out
+    truth. It is a provenance guard, not a substitute for reviewer isolation.
+    """
+    root = Path(root).resolve()
+    manifest = _read_json(Path(manifest_path) if manifest_path else root / "benchmark/dataset.json")
+    summary = _validate(root, manifest)
+    path = Path(path).resolve()
+    try:
+        digest = annotation_digest(path)
+    except OSError as exc:
+        raise DatasetError("cannot read %s: %s" % (path, exc)) from exc
+    matches = []
+    for case_id, record in manifest["cases"].items():
+        current = record["annotations"][-1]
+        canonical = root / "benchmark/ground-truth" / (case_id + ".json")
+        if path == canonical or digest == current["sha256"]:
+            matches.append({
+                "case": case_id,
+                "split": record["split"],
+                "dataset_version": summary["dataset_version"],
+                "annotation_version": current["version"],
+                "annotation_sha256": current["sha256"],
+            })
+    if len(matches) > 1:
+        raise DatasetError("truth matches multiple registered cases")
+    return matches[0] if matches else None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", type=Path, default=DATASET)

@@ -1067,6 +1067,7 @@ def main(argv=None):
     scorer = subparsers.add_parser("score", help="exploratory score against supplied truth")
     scorer.add_argument("--truth", required=True)
     scorer.add_argument("--review", required=True)
+    scorer.add_argument("--dataset", type=Path, default=benchmark_dataset.DATASET)
     scorer.add_argument("--json", action="store_true", help="emit JSON instead of a report")
 
     evaluator = subparsers.add_parser(
@@ -1092,8 +1093,21 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "score":
+        dataset_root = args.dataset.resolve().parent.parent
+        try:
+            registration = benchmark_dataset.classify_truth(
+                args.truth, dataset_root, args.dataset)
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        if registration and registration["split"] == "held_out":
+            parser.error("registered held-out truth requires evaluate --case %s"
+                         % registration["case"])
         result = score(load(args.truth), load(args.review))
-        print(json.dumps(result, indent=2) if args.json else render(result))
+        result["evidence_tier"] = "exploratory"
+        if registration:
+            result["dataset"] = registration
+        print(json.dumps(result, indent=2) if args.json
+              else "EXPLORATORY — not held-out evaluation\n" + render(result))
         return 0
 
     if args.command == "evaluate":

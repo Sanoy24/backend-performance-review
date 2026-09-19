@@ -44,7 +44,11 @@ source URL, and commit live in the truth file. License metadata is explicitly un
 for the historical cases; several also lack a full commit SHA. They remain useful
 development fixtures, not held-out accuracy evidence.
 
-`score.py score --truth ...` remains exploratory. The guarded
+`score.py score --truth ...` is explicitly labeled exploratory in text and JSON output.
+It identifies registered development truth by path or current annotation digest, and
+rejects registered held-out truth (including an unchanged copy). Use `--dataset` when
+scoring against a non-default registry. This is an accidental-misuse safeguard, not a
+security boundary or proof that an unregistered truth file is independent. The guarded
 `score.py evaluate --case <id> --review <review.json> --json` command accepts only a
 pre-registered held-out case with independent annotation origin, a full commit, documented
 license metadata, and a schema-valid review of that same commit. A human must verify the
