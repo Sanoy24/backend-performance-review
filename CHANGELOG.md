@@ -39,6 +39,11 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- A reference-ablation harness can freeze and compare category-only, category-plus-
+  technology, and full routed bundles using paired, pinned reviews. It reports finding
+  changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
+  withholding its measured-contribution score when ground-truth matching is unresolved.
+  No empirical three-arm result is claimed yet.
 - Optional structural-discovery evidence now has a vendor-neutral, versioned contract for
   call edges, query shapes, and changed paths, with file/symbol provenance at both endpoints
   and the relationship site. A stdlib validator rejects malformed or unsafe paths and,
