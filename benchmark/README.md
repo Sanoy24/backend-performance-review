@@ -37,8 +37,9 @@ than relabeling an existing review as independent truth. See "What to annotate f
 Run `python benchmark/dataset.py` to validate the versioned registry. It currently reports
 ten `development` cases, zero `held_out` cases, and `held_out_ready: false`. The dataset
 version is independent of the scorer and skill versions. Each case's annotation history
-records its content hash and origin; a changed truth file fails validation until a new
-annotation version records the new hash, reason, and affected run IDs. Repository name,
+records its content hash and origin, normalizing CRLF to LF across platforms. A changed
+truth file fails validation until a new annotation version records the new hash, reason,
+and affected run IDs. Repository name,
 source URL, and commit live in the truth file. License metadata is explicitly unverified
 for the historical cases; several also lack a full commit SHA. They remain useful
 development fixtures, not held-out accuracy evidence.

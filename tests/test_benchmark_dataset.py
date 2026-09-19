@@ -1,6 +1,5 @@
 """The historical benchmark corpus must not masquerade as held-out evaluation."""
 
-import hashlib
 import json
 import subprocess
 import sys
@@ -45,10 +44,16 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self._save_manifest()
 
     def _digest(self):
-        return hashlib.sha256(self.truth_path.read_bytes()).hexdigest()
+        return dataset.annotation_digest(self.truth_path)
 
     def _save_manifest(self):
         self.manifest_path.write_text(json.dumps(self.manifest), encoding="utf-8")
+
+    def test_annotation_digest_is_platform_independent(self):
+        self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
+        lf_digest = dataset.annotation_digest(self.truth_path)
+        self.truth_path.write_bytes(b'{\r\n  "case": "orders"\r\n}\r\n')
+        self.assertEqual(dataset.annotation_digest(self.truth_path), lf_digest)
 
     def test_committed_corpus_is_development_only(self):
         summary = dataset.validate(ROOT)

@@ -35,6 +35,11 @@ def _read_json(path):
         raise DatasetError("cannot read %s: %s" % (path, exc))
 
 
+def annotation_digest(path):
+    """Hash JSON source with Git's LF line endings on every host."""
+    return hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def validate(root=ROOT, manifest_path=None):
     """Require complete registration and an immutable current annotation digest."""
     root = Path(root).resolve()
@@ -101,7 +106,7 @@ def _validate(root, manifest):
                                          or not isinstance(entry.get("affected_runs"), list)):
                 raise DatasetError("%s: post-baseline annotations need a reason and "
                                    "affected_runs list" % case_id)
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        actual = annotation_digest(path)
         if history[-1]["sha256"] != actual:
             raise DatasetError("%s: annotation changed without a new version and digest"
                                % case_id)
