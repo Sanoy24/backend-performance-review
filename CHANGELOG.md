@@ -45,6 +45,7 @@ value and `[Unreleased]` accumulates.
   withholding its measured-contribution score when ground-truth matching is unresolved.
 - The ablation harness can export opaque, reference-limited run packages for independent
   reviewers, keeping ground truth and arm assignments outside each review package.
+  It rejects placeholder or abbreviated commit pins and non-finite usage measurements.
   No empirical three-arm result is claimed yet.
 - Optional structural-discovery evidence now has a vendor-neutral, versioned contract for
   call edges, query shapes, and changed paths, with file/symbol provenance at both endpoints

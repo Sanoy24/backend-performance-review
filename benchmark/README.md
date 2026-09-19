@@ -55,6 +55,8 @@ python benchmark/reference_ablation.py --manifest <local-manifest.json>
 ```
 
 The first command freezes the prompt and each bundle by SHA-256 before reviews are run.
+It requires a full 40- or 64-character Git commit SHA in each ground-truth case; historical
+placeholder or abbreviated commits are not eligible until re-annotated at a verified commit.
 Before exporting, give each case one or more trials with an `id` and an `order` containing
 `category_only`, `category_technology`, and `full_routed` exactly once; rotate that order
 across repeats. Export writes a new directory of `case/trial/slot-N` packages. Hand a fresh
