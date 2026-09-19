@@ -127,6 +127,11 @@ layer gate, not just the ones the script happened to name.
 load tests, dashboards-as-code, and SLOs exist in the repo? This sets the ceiling on the
 confidence any finding in this review can reach. Do it now, not at the end.
 
+If the user supplies call-graph, query-shape, or changed-path output, or explicitly opts
+into an available structural producer, load `methodology/structural-evidence.md`. Treat
+its edges as source-located leads to verify, not findings. No structural indexer is
+required or recommended by default; source inspection remains the fallback.
+
 Load: `methodology/discovery.md`.
 
 ### Phase 2 — Workload
