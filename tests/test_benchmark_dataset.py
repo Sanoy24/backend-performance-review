@@ -11,6 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmark"))
 import dataset  # noqa: E402
+sys.path.insert(0, str(ROOT / "benchmark/scoring"))
+import score as scorer  # noqa: E402
 
 
 class BenchmarkDatasetTests(unittest.TestCase):
@@ -193,6 +195,35 @@ class BenchmarkDatasetTests(unittest.TestCase):
         provenance = json.loads(completed.stdout)["dataset"]
         self.assertEqual(provenance["split"], "held_out")
         self.assertEqual(provenance["annotation_sha256"], self._digest())
+
+    def test_evaluate_cli_accepts_post_run_candidate_adjudication(self):
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        review = json.loads(self.review_path.read_text(encoding="utf-8"))
+        adjudication = {
+            "schema_version": 1,
+            "truth_content_sha256": scorer.content_digest(truth),
+            "review_content_sha256": scorer.content_digest(review),
+            "adjudicator": "fixture engineer",
+            "adjudicated_at": "2026-09-20T12:00:00Z",
+            "decisions": [
+                {"candidate_index": 0, "judgment": "acceptable_nonreport",
+                 "ground_truth_id": "GT-A01", "reason": "Real but not required."},
+                {"candidate_index": 1, "judgment": "correct_rejection",
+                 "ground_truth_id": "GT-F01", "reason": "No status filter exists."},
+            ],
+        }
+        adjudication_path = self.root / "adjudication.json"
+        adjudication_path.write_text(json.dumps(adjudication), encoding="utf-8")
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+            "--rejection-adjudication", str(adjudication_path), "--json",
+        ], capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        summary = json.loads(completed.stdout)["case_outcome"]["candidate_rejections"]
+        self.assertEqual(summary["adjudicated_correct"], 1)
+        self.assertEqual(summary["adjudicated_acceptable"], 1)
 
     def test_evaluate_cli_rejects_historical_treatment_path(self):
         treatment = self.root / "benchmark/ab-results/treatment.json"

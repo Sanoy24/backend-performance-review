@@ -65,6 +65,39 @@ or that the review examined enough code. `UNKNOWN` correctness and free-text can
 rejection correctness remain `null` until independently adjudicated. Do not turn those
 nulls into successes in aggregate results.
 
+### Post-run candidate adjudication
+
+After a review is frozen, an independent engineer may map each
+`considered_not_reported` entry to ground truth with
+`--rejection-adjudication <adjudication.json>` on either `score` or `evaluate`.
+Run the command once without that option and copy `adjudication_fingerprints` from its
+JSON output. The adjudication has this shape (the IDs here belong to the example fixture):
+
+```json
+{
+  "schema_version": 1,
+  "truth_content_sha256": "<from adjudication_fingerprints>",
+  "review_content_sha256": "<from adjudication_fingerprints>",
+  "adjudicator": "independent reviewer name or stable identifier",
+  "adjudicated_at": "2026-09-20T12:00:00Z",
+  "decisions": [
+    {"candidate_index": 0, "judgment": "acceptable_nonreport", "ground_truth_id": "GT-A01", "reason": "Real but not required."},
+    {"candidate_index": 1, "judgment": "correct_rejection", "ground_truth_id": "GT-F01", "reason": "No query filters on status."}
+  ]
+}
+```
+
+Candidate indices are zero-based positions in the frozen review. Every candidate needs
+exactly one decision. `correct_rejection` must name an unreported `forbidden` item;
+`acceptable_nonreport` must name an unreported `acceptable` item;
+`incorrect_rejection` must name a missed `expected` item. `unresolved` needs a reason
+but no ground-truth ID. A ground-truth item cannot be credited twice. The scorer
+checks both content digests and all mappings. The reported `correct_rate` is correct
+trap rejections divided by correct plus incorrect rejections; acceptable omissions and
+unresolved candidates are excluded. The timestamp must follow the review's `generated_at`
+when that field is present. A named adjudicator and these mechanical checks record
+provenance, but cannot by themselves prove the adjudicator was independent.
+
 ## Running it
 
 ```

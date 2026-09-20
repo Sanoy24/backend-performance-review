@@ -10,6 +10,7 @@ Run with: python -m unittest discover -s tests
 import copy
 import itertools
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -257,6 +258,153 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(result["per_category"]["data-access"]["tp"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["fn"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["recall"], 0.0)
+
+
+class CandidateRejectionAdjudicationTests(unittest.TestCase):
+    def setUp(self):
+        self.annotation = truth(forbidden=[{
+            "id": "GT-F1", "location": {"file": "src/config_loader.py"},
+            "category": "data-access", "why_not": "fixed configuration list",
+        }])
+        self.review = {"findings": [], "considered_not_reported": [{
+            "observation": "Possible repeated query", "why_discarded": "Fixed configuration list",
+            "location": "src/config_loader.py",
+        }]}
+
+    def adjudication(self, decisions):
+        return {
+            "schema_version": 1,
+            "truth_content_sha256": scorer.content_digest(self.annotation),
+            "review_content_sha256": scorer.content_digest(self.review),
+            "adjudicator": "independent engineer",
+            "adjudicated_at": "2026-09-20T12:00:00Z",
+            "decisions": decisions,
+        }
+
+    def test_correct_rejection_requires_explicit_adjudication(self):
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "The list has fixed size."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        self.assertEqual(result["case_outcome"]["candidate_rejections"], {
+            "reported": 1, "adjudicated_correct": 1, "adjudicated_incorrect": 0,
+            "adjudicated_acceptable": 0, "unresolved": 0, "correct_rate": 1.0,
+            "adjudicator": "independent engineer",
+        })
+
+    def test_rejecting_a_missed_required_finding_is_incorrect(self):
+        self.review["considered_not_reported"][0] = {
+            "observation": "One query per order", "why_discarded": "Assumed cheap",
+            "location": "src/orders/service.py",
+        }
+        decision = {"candidate_index": 0, "judgment": "incorrect_rejection",
+                    "ground_truth_id": "GT-001", "reason": "The defect is material."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        self.assertEqual(result["case_outcome"]["candidate_rejections"]["correct_rate"], 0.0)
+        self.assertEqual(result["case_outcome"]["candidate_rejections"]
+                         ["adjudicated_incorrect"], 1)
+
+    def test_unresolved_candidate_is_not_counted_as_correct(self):
+        decision = {"candidate_index": 0, "judgment": "unresolved",
+                    "reason": "Workload information is missing."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        summary = result["case_outcome"]["candidate_rejections"]
+        self.assertEqual(summary["unresolved"], 1)
+        self.assertIsNone(summary["correct_rate"])
+
+    def test_optional_finding_can_be_adjudicated_as_acceptable_nonreport(self):
+        self.annotation["acceptable"] = [{
+            "id": "GT-A1", "location": {"file": "src/config_loader.py"},
+            "category": "data-access", "mechanism": "minor optional work",
+        }]
+        decision = {"candidate_index": 0, "judgment": "acceptable_nonreport",
+                    "ground_truth_id": "GT-A1", "reason": "Valid but not material."}
+        summary = scorer.score(self.annotation, self.review, self.adjudication([decision]))[
+            "case_outcome"]["candidate_rejections"]
+        self.assertEqual(summary["adjudicated_acceptable"], 1)
+        self.assertIsNone(summary["correct_rate"])
+
+    def test_stale_review_digest_is_rejected(self):
+        adjudication = self.adjudication([{
+            "candidate_index": 0, "judgment": "unresolved", "reason": "No workload",
+        }])
+        self.review["considered_not_reported"][0]["why_discarded"] = "Changed after adjudication"
+        with self.assertRaisesRegex(ValueError, "review content digest"):
+            scorer.score(self.annotation, self.review, adjudication)
+
+    def test_truth_digest_is_bound_to_the_annotation(self):
+        adjudication = self.adjudication([{
+            "candidate_index": 0, "judgment": "unresolved", "reason": "No workload",
+        }])
+        self.annotation["forbidden"][0]["why_not"] = "Changed after adjudication"
+        with self.assertRaisesRegex(ValueError, "truth content digest"):
+            scorer.score(self.annotation, self.review, adjudication)
+
+    def test_adjudication_cannot_predate_review_generation(self):
+        self.review["reproducibility"] = {"generated_at": "2026-09-21T12:00:00Z"}
+        decision = {"candidate_index": 0, "judgment": "unresolved", "reason": "No workload"}
+        with self.assertRaisesRegex(ValueError, "must follow the frozen review"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_content_digest_ignores_json_key_order(self):
+        self.assertEqual(scorer.content_digest({"a": 1, "b": [2]}),
+                         scorer.content_digest({"b": [2], "a": 1}))
+
+    def test_correct_rejection_cannot_claim_a_reported_trap(self):
+        self.review["findings"] = [finding(location={"file": "src/config_loader.py"})]
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "Claimed avoidance."}
+        with self.assertRaisesRegex(ValueError, "unreported forbidden"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_every_candidate_needs_one_decision(self):
+        with self.assertRaisesRegex(ValueError, "one decision per candidate"):
+            scorer.score(self.annotation, self.review, self.adjudication([]))
+
+    def test_adjudication_rejects_ambiguous_and_duplicate_candidate_mapping(self):
+        self.review["considered_not_reported"].append({
+            "observation": "Another trap", "why_discarded": "Bounded",
+        })
+        decisions = [
+            {"candidate_index": 0, "judgment": "correct_rejection",
+             "ground_truth_id": "GT-F1", "reason": "Bounded."},
+            {"candidate_index": 0, "judgment": "unresolved", "reason": "No evidence."},
+        ]
+        with self.assertRaisesRegex(ValueError, "indices must be unique"):
+            scorer.score(self.annotation, self.review, self.adjudication(decisions))
+        decisions[1]["candidate_index"] = 1
+        decisions[1]["judgment"] = "correct_rejection"
+        decisions[1]["ground_truth_id"] = "GT-F1"
+        with self.assertRaisesRegex(ValueError, "cannot count for two candidates"):
+            scorer.score(self.annotation, self.review, self.adjudication(decisions))
+
+    def test_ambiguous_ground_truth_ids_cannot_be_adjudicated(self):
+        self.annotation["forbidden"][0]["id"] = "GT-001"
+        decision = {"candidate_index": 0, "judgment": "unresolved", "reason": "Ambiguous"}
+        with self.assertRaisesRegex(ValueError, "ground-truth IDs must be unique"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_cli_accepts_frozen_post_run_adjudication(self):
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "Fixed configuration list."}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            truth_path, review_path = root / "truth.json", root / "review.json"
+            adjudication_path = root / "adjudication.json"
+            truth_path.write_text(json.dumps(self.annotation), encoding="utf-8")
+            review_path.write_text(json.dumps(self.review), encoding="utf-8")
+            adjudication_path.write_text(json.dumps(self.adjudication([decision])),
+                                         encoding="utf-8")
+            completed = subprocess.run([
+                sys.executable, str(ROOT / "benchmark/scoring/score.py"), "score",
+                "--truth", str(truth_path), "--review", str(review_path),
+                "--rejection-adjudication", str(adjudication_path), "--json",
+            ], capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        output = json.loads(completed.stdout)
+        self.assertEqual(output["case_outcome"]["candidate_rejections"]
+                         ["adjudicated_correct"], 1)
+        self.assertEqual(output["adjudication_fingerprints"]["review_content_sha256"],
+                         scorer.content_digest(self.review))
 
 
 class OptimalAssignmentTests(unittest.TestCase):
