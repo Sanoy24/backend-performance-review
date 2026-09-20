@@ -50,6 +50,9 @@ value and `[Unreleased]` accumulates.
 - Optional post-run candidate adjudication binds decisions to frozen truth and review content,
   distinguishes avoided traps, acceptable omissions, missed required findings, and unresolved
   candidates, and refuses stale or duplicate mappings.
+- Held-out benchmark evaluation now requires an auditable pre-registration timestamp and URL,
+  monotonic annotation-version timestamps, and a review generated after the current truth
+  version was recorded.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
