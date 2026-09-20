@@ -415,6 +415,7 @@ def score(truth, review):
             "unanticipated": len(unclaimed),
         },
         "overall": ratios(true_positives, false_positives, false_negatives),
+        "case_outcome": case_outcome(truth, review, trapped),
         "per_category": per_category(pairs, missed, trapped, unclaimed),
         "severity_calibration": severity_calibration(pairs),
         "confidence_calibration": confidence_calibration(pairs, trapped, unclaimed),
@@ -473,6 +474,34 @@ def score(truth, review):
         ],
     }
     return result
+
+
+def case_outcome(truth, review, trapped):
+    """Expose no-finding behavior without treating silence as proof of a healthy system."""
+    expected = truth.get("expected", [])
+    findings = review.get("findings", [])
+    abstained = not findings
+    change_scoped = review.get("mode") == "change-scoped"
+    return {
+        "no_required_findings": not expected,
+        "abstention": {
+            "occurred": abstained,
+            "matches_annotation": (not expected) if abstained else None,
+        },
+        "known_traps_avoided": len(truth.get("forbidden", [])) - len(trapped),
+        "unknown_verdict": {
+            "declared": (review.get("verdict") == "UNKNOWN") if change_scoped else None,
+            "derived": (validate_review.derive_verdict(review) == "UNKNOWN")
+            if change_scoped else None,
+            # Ground truth does not currently adjudicate whether uncertainty was warranted.
+            "correctness": None,
+        },
+        "candidate_rejections": {
+            "reported": len(review.get("considered_not_reported") or []),
+            # Free-text candidates have no independently adjudicated trap mapping.
+            "adjudicated_correct": None,
+        },
+    }
 
 
 def ratios(true_positives, false_positives, false_negatives):
@@ -995,6 +1024,18 @@ def render(result):
     lines.append("")
     lines.append("  precision %s   recall %s   F1 %s"
                  % (overall["precision"], overall["recall"], overall["f1"]))
+
+    outcome = result["case_outcome"]
+    if outcome["abstention"]["occurred"]:
+        lines.append("  abstained; matches annotated required set: %s"
+                     % ("yes" if outcome["abstention"]["matches_annotation"] else "no"))
+    if outcome["no_required_findings"]:
+        lines.append("  no required findings in annotation; known traps avoided: %d of %d"
+                     % (outcome["known_traps_avoided"], result["restraint"]["forbidden_items"]))
+    if outcome["unknown_verdict"]["declared"] is not None:
+        lines.append("  UNKNOWN verdict: declared=%s derived=%s (correctness unadjudicated)"
+                     % (outcome["unknown_verdict"]["declared"],
+                        outcome["unknown_verdict"]["derived"]))
 
     if result["per_category"]:
         lines.append("")

@@ -197,11 +197,53 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(clean["counts"]["false_positives"], 0)
         self.assertEqual(clean["counts"]["false_negatives"], 0)
         self.assertEqual(clean["restraint"]["forbidden_reported"], [])
+        self.assertEqual(clean["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": True})
+        self.assertEqual(clean["case_outcome"]["known_traps_avoided"], 1)
+        self.assertIn("known traps avoided: 1 of 1", scorer.render(clean))
 
         manufactured = scorer.score(annotation, {
             "findings": [finding(location={"file": "src/config_loader.py"})]})
         self.assertEqual(manufactured["counts"]["false_positives"], 1)
         self.assertEqual(manufactured["overall"]["precision"], 0.0)
+        self.assertEqual(manufactured["case_outcome"]["abstention"], {
+            "occurred": False, "matches_annotation": None})
+        self.assertEqual(manufactured["case_outcome"]["known_traps_avoided"], 0)
+
+    def test_abstaining_on_required_finding_conflicts_with_annotation(self):
+        result = scorer.score(truth(), {"findings": []})
+        self.assertEqual(result["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": False})
+        self.assertFalse(result["case_outcome"]["no_required_findings"])
+
+    def test_unknown_is_reported_separately_from_abstention(self):
+        annotation = truth(expected=[])
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        result = scorer.score(annotation, review)
+        self.assertEqual(result["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": True})
+        self.assertEqual(result["case_outcome"]["unknown_verdict"], {
+            "declared": True, "derived": True, "correctness": None})
+        self.assertIn("correctness unadjudicated", scorer.render(result))
+        self.assertIsNone(scorer.score(annotation, {"findings": []})["case_outcome"]
+                          ["unknown_verdict"]["declared"])
+
+    def test_candidate_rejection_correctness_is_not_inferred_from_free_text(self):
+        annotation = truth(expected=[], forbidden=[{
+            "id": "GT-F1", "location": {"file": "src/config_loader.py"},
+            "why_not": "bounded configuration list",
+        }])
+        review = {"findings": [], "considered_not_reported": [{
+            "observation": "Possible cache opportunity",
+            "why_discarded": "The list is bounded",
+            "location": "src/config_loader.py",
+        }]}
+        outcome = scorer.score(annotation, review)["case_outcome"]
+        self.assertEqual(outcome["candidate_rejections"], {
+            "reported": 1, "adjudicated_correct": None})
 
     def test_per_category_metrics_are_separated(self):
         annotation = truth(expected=[
