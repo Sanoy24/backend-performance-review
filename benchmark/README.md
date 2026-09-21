@@ -17,6 +17,7 @@ This directory is the machinery for doing it by computation instead.
 ```
 benchmark/
 ├── annotation_campaign.py export opaque independent-reviewer packages
+├── annotation_collect.py  verify returns and freeze per-case intake reports
 ├── annotation_intake.py  compare two independent expert annotations
 ├── annotation_resolve.py validate human decisions and emit resolved truth
 ├── dataset.json       case split and annotation-version registry
@@ -124,6 +125,29 @@ pre-registration, or create held-out evidence. A coordinator must verify those f
 preserve the manifest, packages, assignments, and returned annotations. Once two distinct
 submissions for a case are frozen, use the intake and resolution steps below.
 
+Put returned files in a separate directory named by packet ID, for example
+`packet-0123456789abcdef.json`. The directory must contain exactly one JSON file for every
+packet in `coordinator.json`. Then freeze the handoff into a new directory:
+
+```
+python benchmark/annotation_collect.py \
+  --campaign-dir <exported-campaign> \
+  --submissions-dir <returned-json-files> \
+  --output-dir <new-collection-directory> \
+  --collected-at <timezone-aware-timestamp>
+```
+
+Collection rechecks every packet tree and the frozen protocol, validates each annotation
+against its own assignment, requires distinct reviewer identities, and requires the
+collection time to follow both completions. It preserves each returned file byte-for-byte,
+records raw and parsed-content hashes, and writes a per-case `intake.json` plus a top-level
+`collection.json`. The collection binds the coordinator by raw and parsed-content hashes and
+also records the exact collector and intake-tool hashes;
+the coordinator carries the frozen protocol file inventory rather than relying on whatever
+helper list a later checkout happens to contain. Missing, extra, renamed, stale, or
+cross-assigned submissions fail before the output directory is created. The output is a
+private adjudication handoff and still says `held_out_ready: false`.
+
 ### Independent annotation intake
 
 Before registering a held-out case, collect two annotations made independently against the
@@ -134,6 +158,10 @@ schema-valid ground truth with `annotation.method` set to `expert-manual-review`
 ```
 python benchmark/annotation_intake.py --annotation-a <expert-a.json> --annotation-b <expert-b.json>
 ```
+
+The campaign collector above runs this step automatically after verifying the packet
+handoffs. Use the direct command for independently obtained annotations that did not use a
+campaign packet.
 
 The JSON report freezes both parsed inputs by SHA-256, proposes location-based candidate
 pairs across `expected`/`acceptable` and `forbidden`, and lists bucket, category, severity,

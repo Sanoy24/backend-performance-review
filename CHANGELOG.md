@@ -69,6 +69,10 @@ value and `[Unreleased]` accumulates.
   mapping. Each packet binds submissions to its package ID, workload, commit, optional diff
   base, and campaign freeze time; export still makes no claim about reviewer isolation,
   license verification, pre-registration, or held-out readiness.
+- Campaign collection now fails closed on changed packets or protocols and on missing, extra,
+  stale, cross-assigned, or same-reviewer submissions. It preserves exact returned bytes and
+  raw/content hashes, binds the campaign coordinator by raw/content hashes, then emits per-case
+  intake reports for human adjudication without changing held-out readiness.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
