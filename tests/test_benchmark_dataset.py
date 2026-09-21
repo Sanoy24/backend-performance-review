@@ -61,6 +61,22 @@ class BenchmarkDatasetTests(unittest.TestCase):
             "--review", str(self.review_path), *extra,
         ], capture_output=True, text=True, check=False)
 
+    def _set_change_scope(self, truth_base="1" * 40, review_base=None):
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        truth["change_scope"] = {
+            "diff_base": truth_base,
+            "expected_verdict": "FAIL",
+            "rationale": "The required high-confidence finding makes this change fail.",
+        }
+        self.truth_path.write_text(json.dumps(truth), encoding="utf-8")
+        self.manifest["cases"]["orders"]["annotations"][0]["sha256"] = self._digest()
+        self._save_manifest()
+        review = json.loads(self.review_path.read_text(encoding="utf-8"))
+        review["mode"] = "change-scoped"
+        review["verdict"] = "FAIL"
+        review["reproducibility"]["repository"]["diff_base"] = review_base or truth_base
+        self.review_path.write_text(json.dumps(review), encoding="utf-8")
+
     def test_annotation_digest_is_platform_independent(self):
         self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
         lf_digest = dataset.annotation_digest(self.truth_path)
@@ -237,6 +253,59 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self.assertEqual(provenance["split"], "held_out")
         self.assertEqual(provenance["annotation_sha256"], self._digest())
         self.assertEqual(provenance["pre_registered_at"], "2026-09-09T00:00:00Z")
+
+    def test_evaluate_cli_scores_expert_adjudicated_change_verdict(self):
+        self._set_change_scope()
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path), "--json",
+        ], capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        outcome = json.loads(completed.stdout)["case_outcome"]["unknown_verdict"]
+        self.assertEqual(outcome, {
+            "declared": False, "derived": False, "expected": False,
+            "scope_matches": True, "correctness": True})
+        verdict = json.loads(completed.stdout)["case_outcome"]["verdict"]
+        self.assertEqual(verdict, {
+            "declared": "FAIL", "derived": "FAIL", "expected": "FAIL",
+            "scope_matches": True, "correctness": True})
+
+    def test_evaluate_cli_rejects_change_review_without_verdict_truth(self):
+        review = json.loads(self.review_path.read_text(encoding="utf-8"))
+        review["mode"] = "change-scoped"
+        review["verdict"] = "FAIL"
+        review["reproducibility"]["repository"]["diff_base"] = "1" * 40
+        self.review_path.write_text(json.dumps(review), encoding="utf-8")
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("requires expert change-scope truth", completed.stderr)
+
+    def test_evaluate_cli_rejects_a_different_diff_base(self):
+        self._set_change_scope(review_base="2" * 40)
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("diff base must match", completed.stderr)
+
+    def test_dataset_rejects_change_scope_with_identical_base_and_head(self):
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        truth["change_scope"] = {
+            "diff_base": truth["repository"]["commit"], "expected_verdict": "PASS",
+            "rationale": "No change exists, so this is not a valid change-scoped case.",
+        }
+        self.truth_path.write_text(json.dumps(truth), encoding="utf-8")
+        self.manifest["cases"]["orders"]["annotations"][0]["sha256"] = self._digest()
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "diff base and head must differ"):
+            dataset.validate(self.root)
 
     def test_evaluate_cli_rejects_review_predating_preregistration(self):
         review = json.loads(self.review_path.read_text(encoding="utf-8"))

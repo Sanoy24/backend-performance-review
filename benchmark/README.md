@@ -69,9 +69,13 @@ Scoring also emits `case_outcome`: whether a review abstained, whether that agre
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
 only that the annotation requires no finding; it does not prove the repository is healthy
-or that the review examined enough code. `UNKNOWN` correctness and free-text candidate
-rejection correctness remain `null` until independently adjudicated. Do not turn those
-nulls into successes in aggregate results.
+or that the review examined enough code. Verdict correctness remains `null` unless ground
+truth contains an expert-authored `change_scope` for the exact full `diff_base`. It records
+the expected verdict and rationale; an expected `UNKNOWN` also requires structured evidence
+gaps and what would resolve them. The scorer compares its mechanically derived verdict with
+that expected verdict. A mismatched diff receives no correctness score, and guarded held-out
+evaluation rejects it. Free-text candidate-rejection correctness remains `null` until the
+separate post-run adjudication below. Do not turn nulls into successes in aggregate results.
 
 ### Post-run candidate adjudication
 

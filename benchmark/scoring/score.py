@@ -591,6 +591,18 @@ def case_outcome(truth, review, trapped, rejection_summary=None):
     findings = review.get("findings", [])
     abstained = not findings
     change_scoped = review.get("mode") == "change-scoped"
+    derived_verdict = validate_review.derive_verdict(review) if change_scoped else None
+    change_truth = truth.get("change_scope")
+    change_truth = change_truth if isinstance(change_truth, dict) else None
+    review_repository = review.get("reproducibility")
+    review_repository = (review_repository.get("repository")
+                         if isinstance(review_repository, dict) else None)
+    review_diff_base = (review_repository.get("diff_base")
+                        if isinstance(review_repository, dict) else None)
+    scope_matches = (review_diff_base == change_truth.get("diff_base")
+                     if change_scoped and change_truth else None)
+    expected_verdict = change_truth.get("expected_verdict") if change_truth else None
+    verdict_correct = (derived_verdict == expected_verdict) if scope_matches else None
     return {
         "no_required_findings": not expected,
         "abstention": {
@@ -598,12 +610,19 @@ def case_outcome(truth, review, trapped, rejection_summary=None):
             "matches_annotation": (not expected) if abstained else None,
         },
         "known_traps_avoided": len(truth.get("forbidden", [])) - len(trapped),
+        "verdict": {
+            "declared": review.get("verdict") if change_scoped else None,
+            "derived": derived_verdict,
+            "expected": expected_verdict,
+            "scope_matches": scope_matches,
+            "correctness": verdict_correct,
+        },
         "unknown_verdict": {
             "declared": (review.get("verdict") == "UNKNOWN") if change_scoped else None,
-            "derived": (validate_review.derive_verdict(review) == "UNKNOWN")
-            if change_scoped else None,
-            # Ground truth does not currently adjudicate whether uncertainty was warranted.
-            "correctness": None,
+            "derived": (derived_verdict == "UNKNOWN") if change_scoped else None,
+            "expected": (expected_verdict == "UNKNOWN") if change_truth else None,
+            "scope_matches": scope_matches,
+            "correctness": verdict_correct,
         },
         "candidate_rejections": rejection_summary if rejection_summary is not None else {
             "reported": len(review.get("considered_not_reported") or []),
@@ -1141,10 +1160,13 @@ def render(result):
     if outcome["no_required_findings"]:
         lines.append("  no required findings in annotation; known traps avoided: %d of %d"
                      % (outcome["known_traps_avoided"], result["restraint"]["forbidden_items"]))
-    if outcome["unknown_verdict"]["declared"] is not None:
-        lines.append("  UNKNOWN verdict: declared=%s derived=%s (correctness unadjudicated)"
-                     % (outcome["unknown_verdict"]["declared"],
-                        outcome["unknown_verdict"]["derived"]))
+    if outcome["verdict"]["declared"] is not None:
+        verdict = outcome["verdict"]
+        correctness = ("unadjudicated" if verdict["correctness"] is None
+                       else "correct" if verdict["correctness"] else "incorrect")
+        lines.append("  verdict: declared=%s derived=%s expected=%s (%s)"
+                     % (verdict["declared"], verdict["derived"],
+                        verdict["expected"], correctness))
     rejected = outcome["candidate_rejections"]
     if rejected["adjudicated_correct"] is not None:
         lines.append("  candidate rejections: %d correct traps, %d acceptable omissions, "
@@ -1307,6 +1329,12 @@ def main(argv=None):
         pinned = truth["repository"]
         if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
             parser.error("held-out review repository and commit must match ground truth")
+        if review.get("mode") == "change-scoped":
+            change_truth = truth.get("change_scope")
+            if not isinstance(change_truth, dict):
+                parser.error("held-out change-scoped review requires expert change-scope truth")
+            if source.get("diff_base") != change_truth.get("diff_base"):
+                parser.error("held-out review diff base must match change-scope truth")
         try:
             registered_at = benchmark_dataset.parse_timestamp(
                 provenance["pre_registered_at"], "pre_registered_at")
