@@ -20,6 +20,7 @@ benchmark/
 ├── annotation_collect.py  verify returns and freeze per-case intake reports
 ├── annotation_intake.py  compare two independent expert annotations
 ├── annotation_resolve.py validate human decisions and emit resolved truth
+├── annotation_resolution_collect.py verify every campaign resolution and freeze truth
 ├── dataset.json       case split and annotation-version registry
 ├── dataset.py         registry validation and held-out eligibility gate
 ├── ground-truth/     annotations, one file per repository/case
@@ -222,6 +223,26 @@ duplicate decisions, pre-review timestamps, and an adjudicator who is one of the
 reviewers. Preserve all four artifacts: both source annotations, the intake report, and the
 resolution. The generated truth is eligible for later review, not automatically held out;
 license verification, pre-registration, isolation, and dataset registration still apply.
+
+For a collected campaign, put exactly one resolution named `<case-id>.json` in a separate
+directory, then freeze the complete adjudication handoff:
+
+```
+python benchmark/annotation_resolution_collect.py \
+  --collection-dir <annotation-collection-directory> \
+  --resolutions-dir <returned-resolution-files> \
+  --output-dir <new-resolution-collection-directory> \
+  --finalized-at <timezone-aware-timestamp>
+```
+
+The batch collector rechecks every preserved annotation and intake digest, deterministically
+re-derives each intake from its two source annotations, requires one content-bound resolution
+per case, runs the resolver, and requires finalization after every
+adjudication. It preserves each returned resolution byte-for-byte and records raw and parsed
+hashes for the source collection, resolutions, generated truth, collector, and resolver.
+Missing, extra, stale, cross-case, or changed artifacts fail before output is created. The
+result remains `resolved_pending_protocol_review` with `held_out_ready: false`; it does not
+verify reviewer recruitment, isolation, licenses, pre-registration, or dataset eligibility.
 
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
