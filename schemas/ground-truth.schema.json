@@ -35,10 +35,11 @@
         "annotated_by": { "type": "string" },
         "annotated_at": { "type": "string" },
         "method": {
-          "description": "How the truth was established. `blind-pass-derived` means it was retro-annotated from a recorded independent review rather than established first — weaker, and it must say so.",
+          "description": "How the truth was established. `independent-expert-adjudication` identifies a resolved artifact from distinct source experts and an adjudicator. `blind-pass-derived` means it was retro-annotated from a recorded independent review rather than established first — weaker, and it must say so.",
           "type": "string",
           "enum": [
             "expert-manual-review",
+            "independent-expert-adjudication",
             "documented-issue",
             "injected-defect",
             "blind-pass-derived"

@@ -100,6 +100,14 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self.assertEqual(provenance["annotation_recorded_at"], "2026-09-08T00:00:00Z")
         self.assertEqual(provenance["pre_registered_at"], "2026-09-09T00:00:00Z")
 
+    def test_independent_expert_adjudication_can_be_held_out(self):
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        truth["annotation"]["method"] = "independent-expert-adjudication"
+        self.truth_path.write_text(json.dumps(truth), encoding="utf-8")
+        self.manifest["cases"]["orders"]["annotations"][0]["sha256"] = self._digest()
+        self._save_manifest()
+        self.assertTrue(dataset.validate(self.root)["held_out_ready"])
+
     def test_held_out_needs_auditable_preregistration_metadata(self):
         record = self.manifest["cases"]["orders"]
         del record["pre_registration_evidence_url"]

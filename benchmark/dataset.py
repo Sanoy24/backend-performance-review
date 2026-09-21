@@ -22,7 +22,8 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 CASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 INDEPENDENT_METHODS = frozenset({
-    "expert-manual-review", "documented-issue", "injected-defect"})
+    "expert-manual-review", "independent-expert-adjudication",
+    "documented-issue", "injected-defect"})
 
 
 class DatasetError(ValueError):

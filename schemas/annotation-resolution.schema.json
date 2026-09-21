@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/annotation-resolution.schema.json",
+  "title": "Independent annotation disagreement resolution",
+  "description": "Human decisions covering every unit in one frozen independent-annotation intake report.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "intake_content_sha256",
+    "adjudicator",
+    "adjudicated_at",
+    "decisions",
+    "resolved_ground_truth"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "intake_content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "adjudicator": { "type": "string", "minLength": 1 },
+    "adjudicated_at": { "type": "string", "format": "date-time" },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["unit_id", "outcome", "final_item_ids", "reason"],
+        "properties": {
+          "unit_id": { "type": "string", "pattern": "^ARU-[0-9a-f]{16}$" },
+          "outcome": {
+            "type": "string",
+            "enum": ["include", "exclude", "context_resolved", "ambiguity_resolved"]
+          },
+          "final_item_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "resolved_ground_truth": { "$ref": "ground-truth.schema.json" }
+  }
+}

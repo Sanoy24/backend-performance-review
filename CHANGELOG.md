@@ -60,6 +60,10 @@ value and `[Unreleased]` accumulates.
   repository and workload, freezes their content digests, and emits candidate pairs,
   disagreements, ambiguities, and unmatched judgments for human resolution. It explicitly
   remains ineligible as held-out evidence until that separate adjudication is completed.
+- Content-bound annotation resolution now requires a distinct adjudicator to decide every
+  intake unit, traces every final item to an include decision, preserves issue-versus-trap
+  semantics, and emits schema-valid ground truth with frozen intake and resolution digests.
+  It does not register the result or claim that held-out protocol requirements were met.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
