@@ -16,6 +16,7 @@ This directory is the machinery for doing it by computation instead.
 
 ```
 benchmark/
+├── annotation_campaign.py export opaque independent-reviewer packages
 ├── annotation_intake.py  compare two independent expert annotations
 ├── annotation_resolve.py validate human decisions and emit resolved truth
 ├── dataset.json       case split and annotation-version registry
@@ -66,6 +67,62 @@ evaluator requires the review's `generated_at` to follow both the registration a
 current annotation version. This prevents an older review from being silently scored
 against later truth. The evidence URL and timestamps are audit hooks, not proof of a
 blind run; an independent reviewer must check the cited registration record.
+
+### Blinded annotation campaigns
+
+Create a local campaign manifest before assigning reviewers. Each case needs an HTTPS source,
+full commit, explicit workload, documented license evidence, and exactly two reviewer slots.
+A change-scoped case also fixes its full diff base. For example:
+
+```json
+{
+  "schema_version": 1,
+  "campaign_id": "independent-pilot-1",
+  "frozen_at": "2026-09-21T12:00:00Z",
+  "cases": [{
+    "id": "opaque-to-reviewers-case-id",
+    "repository": {
+      "name": "orders",
+      "url": "https://example.com/org/orders",
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "workload": "100 orders returned per interactive request"
+    },
+    "license": {
+      "spdx": "MIT",
+      "evidence_url": "https://example.com/org/orders/blob/0123456789abcdef0123456789abcdef01234567/LICENSE"
+    },
+    "reviewer_slots": 2
+  }]
+}
+```
+
+Plan without writing packages, then export into a new directory:
+
+```
+python benchmark/annotation_campaign.py --manifest <campaign.json> --plan-only
+python benchmark/annotation_campaign.py --manifest <campaign.json> --export-dir <new-directory>
+```
+
+The exporter creates opaque `packet-...` directories and a separate `coordinator.json`.
+Give each packet to a distinct experienced backend engineer and keep the coordinator file
+private. A packet contains only its exact repository/workload assignment, license record,
+blank submission template, ground-truth schemas, task instructions, and a standard-library
+validator. It does not contain this skill, existing ground truth, treatment/control reports,
+other assignments, case IDs, reviewer identities, or the coordinator mapping. The validator
+requires the returned annotation to preserve its opaque package ID and to be completed after
+the campaign freeze time.
+
+The plan records the manifest digest plus the path and SHA-256 of every bundled validator and
+schema. Packet IDs derive from the full manifest and protocol digests, case ID, and slot, so
+any change to the frozen campaign or bundled validation contract produces new opaque
+identities. Preserve the plan output and compare its `protocol_sha256` with the coordinator
+record before distributing packets.
+
+Package hashes detect changed handoffs, but the exporter does not clone or verify a commit,
+verify a license, assign actual people, enforce what they read outside the packet, publish a
+pre-registration, or create held-out evidence. A coordinator must verify those facts and
+preserve the manifest, packages, assignments, and returned annotations. Once two distinct
+submissions for a case are frozen, use the intake and resolution steps below.
 
 ### Independent annotation intake
 
