@@ -56,6 +56,10 @@ value and `[Unreleased]` accumulates.
 - Ground truth can now adjudicate a verdict for one pinned change, including structured
   evidence gaps for an expected `UNKNOWN`; scoring withholds correctness for a different diff,
   and held-out evaluation rejects change-scoped reviews without matching verdict truth.
+- Independent-annotation intake now validates two expert submissions against the same pinned
+  repository and workload, freezes their content digests, and emits candidate pairs,
+  disagreements, ambiguities, and unmatched judgments for human resolution. It explicitly
+  remains ineligible as held-out evidence until that separate adjudication is completed.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
