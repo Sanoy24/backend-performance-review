@@ -49,6 +49,12 @@ class BenchmarkDatasetTests(unittest.TestCase):
     def _save_manifest(self):
         self.manifest_path.write_text(json.dumps(self.manifest), encoding="utf-8")
 
+    def _score_cli(self, truth_path, *extra):
+        return subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "score",
+            "--dataset", str(self.manifest_path), "--truth", str(truth_path),
+            "--review", str(self.review_path), *extra,
+        ], capture_output=True, text=True, check=False)
     def test_annotation_digest_is_platform_independent(self):
         self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
         lf_digest = dataset.annotation_digest(self.truth_path)
@@ -70,6 +76,54 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self.assertEqual(provenance["dataset_version"], "0.1.0")
         self.assertEqual(provenance["annotation_version"], 1)
 
+    def test_classify_truth_recognizes_registered_copy(self):
+        copy = self.root / "copy.json"
+        copy.write_bytes(self.truth_path.read_bytes())
+        for path in (self.truth_path, copy):
+            registration = dataset.classify_truth(path, self.root)
+            self.assertEqual(registration["case"], "orders")
+            self.assertEqual(registration["split"], "held_out")
+            self.assertEqual(registration["annotation_sha256"], self._digest())
+
+    def test_raw_score_rejects_registered_held_out_truth_and_copy(self):
+        copy = self.root / "copy.json"
+        copy.write_bytes(self.truth_path.read_bytes())
+        for path in (self.truth_path, copy):
+            with self.subTest(path=path):
+                completed = self._score_cli(path, "--json")
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn("requires evaluate --case orders", completed.stderr)
+
+    def test_raw_score_labels_registered_development_case_exploratory(self):
+        self.manifest["cases"]["orders"]["split"] = "development"
+        self._save_manifest()
+        completed = self._score_cli(self.truth_path, "--json")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["evidence_tier"], "exploratory")
+        self.assertEqual(result["dataset"]["split"], "development")
+        self.assertEqual(result["dataset"]["case"], "orders")
+        report = self._score_cli(self.truth_path)
+        self.assertEqual(report.returncode, 0, report.stderr)
+        self.assertTrue(report.stdout.startswith("EXPLORATORY"))
+
+    def test_raw_score_labels_unregistered_truth_exploratory(self):
+        other = self.root / "other.json"
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        truth["annotation"]["notes"] = "Different annotation content."
+        other.write_text(json.dumps(truth), encoding="utf-8")
+        completed = self._score_cli(other, "--json")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["evidence_tier"], "exploratory")
+        self.assertNotIn("dataset", result)
+
+    def test_raw_score_fails_closed_when_registry_is_invalid(self):
+        self.manifest["cases"]["orders"]["annotations"][0]["sha256"] = "0" * 64
+        self._save_manifest()
+        completed = self._score_cli(self.truth_path)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("changed without a new version", completed.stderr)
     def test_annotation_drift_requires_new_version(self):
         truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
         truth["annotation"]["notes"] = "A revised explanation."

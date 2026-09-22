@@ -1067,6 +1067,7 @@ def main(argv=None):
     scorer = subparsers.add_parser("score", help="exploratory score against supplied truth")
     scorer.add_argument("--truth", required=True)
     scorer.add_argument("--review", required=True)
+    scorer.add_argument("--dataset", type=Path, default=benchmark_dataset.DATASET)
     scorer.add_argument("--json", action="store_true", help="emit JSON instead of a report")
 
     evaluator = subparsers.add_parser(
@@ -1092,8 +1093,54 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "score":
+        dataset_root = args.dataset.resolve().parent.parent
+        try:
+            registration = benchmark_dataset.classify_truth(
+                args.truth, dataset_root, args.dataset)
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        if registration and registration["split"] == "held_out":
+            parser.error("registered held-out truth requires evaluate --case %s"
+                         % registration["case"])
         result = score(load(args.truth), load(args.review))
-        print(json.dumps(result, indent=2) if args.json else render(result))
+        result["evidence_tier"] = "exploratory"
+        if registration:
+            result["dataset"] = registration
+        print(json.dumps(result, indent=2) if args.json
+              else "EXPLORATORY — not held-out evaluation\n" + render(result))
+        return 0
+
+    if args.command == "evaluate":
+        dataset_root = args.dataset.resolve().parent.parent
+        try:
+            truth_path, provenance = benchmark_dataset.require_held_out(
+                args.case, dataset_root, args.dataset)
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        review_path = Path(args.review).resolve()
+        parts = [part.lower() for part in review_path.parts]
+        if any(parts[i:i + 2] == ["benchmark", "ab-results"]
+               for i in range(len(parts) - 1)):
+            parser.error("historical treatment output cannot be a held-out review")
+        truth = load(truth_path)
+        review = load(review_path)
+        errors = validate_review.validate(
+            review, Path(__file__).resolve().parents[2] / "schemas")
+        if errors:
+            parser.error("invalid held-out review: %s" % errors[0])
+        reproducibility = review["reproducibility"]
+        source = reproducibility["repository"]
+        pinned = truth["repository"]
+        if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
+            parser.error("held-out review repository and commit must match ground truth")
+        model = reproducibility.get("model")
+        if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
+            parser.error("held-out review must name the actual model")
+        result = score(truth, review)
+        result["dataset"] = {"case": args.case, "split": "held_out", **provenance}
+        heading = ("HELD-OUT %s | dataset %s | annotation v%d\n" % (
+            args.case, provenance["dataset_version"], provenance["annotation_version"]))
+        print(json.dumps(result, indent=2) if args.json else heading + render(result))
         return 0
 
     if args.command == "evaluate":
