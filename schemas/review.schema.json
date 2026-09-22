@@ -179,6 +179,16 @@
         },
         "critical_paths_identified": { "type": "integer", "minimum": 0 },
         "critical_paths_analyzed": { "type": "integer", "minimum": 0 },
+        "shared_resources_identified": {
+          "description": "Pools, queues, event loops, worker sets, locks, datastores, caches, and downstreams identified during the final coverage sweep.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "shared_resources_analyzed": {
+          "description": "Identified shared resources whose in-scope acquisition, bounds, release, contention, and observability were examined.",
+          "type": "integer",
+          "minimum": 0
+        },
         "technology_support": {
           "description": "Registry tier per detected technology, so reduced depth is visible rather than silent.",
           "type": "array",
@@ -328,7 +338,7 @@
       }
     },
     "considered_not_reported": {
-      "description": "Candidates examined and discarded, with the reason. Evidence that the review had a filter — and the honest home for \"theoretically inefficient, not worth optimizing\".",
+      "description": "Plausible, material candidates examined and discarded but worth revisiting if evidence or workload changes. This is not the private candidate ledger and must not accumulate obvious noise.",
       "type": "array",
       "items": {
         "type": "object",
@@ -337,7 +347,23 @@
         "properties": {
           "observation": { "type": "string" },
           "why_discarded": { "type": "string" },
-          "location": { "type": "string" }
+          "location": { "type": "string" },
+          "path": {
+            "description": "Critical path or shared resource this candidate could affect.",
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_checked": {
+            "description": "Support and counter-evidence examined before disposition.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "revisit_when": {
+            "description": "Measurement, workload change, or new evidence that would justify reopening this candidate.",
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
