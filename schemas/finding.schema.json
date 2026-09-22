@@ -317,6 +317,29 @@
         "guard": {
           "description": "A test, metric, or alert that stops the problem recurring once fixed.",
           "type": "string"
+        },
+        "commands": {
+          "description": "Concrete repository-local commands that establish a baseline or test the recommendation. Omit rather than invent one; every command carries its own safety label because commands in one validation plan can have different production risk.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["command", "purpose", "safety"],
+            "properties": {
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "safety": {
+                "type": "string",
+                "enum": ["safe-on-production", "not-safe-on-production"]
+              }
+            }
+          }
         }
       }
     }
