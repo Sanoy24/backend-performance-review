@@ -17,6 +17,7 @@ This directory is the machinery for doing it by computation instead.
 ```
 benchmark/
 ├── annotation_intake.py  compare two independent expert annotations
+├── annotation_resolve.py validate human decisions and emit resolved truth
 ├── dataset.json       case split and annotation-version registry
 ├── dataset.py         registry validation and held-out eligibility gate
 ├── ground-truth/     annotations, one file per repository/case
@@ -89,6 +90,53 @@ and record a separate human resolution for every candidate pair, unmatched item,
 disagreement, and ambiguity. The tool validates declared provenance but cannot prove the
 reviewers worked independently. It also does not register the resolved case or turn this
 preparation step into held-out evidence.
+
+Resolve the report with a third named adjudicator after both source annotations are frozen.
+The resolution file is validated by
+[`schemas/annotation-resolution.schema.json`](../schemas/annotation-resolution.schema.json)
+and has this shape:
+
+```json
+{
+  "schema_version": 1,
+  "intake_content_sha256": "<SHA-256 of the parsed intake report>",
+  "adjudicator": "independent expert identifier",
+  "adjudicated_at": "2026-09-21T12:00:00Z",
+  "decisions": [
+    {
+      "unit_id": "ARU-<from intake report>",
+      "outcome": "include",
+      "final_item_ids": ["GT-001"],
+      "reason": "Both descriptions identify the same per-item query."
+    }
+  ],
+  "resolved_ground_truth": {
+    "repository": {"name": "...", "commit": "<full SHA>", "url": "https://...", "workload": "..."},
+    "expected": [],
+    "acceptable": [],
+    "forbidden": []
+  }
+}
+```
+
+Candidate-pair and unmatched-item units use `include` or `exclude`; included units name one
+or more IDs in the final ground truth. Scope units use `context_resolved`, and assignment
+ambiguities use `ambiguity_resolved`; neither names final items. Every unit needs exactly one
+reasoned decision, every final item needs an `include` decision, and issue items cannot be
+mapped into the `forbidden` family or vice versa. Omit `annotation` from
+`resolved_ground_truth`; the resolver generates provenance bound to both artifact digests.
+The generated annotation method is `independent-expert-adjudication`, keeping it distinct
+from either source expert's `expert-manual-review` artifact.
+
+```
+python benchmark/annotation_resolve.py --intake <intake.json> --resolution <resolution.json> > resolved-ground-truth.json
+```
+
+The resolver rejects stale digests, changed repository/workload/diff context, incomplete or
+duplicate decisions, pre-review timestamps, and an adjudicator who is one of the two source
+reviewers. Preserve all four artifacts: both source annotations, the intake report, and the
+resolution. The generated truth is eligible for later review, not automatically held out;
+license verification, pre-registration, isolation, and dataset registration still apply.
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means

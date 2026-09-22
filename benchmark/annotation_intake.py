@@ -131,6 +131,10 @@ def _differences(a, b, fields):
     return [field for field in fields if a.get(field) != b.get(field)]
 
 
+def _unit_id(kind, value):
+    return "ARU-" + scorer.content_digest({"kind": kind, "value": value})[:16]
+
+
 def _item_view(bucket, item, fields):
     """Keep the report self-contained without copying unrelated annotation metadata."""
     view = {"id": item["id"], "bucket": bucket, "location": item["location"]}
@@ -156,26 +160,46 @@ def _candidate_report(a, b, buckets, fields, label):
         bucket_b, item_b = by_id_b[record["finding"]]
         comparison_a = dict(item_a, bucket=bucket_a)
         comparison_b = dict(item_b, bucket=bucket_b)
-        pairs.append({
+        pair = {
+            "unit_kind": "candidate_pair",
             "reviewer_a": _item_view(bucket_a, item_a, fields),
             "reviewer_b": _item_view(bucket_b, item_b, fields),
             "location_match": record["specificity"],
             "judgment_differences": _differences(comparison_a, comparison_b, fields),
             "resolution_required": True,
             "resolution_reason": "human_mechanism_confirmation_required",
-        })
+        }
+        pair["unit_id"] = _unit_id("%s-candidate-pair" % label, {
+            "reviewer_a": item_a["id"], "reviewer_b": item_b["id"]})
+        pairs.append(pair)
 
     unmatched_ids_a = {entry["id"] for entry in assignment["unmatched_items"]}
     unmatched_ids_b = {entry["id"] for entry in assignment["unmatched_findings"]}
-    unmatched_a = [_item_view(bucket, item, fields)
-                   for bucket, item in bucketed_a if item["id"] in unmatched_ids_a]
-    unmatched_b = [_item_view(bucket, item, fields)
-                   for bucket, item in bucketed_b if item["id"] in unmatched_ids_b]
+    unmatched_a = []
+    unmatched_b = []
+    for role, bucketed, unmatched_ids, destination in (
+            ("reviewer_a", bucketed_a, unmatched_ids_a, unmatched_a),
+            ("reviewer_b", bucketed_b, unmatched_ids_b, unmatched_b)):
+        for bucket, item in bucketed:
+            if item["id"] not in unmatched_ids:
+                continue
+            view = _item_view(bucket, item, fields)
+            view["unit_kind"] = "unmatched_item"
+            view["unit_id"] = _unit_id("%s-unmatched-item" % label, {
+                "reviewer": role, "id": item["id"], "bucket": bucket})
+            destination.append(view)
+
+    ambiguities = []
+    for ambiguity in assignment["ambiguities"]:
+        value = copy.deepcopy(ambiguity)
+        value["unit_kind"] = "matching_ambiguity"
+        value["unit_id"] = _unit_id("%s-matching-ambiguity" % label, ambiguity)
+        ambiguities.append(value)
     return {
         "candidate_pairs": pairs,
         "unmatched_reviewer_a": sorted(unmatched_a, key=lambda value: (value["bucket"], value["id"])),
         "unmatched_reviewer_b": sorted(unmatched_b, key=lambda value: (value["bucket"], value["id"])),
-        "ambiguities": assignment["ambiguities"],
+        "ambiguities": ambiguities,
     }
 
 
@@ -184,6 +208,8 @@ def _scope_disagreements(a, b):
     for field in ("language", "framework", "datastore"):
         if a["repository"].get(field) != b["repository"].get(field):
             disagreements.append({
+                "unit_kind": "scope_disagreement",
+                "unit_id": _unit_id("scope-disagreement", "repository.%s" % field),
                 "field": "repository.%s" % field,
                 "reviewer_a": a["repository"].get(field),
                 "reviewer_b": b["repository"].get(field),
@@ -192,6 +218,8 @@ def _scope_disagreements(a, b):
         for field in ("expected_verdict", "rationale", "unknowns"):
             if a["change_scope"].get(field) != b["change_scope"].get(field):
                 disagreements.append({
+                    "unit_kind": "scope_disagreement",
+                    "unit_id": _unit_id("scope-disagreement", "change_scope.%s" % field),
                     "field": "change_scope.%s" % field,
                     "reviewer_a": a["change_scope"].get(field),
                     "reviewer_b": b["change_scope"].get(field),

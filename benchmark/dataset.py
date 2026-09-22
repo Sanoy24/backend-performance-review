@@ -22,7 +22,8 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 CASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 INDEPENDENT_METHODS = frozenset({
-    "expert-manual-review", "documented-issue", "injected-defect"})
+    "expert-manual-review", "independent-expert-adjudication",
+    "documented-issue", "injected-defect"})
 
 
 class DatasetError(ValueError):
@@ -50,6 +51,7 @@ def parse_timestamp(value, label):
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise DatasetError("%s must be a timezone-aware ISO timestamp" % label)
     return parsed
+
 
 def validate(root=ROOT, manifest_path=None):
     """Require complete registration and an immutable current annotation digest."""
@@ -221,6 +223,7 @@ def classify_truth(path, root=ROOT, manifest_path=None):
     if len(matches) > 1:
         raise DatasetError("truth matches multiple registered cases")
     return matches[0] if matches else None
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
