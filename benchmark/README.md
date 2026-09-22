@@ -50,21 +50,37 @@ the routed context. It does **not** run a model or claim that a larger bundle is
 
 ```
 python benchmark/reference_ablation.py --manifest <local-manifest.json> --plan-only
+python benchmark/reference_ablation.py --manifest <local-manifest.json> --export-dir <new-run-directory>
 python benchmark/reference_ablation.py --manifest <local-manifest.json>
 ```
 
 The first command freezes the prompt and each bundle by SHA-256 before reviews are run.
+Before exporting, give each case one or more trials with an `id` and an `order` containing
+`category_only`, `category_technology`, and `full_routed` exactly once; rotate that order
+across repeats. Export writes a new directory of `case/trial/slot-N` packages. Hand a fresh
+reviewer **only their slot directory** and a separate checkout of the target repository at
+the pinned commit. Each slot contains the common prompt, its allowed reference bundle, the
+review template and schemas, and the stable-ID helper. Include `SKILL.md`, shared
+methodology, and rubrics in the manifest's `common` tier; assign only relevant category,
+technology, and remaining routed files to the other tiers. Keep `coordinator.json` private: it maps opaque
+slots back to arms. No package contains the ground truth or the other arms' references.
+The exporter refuses to overwrite an existing directory. It does not clone the target,
+start review agents, or collect model usage.
+
 Supply three schema-valid reviews per trial, from the same model, prompt, pinned repository,
-and scope, with actual token, elapsed-time, and cost records. Rotate arm order across
-repeats. The second command reports gained, lost, and changed expected findings alongside
-resource costs. Its reference-quality score is the change in expected matches minus false
-positives and manually adjudicated unsupported claims; `acceptable` findings are neutral.
+and scope, with actual prompt/context-token usage, reference tokens counted by a named
+tokenizer, elapsed time, and cost provenance. Record a named human audit of unsupported
+claims. Then run the third command to report gained, lost, and changed expected findings
+alongside resource costs. Its reference-quality score is the change in expected matches
+minus false positives and manually adjudicated unsupported claims; `acceptable` findings
+are neutral.
 It withholds that score while an unmatched finding or ambiguous match needs adjudication.
 
 This is a tier-level comparison, not proof about any one file. Test suspected low-value
 references with a targeted leave-one-out comparison before shortening or removing them.
 No empirical three-arm ablation has been recorded yet; the existing treatment/control
 reports cannot be relabelled as these arms.
+
 ### Matching is order-independent
 
 The scorer treats compatible ground-truth items and findings as a bipartite graph. For each
