@@ -55,7 +55,6 @@ class BenchmarkDatasetTests(unittest.TestCase):
             "--dataset", str(self.manifest_path), "--truth", str(truth_path),
             "--review", str(self.review_path), *extra,
         ], capture_output=True, text=True, check=False)
-
     def test_annotation_digest_is_platform_independent(self):
         self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
         lf_digest = dataset.annotation_digest(self.truth_path)
@@ -125,7 +124,6 @@ class BenchmarkDatasetTests(unittest.TestCase):
         completed = self._score_cli(self.truth_path)
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("changed without a new version", completed.stderr)
-
     def test_annotation_drift_requires_new_version(self):
         truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
         truth["annotation"]["notes"] = "A revised explanation."

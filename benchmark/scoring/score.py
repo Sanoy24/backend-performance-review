@@ -1184,6 +1184,39 @@ def main(argv=None):
         print(json.dumps(result, indent=2) if args.json else heading + render(result))
         return 0
 
+    if args.command == "evaluate":
+        dataset_root = args.dataset.resolve().parent.parent
+        try:
+            truth_path, provenance = benchmark_dataset.require_held_out(
+                args.case, dataset_root, args.dataset)
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        review_path = Path(args.review).resolve()
+        parts = [part.lower() for part in review_path.parts]
+        if any(parts[i:i + 2] == ["benchmark", "ab-results"]
+               for i in range(len(parts) - 1)):
+            parser.error("historical treatment output cannot be a held-out review")
+        truth = load(truth_path)
+        review = load(review_path)
+        errors = validate_review.validate(
+            review, Path(__file__).resolve().parents[2] / "schemas")
+        if errors:
+            parser.error("invalid held-out review: %s" % errors[0])
+        reproducibility = review["reproducibility"]
+        source = reproducibility["repository"]
+        pinned = truth["repository"]
+        if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
+            parser.error("held-out review repository and commit must match ground truth")
+        model = reproducibility.get("model")
+        if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
+            parser.error("held-out review must name the actual model")
+        result = score(truth, review)
+        result["dataset"] = {"case": args.case, "split": "held_out", **provenance}
+        heading = ("HELD-OUT %s | dataset %s | annotation v%d\n" % (
+            args.case, provenance["dataset_version"], provenance["annotation_version"]))
+        print(json.dumps(result, indent=2) if args.json else heading + render(result))
+        return 0
+
     if args.command == "discipline":
         tokens = repo_number_tokens(args.repo) if args.repo else None
         print(json.dumps(discipline(load(args.review), tokens), indent=2))
