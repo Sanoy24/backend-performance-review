@@ -42,6 +42,29 @@ The review file is the machine-readable output described in
 [schemas/review.schema.json](../schemas/review.schema.json), which a review emits alongside
 its Markdown report (report template §10).
 
+### Reference ablations
+
+`reference_ablation.py` prepares and compares three paired reference bundles: shared
+methodology plus category references, then matching technology references, then the rest of
+the routed context. It does **not** run a model or claim that a larger bundle is better.
+
+```
+python benchmark/reference_ablation.py --manifest <local-manifest.json> --plan-only
+python benchmark/reference_ablation.py --manifest <local-manifest.json>
+```
+
+The first command freezes the prompt and each bundle by SHA-256 before reviews are run.
+Supply three schema-valid reviews per trial, from the same model, prompt, pinned repository,
+and scope, with actual token, elapsed-time, and cost records. Rotate arm order across
+repeats. The second command reports gained, lost, and changed expected findings alongside
+resource costs. Its reference-quality score is the change in expected matches minus false
+positives and manually adjudicated unsupported claims; `acceptable` findings are neutral.
+It withholds that score while an unmatched finding or ambiguous match needs adjudication.
+
+This is a tier-level comparison, not proof about any one file. Test suspected low-value
+references with a targeted leave-one-out comparison before shortening or removing them.
+No empirical three-arm ablation has been recorded yet; the existing treatment/control
+reports cannot be relabelled as these arms.
 ### Matching is order-independent
 
 The scorer treats compatible ground-truth items and findings as a bipartite graph. For each
