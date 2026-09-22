@@ -123,7 +123,6 @@ verify a license, assign actual people, enforce what they read outside the packe
 pre-registration, or create held-out evidence. A coordinator must verify those facts and
 preserve the manifest, packages, assignments, and returned annotations. Once two distinct
 submissions for a case are frozen, use the intake and resolution steps below.
-
 ### Independent annotation intake
 
 Before registering a held-out case, collect two annotations made independently against the
@@ -194,7 +193,6 @@ duplicate decisions, pre-review timestamps, and an adjudicator who is one of the
 reviewers. Preserve all four artifacts: both source annotations, the intake report, and the
 resolution. The generated truth is eligible for later review, not automatically held out;
 license verification, pre-registration, isolation, and dataset registration still apply.
-
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
