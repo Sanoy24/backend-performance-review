@@ -65,7 +65,6 @@ This is a tier-level comparison, not proof about any one file. Test suspected lo
 references with a targeted leave-one-out comparison before shortening or removing them.
 No empirical three-arm ablation has been recorded yet; the existing treatment/control
 reports cannot be relabelled as these arms.
-
 ### Matching is order-independent
 
 The scorer treats compatible ground-truth items and findings as a bipartite graph. For each

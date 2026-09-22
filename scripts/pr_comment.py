@@ -260,7 +260,6 @@ def render(review, fail_on="never"):
         if (isinstance(identified, int) and not isinstance(identified, bool)
                 and isinstance(analyzed, int) and not isinstance(analyzed, bool)):
             lines.append("| %s analyzed | %d / %d |" % (label, analyzed, identified))
-
     if unknowns:
         lines.append("| Not determined | %d item(s) |" % len(unknowns))
     lines.append("")
