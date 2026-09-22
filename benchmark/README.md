@@ -89,7 +89,6 @@ and record a separate human resolution for every candidate pair, unmatched item,
 disagreement, and ambiguity. The tool validates declared provenance but cannot prove the
 reviewers worked independently. It also does not register the resolved case or turn this
 preparation step into held-out evidence.
-
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
