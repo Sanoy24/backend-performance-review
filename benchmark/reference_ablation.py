@@ -33,6 +33,7 @@ withhold the score until the ground truth is adjudicated. No model is invoked he
 import argparse
 import hashlib
 import json
+import math
 import re
 import statistics
 import sys
@@ -53,6 +54,7 @@ TIERS = ("common", "category", "technology", "full")
 PAIRS = (("category_only", "category_technology"),
          ("category_technology", "full_routed"))
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+COMMIT_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
 
 
@@ -158,8 +160,9 @@ def prepare(manifest, root=ROOT):
         if errors:
             raise AblationError("%s: invalid ground truth: %s" % (case_id, errors[0]))
         repository = truth["repository"]
-        if not repository.get("commit"):
-            raise AblationError("%s: ground truth has no pinned commit" % case_id)
+        if not COMMIT_SHA.fullmatch(str(repository.get("commit", ""))):
+            raise AblationError("%s: ground truth needs a full Git commit SHA, not a "
+                                "placeholder or abbreviation" % case_id)
         result.append({
             "id": case_id, "repository": repository["name"],
             "commit": repository["commit"],
@@ -172,7 +175,8 @@ def prepare(manifest, root=ROOT):
 
 
 def _nonnegative_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and (not isinstance(value, float) or math.isfinite(value)) and value >= 0)
 
 
 def _trials(case):
@@ -187,7 +191,9 @@ def _trials(case):
             raise AblationError("%s: duplicate trial id %s" % (case["id"], trial["id"]))
         seen.add(trial["id"])
         order = trial.get("order")
-        if not isinstance(order, list) or set(order) != set(ARMS) or len(order) != len(ARMS):
+        if (not isinstance(order, list) or len(order) != len(ARMS)
+                or not all(isinstance(arm, str) for arm in order)
+                or set(order) != set(ARMS)):
             raise AblationError("%s/%s: record the three-arm execution order"
                                 % (case["id"], trial["id"]))
     return trials

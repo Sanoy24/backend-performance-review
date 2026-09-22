@@ -192,6 +192,31 @@ class ReferenceAblationTests(unittest.TestCase):
         with self.assertRaisesRegex(ablation.AblationError, "match ground truth"):
             ablation.compare(self.manifest, self.root)
 
+    def test_placeholder_truth_commit_cannot_enter_an_ablation(self):
+        truth = json.loads((self.root / "truth.json").read_text(encoding="utf-8"))
+        truth["repository"]["commit"] = "unpinned-at-review-time"
+        self._write("truth.json", json.dumps(truth))
+        with self.assertRaisesRegex(ablation.AblationError, "full Git commit SHA"):
+            ablation.prepare(self.manifest, self.root)
+
+    def test_abbreviated_truth_commit_cannot_enter_an_ablation(self):
+        truth = json.loads((self.root / "truth.json").read_text(encoding="utf-8"))
+        truth["repository"]["commit"] = "a397d119"
+        self._write("truth.json", json.dumps(truth))
+        with self.assertRaisesRegex(ablation.AblationError, "full Git commit SHA"):
+            ablation.prepare(self.manifest, self.root)
+
+    def test_nonfinite_usage_metric_is_rejected(self):
+        run = self.manifest["cases"][0]["trials"][0]["arms"]["full_routed"]
+        run["cost_usd"] = float("inf")
+        with self.assertRaisesRegex(ablation.AblationError, "nonnegative measured cost_usd"):
+            ablation.compare(self.manifest, self.root)
+
+    def test_malformed_execution_order_is_rejected_cleanly(self):
+        self.manifest["cases"][0]["trials"][0]["order"] = [
+            "category_only", "category_technology", {"full_routed": True}]
+        with self.assertRaisesRegex(ablation.AblationError, "three-arm execution order"):
+            ablation.compare(self.manifest, self.root)
     def test_reference_path_cannot_escape_checkout(self):
         self.manifest["cases"][0]["references"]["technology"] = ["../secret.md"]
         with self.assertRaises(ablation.AblationError):
