@@ -31,10 +31,10 @@ DETECT_SCRIPT = SKILL / "scripts" / "detect_stack.py"
 
 sys.path.insert(0, str(SKILL / "scripts"))
 import detect_stack as detect  # noqa: E402
-import compute_stable_id as stable_id  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import json_schema_lite as schema_lite  # noqa: E402
+import validate_review  # noqa: E402
 
 PRODUCT_NAME_PATTERN = re.compile(
     r"\b(postgres|postgresql|mysql|mariadb|mongodb|mongo|redis|cassandra|scylla|"
@@ -577,35 +577,12 @@ def check_example_review_validates(review_schema):
     if instance is None:
         return
 
-    errors = schema_lite.validate(
-        instance, review_schema, base_dir=SCHEMAS, filename="review.schema.json")
+    errors = validate_review.validate(instance, SCHEMAS)
     for error in errors[:20]:
         fail(f"docs/examples/review.example.json: {error}")
     if len(errors) > 20:
         fail(f"docs/examples/review.example.json: {len(errors) - 20} further "
              f"schema error(s) not shown")
-
-    skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-    matrix = parse_priority_matrix(skill_text)
-    declared_causes = {c.get("id") for c in instance.get("root_causes", [])}
-    for finding in instance.get("findings", []):
-        key = (finding.get("severity"), finding.get("confidence"))
-        expected = matrix.get(key)
-        if expected and finding.get("priority") != expected:
-            fail(f"docs/examples/review.example.json: {finding.get('id')} is "
-                 f"{key[0]}/{key[1]}, which the matrix derives as {expected}, "
-                 f"but it declares {finding.get('priority')}")
-        if finding.get("root_cause_id") not in declared_causes:
-            fail(f"docs/examples/review.example.json: {finding.get('id')} references "
-                 f"{finding.get('root_cause_id')}, which no root_causes[] entry declares")
-        expected_stable_id = stable_id.compute_for_finding(finding)
-        if finding.get("stable_id") != expected_stable_id:
-            fail(f"docs/examples/review.example.json: {finding.get('id')} has stable_id "
-                 f"'{finding.get('stable_id')}', but the canonical algorithm "
-                 f"(compute_stable_id.py) computes '{expected_stable_id}' from its own "
-                 f"location/category — the one committed example must demonstrate the "
-                 f"correct value, not a hand-invented one")
-
 
 def check_ground_truth_files_validate():
     """Every committed annotation must validate, because a malformed one fails silently:

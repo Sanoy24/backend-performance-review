@@ -37,8 +37,52 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- Maintained, standard-library workflow recipes now cover Claude Code, Codex CLI, and a
+  vendor-neutral manual flow with one prompt and artifact contract. A complete pull-request
+  workflow uses the official Codex Action's API-key proxy, hands off only the two review
+  artifacts, and validates in a fresh credential-free job before publishing. It disables
+  persisted checkout credentials and stays advisory by default. CI smoke-tests prompt
+  generation, both provider command plans, manual validation, and workflow ordering without
+  paid model calls.
+- README onboarding now follows one vendor-neutral, copy-paste journey from checkout and
+  environment diagnosis through an exact agent prompt, two expected artifacts, authoritative
+  validation, and a concrete success signal. It also includes five two-minute troubleshooting
+  paths and shows a generic finding transformed into an evidence-based one; platform-specific
+  discovery commands remain in the installation guide.
+- `scripts/doctor.py`, a standard-library installation diagnostic for Python compatibility,
+  project and personal skill discovery, `SKILL.md`/registry integrity, writable review-output
+  locations, and optional GitHub CLI availability. It prints remediation commands, supports
+  JSON output and explicit plugin/cache paths, never reads application secrets or credential
+  contents, and now runs in CI on Linux, macOS, and Windows at Python 3.8.
+
 ### Fixed
 
+- The composite Action now rejects unknown `fail-on` values and malformed boolean inputs
+  before doing any work, rather than letting typos silently disable uploads, comments, or a
+  requested merge gate. Inputs reach shell steps through environment variables; comment
+  updates match both the marker and `github-actions[bot]`; and comment footers describe the
+  configured gate accurately. Live Action CI covers `never`, `fail`, `warn`, invalid
+  configuration, full mode, and `UNKNOWN`.
+- Review validation is now the single publishability boundary shared by the CLI, SARIF,
+  pull-request renderer, repository invariants, and composite Action. It rejects full-review
+  verdicts, missing or contradictory change-scoped verdicts, unsupported schema/spec
+  versions, inconsistent two-way root-cause links, and runtime citations that do not resolve
+  to a declared artifact. Published verdicts are always derived from review contents.
+- The stdlib JSON Schema reader now enforces RFC 3339 `date-time` fields instead of silently
+  treating `format` as advisory. Its exact supported keyword subset is documented and covered
+  by contract tests, while semantic-validation failures have one negative fixture per rule.
+- Stability scoring now uses canonical `stable_id` values as a multiset instead of collapsing
+  findings into a dictionary keyed by `(file, category)`. Repeated IDs remain separate and are
+  reported as collisions, severity/priority comparisons exclude ambiguous collision pairs,
+  missing IDs are explicit, and the former location/category view is retained only as a named
+  approximation. Stale claims that no canonical algorithm exists were removed.
+- Benchmark scoring now uses maximum-cardinality, maximum-specificity bipartite assignment
+  instead of first-match traversal. Reordering findings or `expected`, `acceptable`, and
+  `forbidden` annotations can no longer change the score; equal-score assignments are surfaced
+  for adjudication, and every unmatched item receives a deterministic explanation. The two
+  committed machine-readable treatment reports were recomputed with no primary count changes.
 - `detect_stack.py` no longer treats project-scoped agent installations under `.claude`,
   `.agents`, `.opencode`, or `.codex` as application evidence. The scanner also excludes its
   own resolved skill root when it lives under the target repository and refuses to read file

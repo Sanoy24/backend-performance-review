@@ -2,6 +2,29 @@
 
 How the skill is packaged, discovered, and invoked — in Claude Code and elsewhere.
 
+For the shortest vendor-neutral path from checkout to a validated first review, start with
+the [README quickstart](../README.md#quickstart-your-first-validated-review). Return here when
+you want automatic discovery or a personal installation.
+
+## Quick installation check
+
+From a clone or downloaded copy of this repository, run:
+
+```bash
+python scripts/doctor.py --project /path/to/project --output /path/to/project
+```
+
+The doctor checks Python 3.8+, every documented project and personal skill location,
+`SKILL.md`, registry readability and load targets, and whether the output directory is
+writable. Add `--github` when the workflow will use the GitHub CLI, or `--skill-dir PATH`
+for a plugin/cache location outside the documented copy layouts. `--json` produces a
+machine-readable result.
+
+Every failure includes a remediation command and exits non-zero. The doctor reads only the
+installed `SKILL.md` and `registry.yaml`; it does not scan the application, inspect credential
+contents, or run `gh auth status`. Its output check creates and immediately deletes one small
+temporary file in the selected directory.
+
 ---
 
 ## 1. Conventions verification record
@@ -18,12 +41,16 @@ layout has drifted.
 | Manifest schemas re-verified against the installed CLI's own validator (`claude plugin validate`, v2.1.39) rather than documentation alone; full install/uninstall cycle run against the live repository | 2026-08-25 | Local `claude` CLI |
 | OpenCode skill discovery paths, including its Claude-compatible fallback (`.claude/skills/<name>/SKILL.md`) | 2026-08-26 | `https://opencode.ai/docs/rules/` |
 | Google Antigravity skill directory convention (`.agents/skills/<name>/SKILL.md`, project scope) | 2026-08-26 | `https://antigravity.google/docs/skills` |
-| OpenAI Codex CLI skill directory convention (`.agents/skills/<name>/SKILL.md`, same path as Antigravity) | 2026-08-26 | `https://codex.danielvaughan.com/2026/03/26/writing-effective-skillmd-files/` |
+| OpenAI Codex CLI skill directory convention (`.agents/skills/<name>/SKILL.md`, same path as Antigravity) | 2026-09-17 | `https://learn.chatgpt.com/docs/build-skills` |
+| OpenAI Codex non-interactive invocation (`codex exec`, explicit `workspace-write`, ephemeral sessions, stdin prompts, isolated user configuration) | 2026-09-17 | `https://learn.chatgpt.com/docs/non-interactive-mode` |
+| OpenAI Codex GitHub Action API-key proxy, privilege controls, prompt files, and output handling | 2026-09-17 | `https://learn.chatgpt.com/docs/github-action` |
+| Claude Code non-interactive invocation (`--bare -p`, `--permission-mode`, and scoped `--allowedTools`) | 2026-09-17 | `https://code.claude.com/docs/en/headless` |
 
-The three rows above are **checked against each tool's published documentation only** — unlike
-the Claude Code rows, no local install of OpenCode, Antigravity, or Codex CLI was available to
-run an end-to-end cycle against this repository at the time of writing. Treat §4 below as
-believed-correct, not verified-by-execution, until someone runs it and reports back (that report
+The OpenCode, Antigravity, and Codex discovery rows are **checked against each tool's published
+documentation only** — unlike the Claude Code rows, no local install of those three tools was
+available to run an end-to-end discovery cycle against this repository at the time of writing.
+Treat §4 below as believed-correct, not verified-by-execution, until someone runs it and
+reports back (that report
 would itself be a valuable contribution — see `CONTRIBUTING.md` §1).
 
 **Re-verify before a release.** If the frontmatter schema or marketplace format has changed,
@@ -172,7 +199,68 @@ tool checked so far ignores fields it does not recognize rather than rejecting t
 
 ---
 
-## 5. The detection script
+## 5. Maintained execution recipes
+
+Installation controls discovery; these recipes control one complete run. They share the same
+prompt builder, output names, clean-worktree guard, and authoritative validator:
+
+```bash
+# Vendor-neutral: write a prompt, use it in any agent, then validate its saved artifacts.
+python backend-performance-review/scripts/workflow_recipe.py prompt \
+  --project . --prompt-file performance-review.prompt.txt
+python backend-performance-review/scripts/workflow_recipe.py validate --project .
+
+# Codex CLI: generate both artifacts and validate them.
+python backend-performance-review/scripts/workflow_recipe.py run --agent codex --project .
+
+# Claude Code: generate both artifacts and validate them.
+python backend-performance-review/scripts/workflow_recipe.py run --agent claude --project .
+```
+
+Use `--mode change-scoped --base-ref origin/main` for a branch or pull-request review. The
+runner refuses to start when unrelated worktree changes exist and rejects a completed run if
+anything except the declared Markdown and JSON artifacts changed. This makes accidental agent
+edits visible; it does not silently discard user work.
+
+`--dry-run` prints the exact provider command, prompt-delivery method, output paths, and prompt
+without checking for a vendor CLI or making a model call. CI exercises both provider plans,
+the manual prompt/validation path, and the complete GitHub workflow contract. Authenticated
+model calls remain documentation-only because they are paid, non-deterministic, and require
+user credentials.
+
+### Pull-request workflow
+
+The maintained workflow is
+[`examples/workflows/github-actions.yml`](../examples/workflows/github-actions.yml). It checks
+out the review tool, prepares the maintained prompt, runs the official Codex Action, hands off
+only the two review artifacts, and validates them in a fresh credential-free job before
+publishing. Install it by copying one file:
+
+```bash
+mkdir -p .github/workflows
+cp backend-performance-review/examples/workflows/github-actions.yml \
+  .github/workflows/backend-performance-review.yml
+```
+
+The example follows `main` so it becomes usable with the release that introduces these
+recipes. After a successful trial, pin both review-tool checkouts to the same released tag or
+full commit SHA for reproducible runs.
+
+Create the repository secret `OPENAI_API_KEY`. The official agent Action keeps the key behind
+its API proxy; validation and publishing run in a separate job that never receives it or reuses
+the agent's tool checkout. Both jobs disable persisted Git credentials. The workflow skips fork
+pull requests and does not use `pull_request_target`, which would combine a credential with
+untrusted contributor code. Publishing starts at `fail-on: never`; earn stricter gating from
+observed accuracy rather than enabling it on day one.
+
+The agent boundary is deliberately replaceable. To use Claude Code or another provider, replace
+only the step named `Run the review agent`; keep the prepared prompt and require that step to
+write `performance-review.md` and `performance-review.json`. The artifact handoff, fresh
+validator job, and publisher stay unchanged.
+
+---
+
+## 6. The detection script
 
 `skills/backend-performance-review/scripts/detect_stack.py` is an accelerator, not a
 dependency. If Python is unavailable or the script errors, the skill falls back to manual
@@ -203,7 +291,7 @@ Output is JSON on stdout; diagnostics go to stderr.
 
 ---
 
-## 6. How the skill is discovered and invoked
+## 7. How the skill is discovered and invoked
 
 Three paths, in decreasing order of how often they happen:
 
@@ -226,7 +314,7 @@ would change if you had answered.
 
 ---
 
-## 7. Uninstalling
+## 8. Uninstalling
 
 ```
 /plugin uninstall backend-performance-review
@@ -238,7 +326,7 @@ outside its own directory.
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 **The skill never activates automatically.** Check that it appears in `/plugin` or in your
 skills directory listing. If it is installed but not firing, phrase the request in terms the

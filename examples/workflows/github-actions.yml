@@ -1,0 +1,111 @@
+name: backend performance review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  generate:
+    # Secrets are unavailable to fork pull requests. Do not use pull_request_target here:
+    # that would expose a model credential while checking out untrusted contributor code.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the change
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out the review tool
+        uses: actions/checkout@v4
+        with:
+          repository: Sanoy24/backend-performance-review
+          # Start with main so the recipe works at release; pin a release tag or commit SHA
+          # after the first successful run in your repository.
+          ref: main
+          path: .backend-performance-review
+          persist-credentials: false
+
+      - name: Prepare the maintained change-scoped prompt
+        run: |
+          python .backend-performance-review/scripts/workflow_recipe.py prompt \
+            --project . \
+            --skill-dir .backend-performance-review/skills/backend-performance-review \
+            --mode change-scoped \
+            --base-ref "${{ github.event.pull_request.base.sha }}" \
+            --prompt-file .performance-review-prompt.txt \
+            --report performance-review.md \
+            --review performance-review.json
+
+      # This is the user-selected agent boundary. Replace only this step when using another
+      # agent; it must write performance-review.md and performance-review.json.
+      - name: Run the review agent
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .performance-review-prompt.txt
+          sandbox: workspace-write
+          codex-args: '["--ephemeral", "--ignore-user-config", "--ignore-rules"]'
+
+      - name: Check the artifact handoff
+        run: |
+          test -s performance-review.md
+          test -s performance-review.json
+
+      - name: Hand off only the review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-performance-review
+          path: |
+            performance-review.md
+            performance-review.json
+          if-no-files-found: error
+
+  validate-and-publish:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      # This fresh job never receives the model credential or the agent-modified tool tree.
+      - name: Check out the change
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out a clean review tool
+        uses: actions/checkout@v4
+        with:
+          repository: Sanoy24/backend-performance-review
+          # Keep this identical to the generation job.
+          ref: main
+          path: .backend-performance-review
+          persist-credentials: false
+
+      - name: Download the review artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-performance-review
+
+      - name: Validate the agent output
+        run: |
+          python .backend-performance-review/scripts/workflow_recipe.py validate \
+            --project . \
+            --skill-dir .backend-performance-review/skills/backend-performance-review \
+            --mode change-scoped \
+            --base-ref "${{ github.event.pull_request.base.sha }}" \
+            --report performance-review.md \
+            --review performance-review.json
+
+      - name: Publish the validated review
+        uses: ./.backend-performance-review
+        with:
+          review: performance-review.json
+          fail-on: never

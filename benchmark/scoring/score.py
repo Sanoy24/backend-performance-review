@@ -23,7 +23,9 @@ What it measures, and why each one is separate:
                               and on a healthy repository they are the whole test.
 
 Matching is deliberately conservative: a finding matches a ground-truth item when they name
-the same file and a compatible category. Ground truth does not encode `stable_id`, because
+the same file and a compatible category. Candidate relationships are solved as a
+maximum-cardinality bipartite assignment, then by an explicit specificity order, so harmless
+JSON list reordering cannot change the result. Ground truth does not encode `stable_id`, because
 that would require the annotator to predict the implementation's hashing rather than describe
 the defect.
 """
@@ -96,18 +98,256 @@ def matches(finding, item):
     would actually need to change to fix it. Neither is more correct, so scoring one of them
     as a miss would be scoring the harness's own location convention, not the review.
     """
-    reported = finding.get("location") or {}
+    return match_specificity(finding, item) is not None
 
+
+def match_specificity(finding, item):
+    """Return the best compatible-match specificity, or ``None`` when there is no edge.
+
+    The tuple is ordered from most to least important. Assignment maximizes the summed tuple
+    lexicographically after first maximizing cardinality:
+
+    1. primary ``location`` rather than an ``also_locations`` alternative;
+    2. the same explicit symbol on both sides rather than an omitted symbol;
+    3. an exact normalized file path rather than a suffix-only path match;
+    4. the primary category rather than an ``also_acceptable_categories`` alternative.
+
+    Keeping this as an explicit tuple makes the benchmark's preference auditable instead of
+    hiding it in traversal order.
+    """
+    allowed = categories_for(item)
+    reported_category = finding.get("category")
+    if allowed and reported_category not in allowed:
+        return None
+
+    reported = finding.get("location") or {}
     candidates = [item.get("location") or {}]
     candidates.extend(item.get("also_locations", []))
-    if not any(_location_matches(reported, candidate) for candidate in candidates):
-        return False
+    best = None
+    for index, candidate in enumerate(candidates):
+        if not _location_matches(reported, candidate):
+            continue
+        expected_symbol = candidate.get("symbol")
+        reported_symbol = reported.get("symbol")
+        specificity = (
+            int(index == 0),
+            int(bool(expected_symbol) and expected_symbol == reported_symbol),
+            int(normalize_path(reported.get("file")) == normalize_path(candidate.get("file"))),
+            int(bool(reported_category) and reported_category == item.get("category")),
+        )
+        best = max(best, specificity) if best is not None else specificity
+    return best
 
-    allowed = categories_for(item)
-    if allowed and finding.get("category") not in allowed:
-        return False
 
-    return True
+def _object_key(value):
+    """Stable ordering key independent of the order objects appeared in input JSON."""
+    return (str(value.get("id") or ""),
+            json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True))
+
+
+def _specificity_value(specificity, base):
+    value = 0
+    for component in specificity:
+        value = value * base + component
+    return value
+
+
+def _hungarian_max(weights):
+    """Maximum-weight rectangular assignment for rows <= columns.
+
+    This is the O(rows^2 * columns) Hungarian algorithm. Callers add one dummy column per
+    row, so every row can remain unmatched without ever selecting an incompatible real edge.
+    """
+    row_count = len(weights)
+    if not row_count:
+        return []
+    column_count = len(weights[0])
+    if row_count > column_count:
+        raise ValueError("assignment requires at least as many columns as rows")
+
+    # The conventional implementation minimizes cost; negating weights makes it maximize.
+    costs = [[-weight for weight in row] for row in weights]
+    u = [0] * (row_count + 1)
+    v = [0] * (column_count + 1)
+    p = [0] * (column_count + 1)
+    way = [0] * (column_count + 1)
+
+    for row in range(1, row_count + 1):
+        p[0] = row
+        column = 0
+        minimum = [float("inf")] * (column_count + 1)
+        used = [False] * (column_count + 1)
+        while True:
+            used[column] = True
+            active_row = p[column]
+            delta = float("inf")
+            next_column = 0
+            for candidate in range(1, column_count + 1):
+                if used[candidate]:
+                    continue
+                reduced = costs[active_row - 1][candidate - 1] - u[active_row] - v[candidate]
+                if reduced < minimum[candidate]:
+                    minimum[candidate] = reduced
+                    way[candidate] = column
+                if minimum[candidate] < delta:
+                    delta = minimum[candidate]
+                    next_column = candidate
+            for candidate in range(column_count + 1):
+                if used[candidate]:
+                    u[p[candidate]] += delta
+                    v[candidate] -= delta
+                else:
+                    minimum[candidate] -= delta
+            column = next_column
+            if p[column] == 0:
+                break
+        while True:
+            previous = way[column]
+            p[column] = p[previous]
+            column = previous
+            if column == 0:
+                break
+
+    assignment = [-1] * row_count
+    for column in range(1, column_count + 1):
+        if p[column]:
+            assignment[p[column] - 1] = column - 1
+    return assignment
+
+
+def _solve_assignment(items, findings, excluded=frozenset()):
+    """Solve one already-sorted bucket and return edges plus its comparable objective."""
+    if not items or not findings:
+        return [], (0, 0)
+
+    max_pairs = min(len(items), len(findings))
+    base = max_pairs + 1
+    specificity = {}
+    max_specificity = _specificity_value((1, 1, 1, 1), base)
+    match_bonus = (max_pairs + 1) * (max_specificity + 1)
+    incompatible = -match_bonus * (len(items) + 1)
+    weights = []
+
+    for item_index, item in enumerate(items):
+        row = []
+        for finding_index, finding in enumerate(findings):
+            edge = (item_index, finding_index)
+            edge_specificity = match_specificity(finding, item)
+            specificity[edge] = edge_specificity
+            if edge in excluded or edge_specificity is None:
+                row.append(incompatible)
+            else:
+                row.append(match_bonus + _specificity_value(edge_specificity, base))
+        row.extend([0] * len(items))
+        weights.append(row)
+
+    columns = _hungarian_max(weights)
+    selected = []
+    for item_index, column in enumerate(columns):
+        edge = (item_index, column)
+        if column >= len(findings) or edge in excluded or specificity.get(edge) is None:
+            continue
+        edge_specificity = specificity[edge]
+        selected.append((item_index, column, edge_specificity))
+
+    objective = (
+        len(selected),
+        sum(_specificity_value(edge_specificity, base)
+            for _item_index, _finding_index, edge_specificity in selected),
+    )
+    return selected, objective
+
+
+def _specificity_record(specificity):
+    return {
+        "primary_location": bool(specificity[0]),
+        "exact_symbol": bool(specificity[1]),
+        "exact_file": bool(specificity[2]),
+        "primary_category": bool(specificity[3]),
+    }
+
+
+def _pair_records(edges, items, findings):
+    return [
+        {
+            "item": items[item_index].get("id"),
+            "finding": findings[finding_index].get("id"),
+            "specificity": _specificity_record(specificity),
+        }
+        for item_index, finding_index, specificity in edges
+    ]
+
+
+def optimal_assignment(items, findings, bucket):
+    """Return a canonical maximum-cardinality, maximum-specificity bipartite assignment.
+
+    Input order is discarded before solving. If forbidding any selected edge still permits
+    the same objective, a representative equal-score assignment is emitted for adjudication.
+    """
+    items = sorted(items, key=_object_key)
+    findings = sorted(findings, key=_object_key)
+    selected, objective = _solve_assignment(items, findings)
+    selected_records = _pair_records(selected, items, findings)
+
+    alternatives = []
+    seen = set()
+    for item_index, finding_index, _specificity in selected:
+        alternative, alternative_objective = _solve_assignment(
+            items, findings, excluded=frozenset({(item_index, finding_index)}))
+        if alternative_objective != objective:
+            continue
+        signature = tuple((entry["item"], entry["finding"])
+                          for entry in _pair_records(alternative, items, findings))
+        if signature in seen:
+            continue
+        seen.add(signature)
+        alternatives.append({
+            "bucket": bucket,
+            "reason": "equal_cardinality_and_specificity",
+            "selected": selected_records,
+            "alternative": _pair_records(alternative, items, findings),
+        })
+
+    matched_items = {item_index for item_index, _finding_index, _specificity in selected}
+    matched_findings = {finding_index for _item_index, finding_index, _specificity in selected}
+    return {
+        "pairs": [(items[item_index], findings[finding_index])
+                  for item_index, finding_index, _specificity in selected],
+        "records": selected_records,
+        "unmatched_items": [item for index, item in enumerate(items)
+                            if index not in matched_items],
+        "unmatched_findings": [finding for index, finding in enumerate(findings)
+                               if index not in matched_findings],
+        "ambiguities": sorted(alternatives,
+                              key=lambda value: json.dumps(value, sort_keys=True)),
+    }
+
+
+def _unmatched_item_record(item, findings):
+    candidates = sorted((finding.get("id") for finding in findings if matches(finding, item)),
+                        key=lambda value: str(value or ""))
+    return {
+        "id": item.get("id"),
+        "reason": ("compatible_findings_assigned_elsewhere" if candidates
+                   else "no_compatible_finding"),
+        "compatible_findings": candidates,
+    }
+
+
+def _unmatched_finding_record(finding, buckets):
+    candidates = [
+        {"bucket": bucket, "id": item.get("id")}
+        for bucket, items in buckets
+        for item in items
+        if matches(finding, item)
+    ]
+    candidates.sort(key=lambda value: (value["bucket"], str(value["id"] or "")))
+    return {
+        "id": finding.get("id"),
+        "reason": ("compatible_ground_truth_items_assigned_elsewhere" if candidates
+                   else "no_compatible_ground_truth_item"),
+        "compatible_items": candidates,
+    }
 
 
 def recommendation_text(finding):
@@ -124,38 +364,33 @@ def recommendation_text(finding):
 # --------------------------------------------------------------------------------------
 
 def score(truth, review):
-    findings = review.get("findings", [])
-    expected = truth.get("expected", [])
-    acceptable = truth.get("acceptable", [])
-    forbidden = truth.get("forbidden", [])
+    findings = sorted(review.get("findings", []), key=_object_key)
+    expected = sorted(truth.get("expected", []), key=_object_key)
+    acceptable = sorted(truth.get("acceptable", []), key=_object_key)
+    forbidden = sorted(truth.get("forbidden", []), key=_object_key)
 
-    unclaimed = list(findings)
-    pairs = []          # (ground-truth item, finding) for expected items that were found
-    missed = []
+    # Bucket priority is semantic, not incidental list order: required findings are claimed
+    # first, optional real findings second, and known non-problems last. Within each bucket,
+    # assignment is globally optimal and independent of JSON ordering.
+    expected_assignment = optimal_assignment(expected, findings, "expected")
+    pairs = expected_assignment["pairs"]
+    missed = expected_assignment["unmatched_items"]
 
-    for item in expected:
-        hit = next((f for f in unclaimed if matches(f, item)), None)
-        if hit is None:
-            missed.append(item)
-        else:
-            unclaimed.remove(hit)
-            pairs.append((item, hit))
+    claimed = {id(finding) for _item, finding in pairs}
+    after_expected = [finding for finding in findings if id(finding) not in claimed]
 
-    # Acceptable items absorb a finding without scoring it either way.
-    tolerated = []
-    for item in acceptable:
-        hit = next((f for f in unclaimed if matches(f, item)), None)
-        if hit is not None:
-            unclaimed.remove(hit)
-            tolerated.append((item, hit))
+    acceptable_assignment = optimal_assignment(acceptable, after_expected, "acceptable")
+    tolerated = acceptable_assignment["pairs"]
+    claimed.update(id(finding) for _item, finding in tolerated)
+    after_acceptable = [finding for finding in findings if id(finding) not in claimed]
 
-    # Anything left that lands on a forbidden item is a false positive the corpus predicted.
-    trapped = []
-    for item in forbidden:
-        for finding in list(unclaimed):
-            if matches(finding, item):
-                unclaimed.remove(finding)
-                trapped.append((item, finding))
+    # A ground-truth item and finding each participate in at most one assignment. Duplicate
+    # reports of one forbidden issue remain false positives, but only one is classified as
+    # the annotated trap; the rest are transparently reported as unanticipated duplicates.
+    forbidden_assignment = optimal_assignment(forbidden, after_acceptable, "forbidden")
+    trapped = forbidden_assignment["pairs"]
+    claimed.update(id(finding) for _item, finding in trapped)
+    unclaimed = [finding for finding in findings if id(finding) not in claimed]
 
     true_positives = len(pairs)
     false_negatives = len(missed)
@@ -178,6 +413,43 @@ def score(truth, review):
         "confidence_calibration": confidence_calibration(pairs, trapped, unclaimed),
         "confidence_ceiling_violations": ceiling_violations(pairs),
         "recommendation_accuracy": recommendation_accuracy(pairs),
+        "matching": {
+            "algorithm": "maximum-cardinality-maximum-specificity-v1",
+            "bucket_priority": ["expected", "acceptable", "forbidden"],
+            "specificity_order": [
+                "primary_location", "exact_symbol", "exact_file", "primary_category",
+            ],
+            "assignments": {
+                "expected": expected_assignment["records"],
+                "acceptable": acceptable_assignment["records"],
+                "forbidden": forbidden_assignment["records"],
+            },
+            "ambiguities": sorted(
+                expected_assignment["ambiguities"]
+                + acceptable_assignment["ambiguities"]
+                + forbidden_assignment["ambiguities"],
+                key=lambda value: json.dumps(value, sort_keys=True),
+            ),
+            "unmatched": {
+                "expected": [_unmatched_item_record(item, findings) for item in missed],
+                "acceptable": [
+                    _unmatched_item_record(item, findings)
+                    for item in acceptable_assignment["unmatched_items"]
+                ],
+                "forbidden": [
+                    _unmatched_item_record(item, findings)
+                    for item in forbidden_assignment["unmatched_items"]
+                ],
+                "findings": [
+                    _unmatched_finding_record(finding, (
+                        ("expected", expected),
+                        ("acceptable", acceptable),
+                        ("forbidden", forbidden),
+                    ))
+                    for finding in unclaimed
+                ],
+            },
+        },
         "restraint": {
             "forbidden_items": len(forbidden),
             "forbidden_reported": [
@@ -331,64 +603,157 @@ def recommendation_accuracy(pairs):
 # Stability — two independent runs over the same code
 # --------------------------------------------------------------------------------------
 
-def stability(first, second):
-    """Turns the hand-diffing in docs/evaluation.md §3.18 and §3.21 into a number, so the
-    remaining repositories can be checked cheaply instead of by eye.
+def _stable_id(finding):
+    value = finding.get("stable_id")
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
-    Two known limitations, both found by running this against two real independent reviews
-    of the same repository (not hypothesized in advance) — see benchmark/README.md
-    "Known limitations, found by real use":
 
-    `overlap`/`only_in_a`/`only_in_b` key on (file, category), which UNDERCOUNTS true
-    agreement when two reviews cite the identical mechanism at opposite ends of one call
-    chain (a query's call site versus its definition) — ground truth's `also_locations`
-    exists for exactly this, but there is no ground truth here, only two raw reviews with no
-    external arbiter of "same finding." Two runs disagreeing on file for the same real bug is
-    a live, observed case, not a hypothetical one.
+def _location_category_key(finding):
+    location = finding.get("location") or {}
+    return (normalize_path(location.get("file")), finding.get("category") or "unknown")
 
-    `stable_id_agreement` is close to meaningless as specified today: SKILL.md/the schema
-    describe `stable_id` as "derived from root cause, file, symbol, and mechanism" but do not
-    mandate a canonical algorithm, so two independently-run agents computing "a hash" from
-    the same inputs are not guaranteed to produce the same bytes even when they agree on
-    every input. Confirmed empirically: two real reviews that agreed on the dominant finding's
-    location, severity-within-one-level, and recommendation still had 0% stable_id agreement.
-    Treat this field as informative only until a canonical algorithm is specified.
-    """
-    a, b = first.get("findings", []), second.get("findings", [])
 
-    def key(finding):
-        location = finding.get("location") or {}
-        return (normalize_path(location.get("file")), finding.get("category"))
+def _multiset_comparison(first, second, key_function, label_function):
+    """Compare without collapsing repeated keys; each key owns a list, never one finding."""
+    groups_a = defaultdict(list)
+    groups_b = defaultdict(list)
+    for finding in sorted(first, key=_object_key):
+        key = key_function(finding)
+        if key is not None:
+            groups_a[key].append(finding)
+    for finding in sorted(second, key=_object_key):
+        key = key_function(finding)
+        if key is not None:
+            groups_b[key].append(finding)
 
-    keys_a, keys_b = {key(f) for f in a}, {key(f) for f in b}
-    shared = keys_a & keys_b
-    union = keys_a | keys_b
-
-    by_key_a = {key(f): f for f in a}
-    by_key_b = {key(f): f for f in b}
-    severity_agree = sum(
-        1 for k in shared if by_key_a[k].get("severity") == by_key_b[k].get("severity"))
-    priority_agree = sum(
-        1 for k in shared if by_key_a[k].get("priority") == by_key_b[k].get("priority"))
-    stable_id_agree = sum(
-        1 for k in shared if by_key_a[k].get("stable_id") == by_key_b[k].get("stable_id"))
+    pairs = []
+    only_a = []
+    only_b = []
+    union_count = 0
+    for key in sorted(set(groups_a) | set(groups_b), key=str):
+        left = groups_a.get(key, [])
+        right = groups_b.get(key, [])
+        shared_count = min(len(left), len(right))
+        union_count += max(len(left), len(right))
+        pairs.extend((key, left[index], right[index]) for index in range(shared_count))
+        only_a.extend(label_function(key, finding) for finding in left[shared_count:])
+        only_b.extend(label_function(key, finding) for finding in right[shared_count:])
 
     return {
+        "overlap": round(len(pairs) / union_count, 3) if union_count else None,
+        "shared": len(pairs),
+        "union": union_count,
+        "only_in_a": sorted(only_a),
+        "only_in_b": sorted(only_b),
+        "pairs": pairs,
+        "groups_a": groups_a,
+        "groups_b": groups_b,
+    }
+
+
+def _stable_label(stable_id, finding):
+    return "%s (%s)" % (stable_id, finding.get("id") or "missing-report-id")
+
+
+def _approximate_label(key, finding):
+    path, category = key
+    return "%s (%s; %s)" % (path, category, finding.get("id") or "missing-report-id")
+
+
+def _collision_records(groups):
+    return [
+        {
+            "stable_id": stable_id,
+            "count": len(findings),
+            "findings": sorted((finding.get("id") for finding in findings),
+                               key=lambda value: str(value or "")),
+        }
+        for stable_id, findings in sorted(groups.items())
+        if len(findings) > 1
+    ]
+
+
+def stability(first, second):
+    """Compare two runs using canonical stable IDs without collapsing duplicate findings.
+
+    `overlap` is multiset Jaccard overlap over findings that carry `stable_id`. Findings with
+    no ID are excluded from that primary metric and listed explicitly. A separate
+    `approximate_location_category` diagnostic preserves the historical file/category view,
+    also as a multiset, but never presents it as semantic identity.
+
+    Severity and priority agreement are computed only for stable IDs that occur exactly once
+    in both runs. A repeated stable ID is a visible collision, so arbitrarily pairing those
+    findings would manufacture calibration evidence.
+    """
+    a = sorted(first.get("findings", []), key=_object_key)
+    b = sorted(second.get("findings", []), key=_object_key)
+    identified_a = [finding for finding in a if _stable_id(finding) is not None]
+    identified_b = [finding for finding in b if _stable_id(finding) is not None]
+    missing_a = [finding for finding in a if _stable_id(finding) is None]
+    missing_b = [finding for finding in b if _stable_id(finding) is None]
+
+    stable = _multiset_comparison(identified_a, identified_b, _stable_id, _stable_label)
+    approximate = _multiset_comparison(
+        a, b, _location_category_key, _approximate_label)
+
+    comparable_pairs = [
+        (left, right)
+        for stable_id, left, right in stable["pairs"]
+        if len(stable["groups_a"][stable_id]) == 1
+        and len(stable["groups_b"][stable_id]) == 1
+    ]
+    severity_agree = sum(
+        left.get("severity") == right.get("severity") for left, right in comparable_pairs)
+    priority_agree = sum(
+        left.get("priority") == right.get("priority") for left, right in comparable_pairs)
+    comparable_count = len(comparable_pairs)
+
+    stable_id_overlap = stable["overlap"]
+    collisions = {
+        "run_a": _collision_records(stable["groups_a"]),
+        "run_b": _collision_records(stable["groups_b"]),
+    }
+    return {
         "findings": {"run_a": len(a), "run_b": len(b)},
-        "overlap": round(len(shared) / len(union), 3) if union else None,
-        "shared": len(shared),
-        "only_in_a": sorted("%s (%s)" % k for k in keys_a - keys_b),
-        "only_in_b": sorted("%s (%s)" % k for k in keys_b - keys_a),
-        "severity_agreement": round(severity_agree / len(shared), 3) if shared else None,
-        "priority_agreement": round(priority_agree / len(shared), 3) if shared else None,
-        "stable_id_agreement": round(stable_id_agree / len(shared), 3) if shared else None,
+        "stable_ids_present": {
+            "run_a": len(identified_a), "run_b": len(identified_b),
+        },
+        "missing_stable_ids": {
+            "run_a": [finding.get("id") for finding in missing_a],
+            "run_b": [finding.get("id") for finding in missing_b],
+        },
+        "overlap": stable_id_overlap,
+        "stable_id_overlap": stable_id_overlap,
+        # Deprecated compatibility alias. Stable IDs are now the primary comparison key, so
+        # a second notion of "agreement" would be the same quantity under a misleading name.
+        "stable_id_agreement": stable_id_overlap,
+        "shared": stable["shared"],
+        "only_in_a": stable["only_in_a"],
+        "only_in_b": stable["only_in_b"],
+        "stable_id_collisions": collisions,
+        "calibration_pairs": comparable_count,
+        "calibration_pairs_excluded_by_collision": stable["shared"] - comparable_count,
+        "severity_agreement": (
+            round(severity_agree / comparable_count, 3) if comparable_count else None),
+        "priority_agreement": (
+            round(priority_agree / comparable_count, 3) if comparable_count else None),
+        "approximate_location_category": {
+            "overlap": approximate["overlap"],
+            "shared": approximate["shared"],
+            "union": approximate["union"],
+            "only_in_a": approximate["only_in_a"],
+            "only_in_b": approximate["only_in_b"],
+        },
         "caveats": [
-            "overlap/only_in_a/only_in_b key on (file, category) and will undercount "
-            "agreement when two reviews cite the identical mechanism at different points "
-            "in one call chain; see this function's docstring.",
-            "stable_id_agreement is not yet a reliable signal: no canonical hashing "
-            "algorithm is mandated, so independently-run agents are not guaranteed to "
-            "produce matching ids even for the identical finding.",
+            "Canonical stable_id is derived from normalized file, symbol, and category. "
+            "Two reviews that cite the same mechanism at different points in one call chain "
+            "will still have different IDs and require human adjudication.",
+            "approximate_location_category is diagnostic only: it can overstate agreement "
+            "for distinct mechanisms in one file/category and understate agreement across "
+            "different call-chain citation locations.",
+            "Repeated canonical IDs are retained as separate findings and reported in "
+            "stable_id_collisions; their severity and priority pairs are excluded rather "
+            "than assigned arbitrarily.",
         ],
     }
 
@@ -670,6 +1035,17 @@ def render(result):
         lines.append("  RESTRAINT FAILURES — reported a known non-problem:")
         for entry in result["restraint"]["forbidden_reported"]:
             lines.append("    %s (%s): %s" % (entry["finding"], entry["id"], entry["why_not"]))
+
+    if result["matching"]["ambiguities"]:
+        lines.append("")
+        lines.append("  AMBIGUOUS MATCHING — equal-score assignments need adjudication:")
+        for ambiguity in result["matching"]["ambiguities"]:
+            selected = ", ".join("%s->%s" % (pair["item"], pair["finding"])
+                                 for pair in ambiguity["selected"])
+            alternative = ", ".join("%s->%s" % (pair["item"], pair["finding"])
+                                    for pair in ambiguity["alternative"])
+            lines.append("    %s: selected [%s], alternative [%s]"
+                         % (ambiguity["bucket"], selected, alternative))
 
     for miss in result["misses"]:
         lines.append("  MISSED  %s — %s" % (miss["id"], miss["mechanism"]))
