@@ -169,7 +169,6 @@ def _semantic_problems(review):
                     "%s coverage analyzes %d of %d without a completeness unknown whose "
                     "reason is not-examined"
                     % (label, analyzed, identified))
-
     findings = [item for item in _array(review.get("findings")) if isinstance(item, dict)]
     finding_by_id = {}
     for finding in findings:
