@@ -76,7 +76,6 @@ class BenchmarkDatasetTests(unittest.TestCase):
         review["verdict"] = "FAIL"
         review["reproducibility"]["repository"]["diff_base"] = review_base or truth_base
         self.review_path.write_text(json.dumps(review), encoding="utf-8")
-
     def test_annotation_digest_is_platform_independent(self):
         self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
         lf_digest = dataset.annotation_digest(self.truth_path)
@@ -306,7 +305,6 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self._save_manifest()
         with self.assertRaisesRegex(dataset.DatasetError, "diff base and head must differ"):
             dataset.validate(self.root)
-
     def test_evaluate_cli_rejects_review_predating_preregistration(self):
         review = json.loads(self.review_path.read_text(encoding="utf-8"))
         review["reproducibility"]["generated_at"] = "2026-09-08T23:59:59Z"
