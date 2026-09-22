@@ -264,6 +264,7 @@ def export_packages(manifest, destination, root=ROOT):
         "campaign_id": plan["campaign_id"],
         "frozen_at": plan["frozen_at"],
         "manifest_sha256": plan["manifest_sha256"],
+        "protocol_files": plan["protocol_files"],
         "protocol_sha256": plan["protocol_sha256"],
         "packages": [{key: value for key, value in package.items() if key != "files"}
                      for package in packages],

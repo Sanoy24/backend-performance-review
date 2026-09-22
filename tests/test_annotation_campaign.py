@@ -135,6 +135,7 @@ class ExportTests(unittest.TestCase):
         coordinator = campaign.export_packages(self.manifest, self.destination)
         self.assertFalse(coordinator["held_out_ready"])
         self.assertRegex(coordinator["protocol_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(len(coordinator["protocol_files"]), len(campaign.HELPERS))
         self.assertEqual(len(coordinator["packages"]), 2)
         self.assertTrue((self.destination / "coordinator.json").is_file())
         for record in coordinator["packages"]:
