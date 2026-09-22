@@ -1307,6 +1307,19 @@ def main(argv=None):
         pinned = truth["repository"]
         if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
             parser.error("held-out review repository and commit must match ground truth")
+        try:
+            registered_at = benchmark_dataset.parse_timestamp(
+                provenance["pre_registered_at"], "pre_registered_at")
+            annotation_at = benchmark_dataset.parse_timestamp(
+                provenance["annotation_recorded_at"], "annotation_recorded_at")
+            generated_at = benchmark_dataset.parse_timestamp(
+                reproducibility.get("generated_at"), "review generated_at")
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        if generated_at <= registered_at:
+            parser.error("held-out review must postdate pre-registration")
+        if generated_at <= annotation_at:
+            parser.error("held-out review must postdate the current annotation version")
         model = reproducibility.get("model")
         if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
             parser.error("held-out review must name the actual model")

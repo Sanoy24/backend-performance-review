@@ -38,8 +38,11 @@ class BenchmarkDatasetTests(unittest.TestCase):
             "schema_version": 1, "dataset_version": "0.1.0",
             "cases": {"orders": {
                 "split": "held_out", "pre_registered_before_review": True,
+                "pre_registered_at": "2026-09-09T00:00:00Z",
+                "pre_registration_evidence_url": "https://example.com/locked/orders",
                 "license": {"spdx": "MIT", "evidence_url": "https://example.com/LICENSE"},
                 "annotations": [{"version": 1, "sha256": self._digest(),
+                                 "recorded_at": "2026-09-08T00:00:00Z",
                                  "origin": "injected fixture established before review"}],
             }},
         }
@@ -57,6 +60,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
             "--dataset", str(self.manifest_path), "--truth", str(truth_path),
             "--review", str(self.review_path), *extra,
         ], capture_output=True, text=True, check=False)
+
     def test_annotation_digest_is_platform_independent(self):
         self.truth_path.write_bytes(b'{\n  "case": "orders"\n}\n')
         lf_digest = dataset.annotation_digest(self.truth_path)
@@ -77,6 +81,33 @@ class BenchmarkDatasetTests(unittest.TestCase):
         self.assertEqual(path, self.truth_path)
         self.assertEqual(provenance["dataset_version"], "0.1.0")
         self.assertEqual(provenance["annotation_version"], 1)
+        self.assertEqual(provenance["annotation_recorded_at"], "2026-09-08T00:00:00Z")
+        self.assertEqual(provenance["pre_registered_at"], "2026-09-09T00:00:00Z")
+
+    def test_held_out_needs_auditable_preregistration_metadata(self):
+        record = self.manifest["cases"]["orders"]
+        del record["pre_registration_evidence_url"]
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "pre-registration evidence URL"):
+            dataset.validate(self.root)
+        record["pre_registration_evidence_url"] = "https://example.com/locked/orders"
+        record["pre_registered_at"] = "2026-09-09T00:00:00"
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "timezone-aware"):
+            dataset.validate(self.root)
+
+    def test_held_out_needs_a_recorded_baseline_annotation_time(self):
+        del self.manifest["cases"]["orders"]["annotations"][0]["recorded_at"]
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "annotation v1 recorded_at"):
+            dataset.validate(self.root)
+
+    def test_baseline_annotation_must_precede_preregistration(self):
+        self.manifest["cases"]["orders"]["annotations"][0]["recorded_at"] = (
+            "2026-09-10T00:00:00Z")
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "baseline annotation must predate"):
+            dataset.validate(self.root)
 
     def test_classify_truth_recognizes_registered_copy(self):
         copy = self.root / "copy.json"
@@ -126,6 +157,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
         completed = self._score_cli(self.truth_path)
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("changed without a new version", completed.stderr)
+
     def test_annotation_drift_requires_new_version(self):
         truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
         truth["annotation"]["notes"] = "A revised explanation."
@@ -134,10 +166,21 @@ class BenchmarkDatasetTests(unittest.TestCase):
             dataset.validate(self.root)
         self.manifest["cases"]["orders"]["annotations"].append({
             "version": 2, "sha256": self._digest(), "origin": "manual adjudication",
+            "recorded_at": "2026-09-11T00:00:00Z",
             "reason": "Clarified existing evidence", "affected_runs": [],
         })
         self._save_manifest()
         self.assertTrue(dataset.validate(self.root)["held_out_ready"])
+
+    def test_held_out_annotation_versions_need_increasing_times(self):
+        self.manifest["cases"]["orders"]["annotations"].append({
+            "version": 2, "sha256": self._digest(), "origin": "manual adjudication",
+            "recorded_at": "2026-09-08T00:00:00Z",
+            "reason": "Clarified evidence", "affected_runs": [],
+        })
+        self._save_manifest()
+        with self.assertRaisesRegex(dataset.DatasetError, "times must increase"):
+            dataset.validate(self.root)
 
     def test_post_baseline_change_needs_reason_and_affected_runs(self):
         self.manifest["cases"]["orders"]["annotations"].append({
@@ -193,6 +236,59 @@ class BenchmarkDatasetTests(unittest.TestCase):
         provenance = json.loads(completed.stdout)["dataset"]
         self.assertEqual(provenance["split"], "held_out")
         self.assertEqual(provenance["annotation_sha256"], self._digest())
+        self.assertEqual(provenance["pre_registered_at"], "2026-09-09T00:00:00Z")
+
+    def test_evaluate_cli_rejects_review_predating_preregistration(self):
+        review = json.loads(self.review_path.read_text(encoding="utf-8"))
+        review["reproducibility"]["generated_at"] = "2026-09-08T23:59:59Z"
+        self.review_path.write_text(json.dumps(review), encoding="utf-8")
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("must postdate pre-registration", completed.stderr)
+
+    def test_evaluate_cli_rejects_review_predating_current_annotation(self):
+        truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
+        truth["annotation"]["notes"] = "Revised after the review was generated."
+        self.truth_path.write_text(json.dumps(truth), encoding="utf-8")
+        self.manifest["cases"]["orders"]["annotations"].append({
+            "version": 2, "sha256": self._digest(), "origin": "manual adjudication",
+            "recorded_at": "2026-09-11T00:00:00Z",
+            "reason": "Clarified evidence", "affected_runs": ["fixture-review"],
+        })
+        self._save_manifest()
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("must postdate the current annotation version", completed.stderr)
+
+    def test_evaluate_cli_compares_timezone_offsets_not_timestamp_text(self):
+        self.manifest["cases"]["orders"]["pre_registered_at"] = "2026-09-09T03:00:00+03:00"
+        self._save_manifest()
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_evaluate_cli_rejects_same_instant_with_different_offsets(self):
+        review = json.loads(self.review_path.read_text(encoding="utf-8"))
+        review["reproducibility"]["generated_at"] = "2026-09-09T03:00:00+03:00"
+        self.review_path.write_text(json.dumps(review), encoding="utf-8")
+        completed = subprocess.run([
+            sys.executable, str(ROOT / "benchmark/scoring/score.py"), "evaluate",
+            "--dataset", str(self.manifest_path), "--case", "orders",
+            "--review", str(self.review_path),
+        ], capture_output=True, text=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("must postdate pre-registration", completed.stderr)
 
     def test_evaluate_cli_accepts_post_run_candidate_adjudication(self):
         truth = json.loads(self.truth_path.read_text(encoding="utf-8"))
@@ -222,6 +318,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
         summary = json.loads(completed.stdout)["case_outcome"]["candidate_rejections"]
         self.assertEqual(summary["adjudicated_correct"], 1)
         self.assertEqual(summary["adjudicated_acceptable"], 1)
+
     def test_evaluate_cli_rejects_historical_treatment_path(self):
         treatment = self.root / "benchmark/ab-results/treatment.json"
         treatment.parent.mkdir(parents=True)

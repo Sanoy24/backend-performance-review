@@ -10,6 +10,7 @@ import hashlib
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +40,16 @@ def annotation_digest(path):
     """Hash JSON source with Git's LF line endings on every host."""
     return hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
+
+def parse_timestamp(value, label):
+    """Require a timezone-aware timestamp before comparing benchmark events."""
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, ValueError) as exc:
+        raise DatasetError("%s must be a timezone-aware ISO timestamp" % label) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise DatasetError("%s must be a timezone-aware ISO timestamp" % label)
+    return parsed
 
 def validate(root=ROOT, manifest_path=None):
     """Require complete registration and an immutable current annotation digest."""
@@ -91,6 +102,8 @@ def _validate(root, manifest):
         history = record.get("annotations")
         if not isinstance(history, list) or not history:
             raise DatasetError("%s: annotation history is required" % case_id)
+        previous_recorded_at = None
+        baseline_recorded_at = None
         for expected_version, entry in enumerate(history, start=1):
             if (not isinstance(entry, dict) or isinstance(entry.get("version"), bool)
                     or entry.get("version") != expected_version):
@@ -106,6 +119,16 @@ def _validate(root, manifest):
                                          or not isinstance(entry.get("affected_runs"), list)):
                 raise DatasetError("%s: post-baseline annotations need a reason and "
                                    "affected_runs list" % case_id)
+            if split == "held_out":
+                recorded_at = parse_timestamp(entry.get("recorded_at"),
+                                              "%s: annotation v%d recorded_at"
+                                              % (case_id, expected_version))
+                if previous_recorded_at is not None and recorded_at <= previous_recorded_at:
+                    raise DatasetError("%s: held-out annotation times must increase"
+                                       % case_id)
+                if expected_version == 1:
+                    baseline_recorded_at = recorded_at
+                previous_recorded_at = recorded_at
         actual = annotation_digest(path)
         if history[-1]["sha256"] != actual:
             raise DatasetError("%s: annotation changed without a new version and digest"
@@ -123,6 +146,16 @@ def _validate(root, manifest):
         if split == "held_out":
             if not record["pre_registered_before_review"]:
                 raise DatasetError("%s: held-out truth must predate review runs" % case_id)
+            registered_at = parse_timestamp(record.get("pre_registered_at"),
+                                            "%s: pre_registered_at" % case_id)
+            if registered_at < baseline_recorded_at:
+                raise DatasetError("%s: baseline annotation must predate pre-registration"
+                                   % case_id)
+            evidence_url = record.get("pre_registration_evidence_url")
+            if (not isinstance(evidence_url, str)
+                    or not re.fullmatch(r"https://[^/\s]+/\S+", evidence_url)):
+                raise DatasetError("%s: held-out case needs a pre-registration evidence URL"
+                                   % case_id)
             if annotation["method"] not in INDEPENDENT_METHODS:
                 raise DatasetError("%s: treatment-derived or unknown truth cannot be held out"
                                    % case_id)
@@ -150,6 +183,9 @@ def require_held_out(case_id, root=ROOT, manifest_path=None):
         "dataset_version": summary["dataset_version"],
         "annotation_version": current["version"],
         "annotation_sha256": current["sha256"],
+        "annotation_recorded_at": current["recorded_at"],
+        "pre_registered_at": record["pre_registered_at"],
+        "pre_registration_evidence_url": record["pre_registration_evidence_url"],
     }
 
 

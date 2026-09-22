@@ -57,6 +57,13 @@ under the historical `benchmark/ab-results/` treatment directory. No committed c
 eligible yet. Reviewer isolation and provenance still require an independent run protocol;
 the command alone does not make a review blind.
 
+Held-out registrations must also record a timezone-aware `pre_registered_at` and a
+`pre_registration_evidence_url`. Every held-out annotation version needs a `recorded_at`;
+version times must increase, and the baseline must exist before pre-registration. The
+evaluator requires the review's `generated_at` to follow both the registration and the
+current annotation version. This prevents an older review from being silently scored
+against later truth. The evidence URL and timestamps are audit hooks, not proof of a
+blind run; an independent reviewer must check the cited registration record.
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
