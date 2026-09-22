@@ -4,8 +4,8 @@ Performance is meaningless without workload. The same code is excellent at 10 re
 per day and catastrophic at 10,000 per second. A review that skips this phase produces
 findings that are technically true and practically unrankable.
 
-This phase has three parts, in order: mine the repository, ask the user, then record what
-remains unknown.
+This phase has four parts, in order: mine the repository, resolve question candidates from
+that evidence, select the smallest useful interview, then record what remains unknown.
 
 ---
 
@@ -63,13 +63,80 @@ Cron expressions, scheduler definitions, queue consumer counts, prefetch setting
 batch windows. A job that runs every minute and scans a growing table is a scalability
 risk with a visible clock on it.
 
+### Resolve repository-answerable questions before asking
+
+Turn the evidence above into answers, not merely observations. For each possible workload
+question, search these sources before it can enter the interview:
+
+1. deployment manifests and infrastructure definitions;
+2. application, worker, client, pool, timeout, quota, and scheduler configuration;
+3. load tests, benchmarks, dashboards-as-code, alerts, SLOs, and runbooks;
+4. route, query, pagination, batch, retention, and background-job code.
+
+Record an answer in `workload.inputs` with `asked: false`, its `repository` or `derived`
+source, and the exact evidence checked. A derived answer shows its inputs. A configured
+ceiling is evidence of a ceiling, not evidence that production reaches it; a load-test rate
+is the scenario that test exercises, not automatically production traffic. If the repository
+only narrows a range, retain that bound and ask only for the unresolved part.
+
+Do not ask a human to transcribe a replica count, worker count, pool limit, timeout, batch
+size, schedule, pagination maximum, retention rule, or declared SLO that is already visible.
+Repository inference is complete only when every proposed question has an evidence-search
+result: answered, partially answered, or absent.
+
 ---
 
-## 2. The workload interview
+## 2. Select the workload interview
 
-Ask **at most seven questions, once, in a single message.** Do not interrogate
-iteratively; do not ask what you already mined. Frame them so approximate answers are
-useful, because approximate answers are what you will get.
+Ask **zero to seven questions, once, in a single message.** Seven is a hard maximum, not a
+target or default quota. Do not interrogate iteratively; do not ask what you already mined.
+Frame selected questions so approximate answers are useful, because approximate answers are
+what you will get.
+
+### Build a private question-candidate ledger
+
+Start from repository gaps and plausible mechanisms, not from a fixed questionnaire:
+
+| Question candidate | Evidence checked | Possible answer range | Decision changed | Expected decision value | Disposition |
+|:--|:--|:--|:--|:--|:--|
+| `<question>` | `<files/artifacts searched>` | `<meaningfully different outcomes>` | `severity | confidence | recommendation` - `<how>` | `highest | high | medium | low` | `ask | inferred | discard | merge into Q-n` |
+
+This ledger is private working state. It prevents duplicate or already-answered questions
+without turning the report into an interview transcript.
+
+### Apply the decision-change gate
+
+A question may be asked only when at least two plausible answers would change one or more of:
+
+- **Severity** - a factor such as frequency, growth, critical-path position, or blast radius;
+- **Confidence** - whether a material assumption becomes evidenced or falsified;
+- **Recommendation** - whether to change code/configuration, measure first, choose a different
+  trade-off, or make no change.
+
+Write the concrete branch before asking: "If A, PERF-001 remains P1; if B, its bounded growth
+makes it P3," or "If the queue already drains within its SLO, recommend an alert rather than
+more consumers." Discard questions that would add context but leave every decision unchanged.
+Merge questions when one answer resolves the same uncertainty for several mechanisms.
+
+### Rank by expected decision value
+
+Order the survivors by the size and reach of the plausible decision change, then by the cost
+to answer. Use the ordinal values below; do not invent a numeric score or probability:
+
+- `highest` - can reverse a ship/no-ship decision, move a likely finding across multiple
+  priority levels, or choose between materially different recommendations;
+- `high` - can change one likely finding's severity, confidence, or recommendation;
+- `medium` - can refine a decision within one finding without changing the top action;
+- `low` - decision-changing but narrow; ask only if capacity remains after higher-value items.
+
+Break ties by preferring one cheap answer that affects several candidates, then one that
+resolves a stated user concern. Ask the first seven survivors at most. If none survive, ask
+no questions and continue with the repository-derived workload model.
+
+### Candidate bank, not a mandatory questionnaire
+
+The following are seeds for a review with no stronger repository-specific candidates. Ask
+only the ones that survive inference, the decision-change gate, and ranking:
 
 1. Roughly what request rate do the busiest endpoints see at peak — order of magnitude is
    enough (per second, per minute, per day)?
@@ -82,21 +149,9 @@ useful, because approximate answers are what you will get.
 7. Is there a specific performance problem that prompted this review — a slow endpoint, an
    incident, a cost increase, a scaling deadline?
 
-Question 7 is the highest-value one. If the user has a specific complaint, the review
+The final seed is often the highest-value one. If the user has a specific complaint, the review
 should be organized around confirming or refuting it, and everything else becomes
 secondary.
-
-### Spend the seven on what would actually change the ranking
-
-The cap is seven. *Which* seven is not fixed — the list above is the default for a review
-with no strong prior, and you should replace items in it once Phase 1 tells you where the
-risk is. A question whose answer cannot move any finding is a wasted question, and you only
-get seven.
-
-Rank candidates by how much the answer would change the review, not by how natural they are
-to ask. "Is this endpoint called ten times a day or ten thousand times a second?" can move a
-finding across three priority levels. "What is your average payload size?" usually moves
-nothing. Ask the first.
 
 Swap in the questions the detected risk calls for:
 
@@ -109,14 +164,16 @@ Swap in the questions the detected risk calls for:
 | Background jobs | Schedule, runtime, and whether runs can overlap |
 | A specific reported incident | What changed immediately before it, and what the symptom actually was |
 
-Keep the generic questions that nothing has displaced — a review with no workload context at
-all is the worst case, and the defaults are chosen to cover the widest ground.
+Keep a generic candidate only when it survived the same gate. Missing general context does
+not by itself justify asking for it.
 
 ### If the user does not answer
 
 **Proceed.** Do not block, do not re-ask, do not stall the review. Instead:
 
 - Record each unanswered item in the unknowns list.
+- Record asked questions in `workload.inputs` with `asked: true`, `source: unanswered` until
+  answered, their decision dimensions, expected decision value, and evidence already checked.
 - Write the assumption you are using into every affected finding's `Conditions` field.
 - Cap workload-dependent findings at `Medium` confidence.
 - In the executive summary, state plainly that the ranking would change if workload data
@@ -228,7 +285,9 @@ The answer to this question is usually what determines whether a finding is `Med
 
 - Declaring workload "unknown" without mining the repository first.
 - Asking the user questions the repo already answers.
+- Asking for context that cannot change severity, confidence, or recommendation.
 - Asking more than seven questions, or asking them one at a time.
+- Filling the seven-question allowance after all high-value uncertainties are covered.
 - Blocking the review on an unanswered interview.
 - Assuming the system is under heavy load because it exists.
 - Assuming it is under light load because the code looks small.

@@ -144,6 +144,58 @@ def _semantic_problems(review):
                 "verdict mismatch: review declares %s, but its contents derive %s"
                 % (declared_verdict, derived_verdict))
 
+    workload = _object(review.get("workload"))
+    inputs = [item for item in _array(workload.get("inputs"))
+              if isinstance(item, dict)]
+    asked_inputs = [item for item in inputs if item.get("asked") is True]
+    if len(asked_inputs) > 7:
+        problems.append(
+            "workload interview asks %d questions; seven is the maximum, not a quota"
+            % len(asked_inputs))
+
+    decision_value_rank = {"highest": 0, "high": 1, "medium": 2, "low": 3}
+    previous_rank = -1
+    for index, item in enumerate(asked_inputs, 1):
+        label = "workload interview question %d" % index
+        if item.get("source") in ("repository", "derived"):
+            problems.append(
+                "%s is already answered by %s evidence and must not be asked"
+                % (label, item.get("source")))
+        if not _array(item.get("evidence_checked")):
+            problems.append("%s must record evidence_checked before asking" % label)
+        if not _array(item.get("decision_dimensions")):
+            problems.append(
+                "%s must name a severity, confidence, or recommendation decision"
+                % label)
+        value = item.get("expected_decision_value")
+        if value not in decision_value_rank:
+            problems.append("%s must declare expected_decision_value" % label)
+        else:
+            rank = decision_value_rank[value]
+            if rank < previous_rank:
+                problems.append(
+                    "workload interview questions must be ordered by expected decision value")
+            previous_rank = rank
+
+    for index, item in enumerate(inputs, 1):
+        if item.get("source") == "unanswered" and item.get("asked") is not True:
+            problems.append(
+                "workload input %d has source unanswered but was not marked asked"
+                % index)
+
+    previous_rank = -1
+    for item in _array(review.get("decision_changing_questions")):
+        if not isinstance(item, dict):
+            continue
+        value = item.get("expected_decision_value")
+        if value not in decision_value_rank:
+            continue
+        rank = decision_value_rank[value]
+        if rank < previous_rank:
+            problems.append(
+                "decision_changing_questions must be ordered by expected decision value")
+            break
+        previous_rank = rank
     completeness = _object(review.get("completeness"))
     unknowns = [item for item in _array(completeness.get("unknowns"))
                 if isinstance(item, dict)]
