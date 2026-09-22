@@ -73,6 +73,10 @@ value and `[Unreleased]` accumulates.
   stale, cross-assigned, or same-reviewer submissions. It preserves exact returned bytes and
   raw/content hashes, binds the campaign coordinator by raw/content hashes, then emits per-case
   intake reports for human adjudication without changing held-out readiness.
+- Campaign resolution collection now requires exactly one content-bound third-reviewer
+  resolution per collected case, re-derives intake from preserved annotations, and
+  freezes raw decisions plus generated truth with raw/content and tool hashes. It remains
+  pending independent protocol review and cannot mark cases held-out-ready.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
