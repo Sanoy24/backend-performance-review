@@ -51,7 +51,6 @@ def parse_timestamp(value, label):
         raise DatasetError("%s must be a timezone-aware ISO timestamp" % label)
     return parsed
 
-
 def validate(root=ROOT, manifest_path=None):
     """Require complete registration and an immutable current annotation digest."""
     root = Path(root).resolve()
@@ -219,7 +218,6 @@ def classify_truth(path, root=ROOT, manifest_path=None):
     if len(matches) > 1:
         raise DatasetError("truth matches multiple registered cases")
     return matches[0] if matches else None
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])

@@ -406,7 +406,6 @@ class CandidateRejectionAdjudicationTests(unittest.TestCase):
         self.assertEqual(output["adjudication_fingerprints"]["review_content_sha256"],
                          scorer.content_digest(self.review))
 
-
 class OptimalAssignmentTests(unittest.TestCase):
     """Matching is a graph assignment problem, not a first-compatible-item search."""
 

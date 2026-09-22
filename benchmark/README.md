@@ -64,7 +64,6 @@ evaluator requires the review's `generated_at` to follow both the registration a
 current annotation version. This prevents an older review from being silently scored
 against later truth. The evidence URL and timestamps are audit hooks, not proof of a
 blind run; an independent reviewer must check the cited registration record.
-
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
