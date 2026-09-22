@@ -36,6 +36,13 @@ import os
 import re
 import sys
 from collections import defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import dataset as benchmark_dataset  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import validate_review  # noqa: E402
 
 SEVERITY_ORDER = ["Informational", "Low", "Medium", "High", "Critical"]
 CONFIDENCE_ORDER = ["Low", "Medium", "High", "Confirmed"]
@@ -1057,10 +1064,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    scorer = subparsers.add_parser("score", help="score a review against ground truth")
+    scorer = subparsers.add_parser("score", help="exploratory score against supplied truth")
     scorer.add_argument("--truth", required=True)
     scorer.add_argument("--review", required=True)
     scorer.add_argument("--json", action="store_true", help="emit JSON instead of a report")
+
+    evaluator = subparsers.add_parser(
+        "evaluate", help="score only a registered, independently established held-out case")
+    evaluator.add_argument("--case", required=True)
+    evaluator.add_argument("--review", required=True)
+    evaluator.add_argument("--dataset", type=Path, default=benchmark_dataset.DATASET)
+    evaluator.add_argument("--json", action="store_true", help="emit JSON instead of a report")
 
     comparer = subparsers.add_parser(
         "stability", help="compare two independent reviews of the same code")
@@ -1080,6 +1094,39 @@ def main(argv=None):
     if args.command == "score":
         result = score(load(args.truth), load(args.review))
         print(json.dumps(result, indent=2) if args.json else render(result))
+        return 0
+
+    if args.command == "evaluate":
+        dataset_root = args.dataset.resolve().parent.parent
+        try:
+            truth_path, provenance = benchmark_dataset.require_held_out(
+                args.case, dataset_root, args.dataset)
+        except benchmark_dataset.DatasetError as exc:
+            parser.error(str(exc))
+        review_path = Path(args.review).resolve()
+        parts = [part.lower() for part in review_path.parts]
+        if any(parts[i:i + 2] == ["benchmark", "ab-results"]
+               for i in range(len(parts) - 1)):
+            parser.error("historical treatment output cannot be a held-out review")
+        truth = load(truth_path)
+        review = load(review_path)
+        errors = validate_review.validate(
+            review, Path(__file__).resolve().parents[2] / "schemas")
+        if errors:
+            parser.error("invalid held-out review: %s" % errors[0])
+        reproducibility = review["reproducibility"]
+        source = reproducibility["repository"]
+        pinned = truth["repository"]
+        if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
+            parser.error("held-out review repository and commit must match ground truth")
+        model = reproducibility.get("model")
+        if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
+            parser.error("held-out review must name the actual model")
+        result = score(truth, review)
+        result["dataset"] = {"case": args.case, "split": "held_out", **provenance}
+        heading = ("HELD-OUT %s | dataset %s | annotation v%d\n" % (
+            args.case, provenance["dataset_version"], provenance["annotation_version"]))
+        print(json.dumps(result, indent=2) if args.json else heading + render(result))
         return 0
 
     if args.command == "discipline":

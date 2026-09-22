@@ -36,6 +36,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import json_schema_lite as schema_lite  # noqa: E402
 import validate_review  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "benchmark"))
+import dataset as benchmark_dataset  # noqa: E402
+
 PRODUCT_NAME_PATTERN = re.compile(
     r"\b(postgres|postgresql|mysql|mariadb|mongodb|mongo|redis|cassandra|scylla|"
     r"dynamodb|neo4j|elasticsearch|opensearch|kafka|rabbitmq|sqlite|oracle|"
@@ -610,6 +613,13 @@ def check_schema_is_referenced():
 
 # ---------------------------------------------------------------------------
 
+def check_benchmark_dataset():
+    try:
+        benchmark_dataset.validate(ROOT)
+    except benchmark_dataset.DatasetError as exc:
+        fail("benchmark dataset: %s" % exc)
+
+
 def main():
     entries = check_registry()
     check_no_product_names_leaked()
@@ -623,6 +633,7 @@ def main():
     _finding_schema, review_schema = check_finding_schema_agrees_with_skill()
     check_example_review_validates(review_schema)
     check_ground_truth_files_validate()
+    check_benchmark_dataset()
     check_schema_is_referenced()
     if entries:
         check_tier_summary_counts(entries)
