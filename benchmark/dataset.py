@@ -99,6 +99,9 @@ def _validate(root, manifest):
             raise DatasetError("%s: repository name and source URL are required" % case_id)
         if not isinstance(annotation, dict) or not annotation.get("method"):
             raise DatasetError("%s: annotation origin method is required" % case_id)
+        change_scope = truth.get("change_scope") if isinstance(truth, dict) else None
+        if change_scope and change_scope["diff_base"] == repository.get("commit"):
+            raise DatasetError("%s: change-scope diff base and head must differ" % case_id)
         history = record.get("annotations")
         if not isinstance(history, list) or not history:
             raise DatasetError("%s: annotation history is required" % case_id)

@@ -53,6 +53,9 @@ value and `[Unreleased]` accumulates.
 - Held-out benchmark evaluation now requires an auditable pre-registration timestamp and URL,
   monotonic annotation-version timestamps, and a review generated after the current truth
   version was recorded.
+- Ground truth can now adjudicate a verdict for one pinned change, including structured
+  evidence gaps for an expected `UNKNOWN`; scoring withholds correctness for a different diff,
+  and held-out evaluation rejects change-scoped reviews without matching verdict truth.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while

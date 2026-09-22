@@ -227,10 +227,57 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(result["case_outcome"]["abstention"], {
             "occurred": True, "matches_annotation": True})
         self.assertEqual(result["case_outcome"]["unknown_verdict"], {
-            "declared": True, "derived": True, "correctness": None})
-        self.assertIn("correctness unadjudicated", scorer.render(result))
+            "declared": True, "derived": True, "expected": None,
+            "scope_matches": None, "correctness": None})
+        self.assertEqual(result["case_outcome"]["verdict"], {
+            "declared": "UNKNOWN", "derived": "UNKNOWN", "expected": None,
+            "scope_matches": None, "correctness": None})
+        self.assertIn("(unadjudicated)", scorer.render(result))
         self.assertIsNone(scorer.score(annotation, {"findings": []})["case_outcome"]
                           ["unknown_verdict"]["declared"])
+
+    def test_unknown_correctness_requires_expert_change_scope_truth(self):
+        annotation = truth(expected=[], change_scope={
+            "diff_base": "1111111111111111111111111111111111111111",
+            "expected_verdict": "UNKNOWN",
+            "rationale": "The changed worker cannot be examined from the supplied source.",
+            "unknowns": [{"subject": "worker", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the generated worker source."}],
+        })
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "reproducibility": {"repository": {
+                "diff_base": "1111111111111111111111111111111111111111"}},
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertEqual(outcome, {
+            "declared": True, "derived": True, "expected": True,
+            "scope_matches": True, "correctness": True})
+        self.assertEqual(scorer.score(annotation, review)["case_outcome"]["verdict"], {
+            "declared": "UNKNOWN", "derived": "UNKNOWN", "expected": "UNKNOWN",
+            "scope_matches": True, "correctness": True})
+
+        annotation["change_scope"]["expected_verdict"] = "PASS"
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertEqual(outcome["expected"], False)
+        self.assertFalse(outcome["correctness"])
+
+    def test_unknown_correctness_is_withheld_for_a_different_diff_base(self):
+        annotation = truth(expected=[], change_scope={
+            "diff_base": "1" * 40, "expected_verdict": "UNKNOWN",
+            "rationale": "The relevant source is unavailable.",
+            "unknowns": [{"subject": "worker", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the worker source."}],
+        })
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "reproducibility": {"repository": {"diff_base": "2" * 40}},
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertFalse(outcome["scope_matches"])
+        self.assertIsNone(outcome["correctness"])
 
     def test_candidate_rejection_correctness_is_not_inferred_from_free_text(self):
         annotation = truth(expected=[], forbidden=[{
@@ -405,6 +452,7 @@ class CandidateRejectionAdjudicationTests(unittest.TestCase):
                          ["adjudicated_correct"], 1)
         self.assertEqual(output["adjudication_fingerprints"]["review_content_sha256"],
                          scorer.content_digest(self.review))
+
 
 class OptimalAssignmentTests(unittest.TestCase):
     """Matching is a graph assignment problem, not a first-compatible-item search."""
@@ -738,6 +786,36 @@ class ShippedExampleTests(unittest.TestCase):
         annotation = truth(forbidden=[{"id": "GT-F1", "location": {"file": "a.py"}}])
         errors = schema_lite.validate_file(annotation, SCHEMAS / "ground-truth.schema.json")
         self.assertTrue(any("why_not" in e for e in errors), errors)
+
+    def test_change_scope_truth_requires_a_pinned_base_verdict_and_rationale(self):
+        annotation = truth(change_scope={
+            "diff_base": "1" * 40,
+            "expected_verdict": "UNKNOWN",
+            "rationale": "The changed generated source is intentionally unavailable.",
+            "unknowns": [{"subject": "generated source", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the generated source."}],
+        })
+        self.assertEqual(schema_lite.validate_file(
+            annotation, SCHEMAS / "ground-truth.schema.json"), [])
+        for missing in ("diff_base", "expected_verdict", "rationale"):
+            invalid = copy.deepcopy(annotation)
+            del invalid["change_scope"][missing]
+            errors = schema_lite.validate_file(
+                invalid, SCHEMAS / "ground-truth.schema.json")
+            self.assertTrue(any(missing in error for error in errors), errors)
+
+        invalid = copy.deepcopy(annotation)
+        del invalid["change_scope"]["unknowns"]
+        errors = schema_lite.validate_file(invalid, SCHEMAS / "ground-truth.schema.json")
+        self.assertTrue(any("unknowns" in error for error in errors), errors)
+
+    def test_change_scope_truth_rejects_an_abbreviated_diff_base(self):
+        annotation = truth(change_scope={
+            "diff_base": "1234567", "expected_verdict": "PASS",
+            "rationale": "The change has no material performance effect.",
+        })
+        errors = schema_lite.validate_file(annotation, SCHEMAS / "ground-truth.schema.json")
+        self.assertTrue(any("diff_base" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
