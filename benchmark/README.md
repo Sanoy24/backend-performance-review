@@ -16,6 +16,7 @@ This directory is the machinery for doing it by computation instead.
 
 ```
 benchmark/
+├── annotation_intake.py  compare two independent expert annotations
 ├── dataset.json       case split and annotation-version registry
 ├── dataset.py         registry validation and held-out eligibility gate
 ├── ground-truth/     annotations, one file per repository/case
@@ -65,6 +66,29 @@ current annotation version. This prevents an older review from being silently sc
 against later truth. The evidence URL and timestamps are audit hooks, not proof of a
 blind run; an independent reviewer must check the cited registration record.
 
+### Independent annotation intake
+
+Before registering a held-out case, collect two annotations made independently against the
+same full commit, source URL, workload, and (when applicable) diff base. Each file must be
+schema-valid ground truth with `annotation.method` set to `expert-manual-review`, a distinct
+`annotated_by`, and a timezone-aware `annotated_at`. Then run:
+
+```
+python benchmark/annotation_intake.py --annotation-a <expert-a.json> --annotation-b <expert-b.json>
+```
+
+The JSON report freezes both parsed inputs by SHA-256, proposes location-based candidate
+pairs across `expected`/`acceptable` and `forbidden`, and lists bucket, category, severity,
+mechanism, verdict, unmatched-item, and matching-ambiguity disagreements. Matching deliberately
+ignores judgment fields: those are the claims the adjudicator must compare. It does not infer
+that similarly located prose describes the same mechanism. Every candidate pair remains a
+human adjudication unit, and the report always emits `held_out_ready: false`.
+
+Keep the two source annotations blinded until both are frozen, preserve this intake report,
+and record a separate human resolution for every candidate pair, unmatched item, scope
+disagreement, and ambiguity. The tool validates declared provenance but cannot prove the
+reviewers worked independently. It also does not register the resolved case or turn this
+preparation step into held-out evidence.
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means

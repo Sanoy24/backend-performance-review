@@ -235,7 +235,8 @@ def _hungarian_max(weights):
     return assignment
 
 
-def _solve_assignment(items, findings, excluded=frozenset()):
+def _solve_assignment(items, findings, excluded=frozenset(),
+                      specificity_fn=match_specificity):
     """Solve one already-sorted bucket and return edges plus its comparable objective."""
     if not items or not findings:
         return [], (0, 0)
@@ -252,7 +253,7 @@ def _solve_assignment(items, findings, excluded=frozenset()):
         row = []
         for finding_index, finding in enumerate(findings):
             edge = (item_index, finding_index)
-            edge_specificity = match_specificity(finding, item)
+            edge_specificity = specificity_fn(finding, item)
             specificity[edge] = edge_specificity
             if edge in excluded or edge_specificity is None:
                 row.append(incompatible)
@@ -298,22 +299,26 @@ def _pair_records(edges, items, findings):
     ]
 
 
-def optimal_assignment(items, findings, bucket):
+def optimal_assignment(items, findings, bucket, specificity_fn=match_specificity):
     """Return a canonical maximum-cardinality, maximum-specificity bipartite assignment.
 
     Input order is discarded before solving. If forbidding any selected edge still permits
     the same objective, a representative equal-score assignment is emitted for adjudication.
+    A caller may supply compatible matching semantics while retaining the same deterministic
+    assignment and ambiguity reporting.
     """
     items = sorted(items, key=_object_key)
     findings = sorted(findings, key=_object_key)
-    selected, objective = _solve_assignment(items, findings)
+    selected, objective = _solve_assignment(
+        items, findings, specificity_fn=specificity_fn)
     selected_records = _pair_records(selected, items, findings)
 
     alternatives = []
     seen = set()
     for item_index, finding_index, _specificity in selected:
         alternative, alternative_objective = _solve_assignment(
-            items, findings, excluded=frozenset({(item_index, finding_index)}))
+            items, findings, excluded=frozenset({(item_index, finding_index)}),
+            specificity_fn=specificity_fn)
         if alternative_objective != objective:
             continue
         signature = tuple((entry["item"], entry["finding"])
