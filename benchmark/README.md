@@ -148,7 +148,6 @@ the coordinator carries the frozen protocol file inventory rather than relying o
 helper list a later checkout happens to contain. Missing, extra, renamed, stale, or
 cross-assigned submissions fail before the output directory is created. The output is a
 private adjudication handoff and still says `held_out_ready: false`.
-
 ### Independent annotation intake
 
 Before registering a held-out case, collect two annotations made independently against the
@@ -163,7 +162,6 @@ python benchmark/annotation_intake.py --annotation-a <expert-a.json> --annotatio
 The campaign collector above runs this step automatically after verifying the packet
 handoffs. Use the direct command for independently obtained annotations that did not use a
 campaign packet.
-
 The JSON report freezes both parsed inputs by SHA-256, proposes location-based candidate
 pairs across `expected`/`acceptable` and `forbidden`, and lists bucket, category, severity,
 mechanism, verdict, unmatched-item, and matching-ambiguity disagreements. Matching deliberately
@@ -243,7 +241,6 @@ hashes for the source collection, resolutions, generated truth, collector, and r
 Missing, extra, stale, cross-case, or changed artifacts fail before output is created. The
 result remains `resolved_pending_protocol_review` with `held_out_ready: false`; it does not
 verify reviewer recruitment, isolation, licenses, pre-registration, or dataset eligibility.
-
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
