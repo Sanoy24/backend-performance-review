@@ -64,6 +64,11 @@ value and `[Unreleased]` accumulates.
   intake unit, traces every final item to an include decision, preserves issue-versus-trap
   semantics, and emits schema-valid ground truth with frozen intake and resolution digests.
   It does not register the result or claim that held-out protocol requirements were met.
+- Blinded annotation campaigns can now export two opaque expert packets per pinned
+  repository without including the skill, existing truth, other assignments, or coordinator
+  mapping. Each packet binds submissions to its package ID, workload, commit, optional diff
+  base, and campaign freeze time; export still makes no claim about reviewer isolation,
+  license verification, pre-registration, or held-out readiness.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
