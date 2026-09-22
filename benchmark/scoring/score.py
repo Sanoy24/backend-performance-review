@@ -31,11 +31,13 @@ the defect.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import sys
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -46,6 +48,17 @@ import validate_review  # noqa: E402
 
 SEVERITY_ORDER = ["Informational", "Low", "Medium", "High", "Critical"]
 CONFIDENCE_ORDER = ["Low", "Medium", "High", "Confirmed"]
+
+
+class AdjudicationError(ValueError):
+    """A post-run candidate adjudication does not bind to this scored review."""
+
+
+def content_digest(value):
+    """SHA-256 of parsed JSON, insensitive to formatting and key order."""
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=True, allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------------------------------------------------
@@ -370,7 +383,7 @@ def recommendation_text(finding):
 # Scoring
 # --------------------------------------------------------------------------------------
 
-def score(truth, review):
+def score(truth, review, rejection_adjudication=None):
     findings = sorted(review.get("findings", []), key=_object_key)
     expected = sorted(truth.get("expected", []), key=_object_key)
     acceptable = sorted(truth.get("acceptable", []), key=_object_key)
@@ -402,6 +415,10 @@ def score(truth, review):
     true_positives = len(pairs)
     false_negatives = len(missed)
     false_positives = len(trapped) + len(unclaimed)
+    rejection_summary = None
+    if rejection_adjudication is not None:
+        rejection_summary = adjudicate_candidate_rejections(
+            truth, review, rejection_adjudication, missed, tolerated, trapped)
 
     result = {
         "repository": truth.get("repository", {}).get("name"),
@@ -415,7 +432,7 @@ def score(truth, review):
             "unanticipated": len(unclaimed),
         },
         "overall": ratios(true_positives, false_positives, false_negatives),
-        "case_outcome": case_outcome(truth, review, trapped),
+        "case_outcome": case_outcome(truth, review, trapped, rejection_summary),
         "per_category": per_category(pairs, missed, trapped, unclaimed),
         "severity_calibration": severity_calibration(pairs),
         "confidence_calibration": confidence_calibration(pairs, trapped, unclaimed),
@@ -476,7 +493,99 @@ def score(truth, review):
     return result
 
 
-def case_outcome(truth, review, trapped):
+def adjudicate_candidate_rejections(truth, review, adjudication, missed, tolerated, trapped):
+    """Score a complete, human-supplied mapping made after the review was frozen."""
+    required = {"schema_version", "truth_content_sha256", "review_content_sha256",
+                "adjudicator", "adjudicated_at", "decisions"}
+    if not isinstance(adjudication, dict) or set(adjudication) != required:
+        raise AdjudicationError("adjudication must contain exactly the required fields")
+    if type(adjudication["schema_version"]) is not int or adjudication["schema_version"] != 1:
+        raise AdjudicationError("unsupported adjudication schema_version")
+    for label, content in (("truth", truth), ("review", review)):
+        if adjudication[label + "_content_sha256"] != content_digest(content):
+            raise AdjudicationError("%s content digest differs from adjudicated artifact" % label)
+    adjudicator = adjudication["adjudicator"]
+    if not isinstance(adjudicator, str) or not adjudicator.strip():
+        raise AdjudicationError("adjudicator must be named")
+    timestamp = adjudication["adjudicated_at"]
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except (AttributeError, ValueError) as exc:
+        raise AdjudicationError("adjudicated_at must be a timezone-aware ISO timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise AdjudicationError("adjudicated_at must be a timezone-aware ISO timestamp")
+    reproducibility = review.get("reproducibility")
+    generated_at = (reproducibility.get("generated_at")
+                    if isinstance(reproducibility, dict) else None)
+    if generated_at is not None:
+        try:
+            generated = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+        except (AttributeError, ValueError) as exc:
+            raise AdjudicationError("review generated_at must be a valid timestamp") from exc
+        if generated.tzinfo is None or generated.utcoffset() is None or parsed < generated:
+            raise AdjudicationError("adjudication must follow the frozen review")
+
+    candidates = review.get("considered_not_reported", [])
+    if not isinstance(candidates, list):
+        raise AdjudicationError("considered_not_reported must be a candidate list")
+    decisions = adjudication["decisions"]
+    if not isinstance(decisions, list) or len(decisions) != len(candidates):
+        raise AdjudicationError("adjudication needs one decision per candidate")
+    truth_ids = [item["id"] for bucket in ("expected", "acceptable", "forbidden")
+                 for item in truth.get(bucket, [])]
+    if len(truth_ids) != len(set(truth_ids)):
+        raise AdjudicationError("ground-truth IDs must be unique for candidate adjudication")
+    missed_ids = {item["id"] for item in missed}
+    optional_ids = {item["id"] for item in truth.get("acceptable", [])} - {
+        item["id"] for item, _finding in tolerated}
+    avoided_ids = {item["id"] for item in truth.get("forbidden", [])} - {
+        item["id"] for item, _finding in trapped}
+    seen_indices, seen_truth_ids = set(), set()
+    counts = {"correct_rejection": 0, "acceptable_nonreport": 0,
+              "incorrect_rejection": 0, "unresolved": 0}
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            raise AdjudicationError("each candidate decision must be an object")
+        judgment = decision.get("judgment")
+        expected_fields = {"candidate_index", "judgment", "reason"}
+        if judgment in ("correct_rejection", "acceptable_nonreport", "incorrect_rejection"):
+            expected_fields.add("ground_truth_id")
+        if set(decision) != expected_fields or judgment not in counts:
+            raise AdjudicationError("invalid candidate decision fields or judgment")
+        index = decision["candidate_index"]
+        if type(index) is not int or index < 0 or index >= len(candidates) or index in seen_indices:
+            raise AdjudicationError("candidate indices must be unique and in range")
+        seen_indices.add(index)
+        if not isinstance(decision["reason"], str) or not decision["reason"].strip():
+            raise AdjudicationError("each decision needs an adjudication reason")
+        if judgment != "unresolved":
+            truth_id = decision["ground_truth_id"]
+            eligible = {"correct_rejection": avoided_ids,
+                        "acceptable_nonreport": optional_ids,
+                        "incorrect_rejection": missed_ids}[judgment]
+            if not isinstance(truth_id, str) or truth_id not in eligible:
+                bucket = {"correct_rejection": "unreported forbidden",
+                          "acceptable_nonreport": "unreported acceptable",
+                          "incorrect_rejection": "missed required"}[judgment]
+                raise AdjudicationError("decision must name a %s ground-truth item" % bucket)
+            if truth_id in seen_truth_ids:
+                raise AdjudicationError("one ground-truth item cannot count for two candidates")
+            seen_truth_ids.add(truth_id)
+        counts[judgment] += 1
+
+    decided = counts["correct_rejection"] + counts["incorrect_rejection"]
+    return {
+        "reported": len(candidates),
+        "adjudicated_correct": counts["correct_rejection"],
+        "adjudicated_acceptable": counts["acceptable_nonreport"],
+        "adjudicated_incorrect": counts["incorrect_rejection"],
+        "unresolved": counts["unresolved"],
+        "correct_rate": round(counts["correct_rejection"] / decided, 3) if decided else None,
+        "adjudicator": adjudicator,
+    }
+
+
+def case_outcome(truth, review, trapped, rejection_summary=None):
     """Expose no-finding behavior without treating silence as proof of a healthy system."""
     expected = truth.get("expected", [])
     findings = review.get("findings", [])
@@ -496,7 +605,7 @@ def case_outcome(truth, review, trapped):
             # Ground truth does not currently adjudicate whether uncertainty was warranted.
             "correctness": None,
         },
-        "candidate_rejections": {
+        "candidate_rejections": rejection_summary if rejection_summary is not None else {
             "reported": len(review.get("considered_not_reported") or []),
             # Free-text candidates have no independently adjudicated trap mapping.
             "adjudicated_correct": None,
@@ -1036,6 +1145,13 @@ def render(result):
         lines.append("  UNKNOWN verdict: declared=%s derived=%s (correctness unadjudicated)"
                      % (outcome["unknown_verdict"]["declared"],
                         outcome["unknown_verdict"]["derived"]))
+    rejected = outcome["candidate_rejections"]
+    if rejected["adjudicated_correct"] is not None:
+        lines.append("  candidate rejections: %d correct traps, %d acceptable omissions, "
+                     "%d incorrect, %d unresolved"
+                     % (rejected["adjudicated_correct"],
+                        rejected["adjudicated_acceptable"],
+                        rejected["adjudicated_incorrect"], rejected["unresolved"]))
 
     if result["per_category"]:
         lines.append("")
@@ -1109,6 +1225,7 @@ def main(argv=None):
     scorer.add_argument("--truth", required=True)
     scorer.add_argument("--review", required=True)
     scorer.add_argument("--dataset", type=Path, default=benchmark_dataset.DATASET)
+    scorer.add_argument("--rejection-adjudication", type=Path)
     scorer.add_argument("--json", action="store_true", help="emit JSON instead of a report")
 
     evaluator = subparsers.add_parser(
@@ -1116,6 +1233,7 @@ def main(argv=None):
     evaluator.add_argument("--case", required=True)
     evaluator.add_argument("--review", required=True)
     evaluator.add_argument("--dataset", type=Path, default=benchmark_dataset.DATASET)
+    evaluator.add_argument("--rejection-adjudication", type=Path)
     evaluator.add_argument("--json", action="store_true", help="emit JSON instead of a report")
 
     comparer = subparsers.add_parser(
@@ -1132,6 +1250,12 @@ def main(argv=None):
         help="repository the review describes; without it, numeric claims are not checked")
 
     args = parser.parse_args(argv)
+    rejection_adjudication = None
+    if args.command in ("score", "evaluate") and args.rejection_adjudication:
+        try:
+            rejection_adjudication = load(args.rejection_adjudication)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            parser.error("cannot read rejection adjudication: %s" % exc)
 
     if args.command == "score":
         dataset_root = args.dataset.resolve().parent.parent
@@ -1143,7 +1267,16 @@ def main(argv=None):
         if registration and registration["split"] == "held_out":
             parser.error("registered held-out truth requires evaluate --case %s"
                          % registration["case"])
-        result = score(load(args.truth), load(args.review))
+        truth = load(args.truth)
+        review = load(args.review)
+        try:
+            result = score(truth, review, rejection_adjudication)
+        except AdjudicationError as exc:
+            parser.error(str(exc))
+        result["adjudication_fingerprints"] = {
+            "truth_content_sha256": content_digest(truth),
+            "review_content_sha256": content_digest(review),
+        }
         result["evidence_tier"] = "exploratory"
         if registration:
             result["dataset"] = registration
@@ -1177,40 +1310,14 @@ def main(argv=None):
         model = reproducibility.get("model")
         if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
             parser.error("held-out review must name the actual model")
-        result = score(truth, review)
-        result["dataset"] = {"case": args.case, "split": "held_out", **provenance}
-        heading = ("HELD-OUT %s | dataset %s | annotation v%d\n" % (
-            args.case, provenance["dataset_version"], provenance["annotation_version"]))
-        print(json.dumps(result, indent=2) if args.json else heading + render(result))
-        return 0
-
-    if args.command == "evaluate":
-        dataset_root = args.dataset.resolve().parent.parent
         try:
-            truth_path, provenance = benchmark_dataset.require_held_out(
-                args.case, dataset_root, args.dataset)
-        except benchmark_dataset.DatasetError as exc:
+            result = score(truth, review, rejection_adjudication)
+        except AdjudicationError as exc:
             parser.error(str(exc))
-        review_path = Path(args.review).resolve()
-        parts = [part.lower() for part in review_path.parts]
-        if any(parts[i:i + 2] == ["benchmark", "ab-results"]
-               for i in range(len(parts) - 1)):
-            parser.error("historical treatment output cannot be a held-out review")
-        truth = load(truth_path)
-        review = load(review_path)
-        errors = validate_review.validate(
-            review, Path(__file__).resolve().parents[2] / "schemas")
-        if errors:
-            parser.error("invalid held-out review: %s" % errors[0])
-        reproducibility = review["reproducibility"]
-        source = reproducibility["repository"]
-        pinned = truth["repository"]
-        if source.get("name") != pinned["name"] or source.get("commit") != pinned["commit"]:
-            parser.error("held-out review repository and commit must match ground truth")
-        model = reproducibility.get("model")
-        if not isinstance(model, str) or not model.strip() or model.strip().startswith("<"):
-            parser.error("held-out review must name the actual model")
-        result = score(truth, review)
+        result["adjudication_fingerprints"] = {
+            "truth_content_sha256": content_digest(truth),
+            "review_content_sha256": content_digest(review),
+        }
         result["dataset"] = {"case": args.case, "split": "held_out", **provenance}
         heading = ("HELD-OUT %s | dataset %s | annotation v%d\n" % (
             args.case, provenance["dataset_version"], provenance["annotation_version"]))

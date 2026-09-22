@@ -47,6 +47,9 @@ value and `[Unreleased]` accumulates.
 - Benchmark scoring now exposes annotation-relative abstention, known-trap avoidance, and
   declared versus derived `UNKNOWN` outcomes without inventing correctness for unadjudicated
   uncertainty or free-text candidate rejections.
+- Optional post-run candidate adjudication binds decisions to frozen truth and review content,
+  distinguishes avoided traps, acceptable omissions, missed required findings, and unresolved
+  candidates, and refuses stale or duplicate mappings.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
