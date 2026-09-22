@@ -217,7 +217,6 @@ class ReferenceAblationTests(unittest.TestCase):
             "category_only", "category_technology", {"full_routed": True}]
         with self.assertRaisesRegex(ablation.AblationError, "three-arm execution order"):
             ablation.compare(self.manifest, self.root)
-
     def test_reference_path_cannot_escape_checkout(self):
         self.manifest["cases"][0]["references"]["technology"] = ["../secret.md"]
         with self.assertRaises(ablation.AblationError):
