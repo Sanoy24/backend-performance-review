@@ -137,7 +137,6 @@ duplicate decisions, pre-review timestamps, and an adjudicator who is one of the
 reviewers. Preserve all four artifacts: both source annotations, the intake report, and the
 resolution. The generated truth is eligible for later review, not automatically held out;
 license verification, pre-registration, isolation, and dataset registration still apply.
-
 Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
 annotation's required findings, how many known false-positive traps it avoided, and whether
 a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
