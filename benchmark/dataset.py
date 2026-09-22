@@ -183,7 +183,6 @@ def classify_truth(path, root=ROOT, manifest_path=None):
         raise DatasetError("truth matches multiple registered cases")
     return matches[0] if matches else None
 
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", type=Path, default=DATASET)
