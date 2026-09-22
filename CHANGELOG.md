@@ -44,6 +44,9 @@ value and `[Unreleased]` accumulates.
   on independent truth, pinned commits, source metadata, and matching review provenance.
 - Exploratory raw scoring now labels its evidence tier and registered development provenance;
   registered held-out truth, including an unchanged copy, must use the guarded evaluator.
+- Benchmark scoring now exposes annotation-relative abstention, known-trap avoidance, and
+  declared versus derived `UNKNOWN` outcomes without inventing correctness for unadjudicated
+  uncertainty or free-text candidate rejections.
 - A reference-ablation harness can freeze and compare category-only, category-plus-
   technology, and full routed bundles using paired, pinned reviews. It reports finding
   changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while

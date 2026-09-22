@@ -57,6 +57,14 @@ under the historical `benchmark/ab-results/` treatment directory. No committed c
 eligible yet. Reviewer isolation and provenance still require an independent run protocol;
 the command alone does not make a review blind.
 
+Scoring also emits `case_outcome`: whether a review abstained, whether that agrees with the
+annotation's required findings, how many known false-positive traps it avoided, and whether
+a change-scoped `UNKNOWN` verdict was declared or derived. An empty `expected` list means
+only that the annotation requires no finding; it does not prove the repository is healthy
+or that the review examined enough code. `UNKNOWN` correctness and free-text candidate
+rejection correctness remain `null` until independently adjudicated. Do not turn those
+nulls into successes in aggregate results.
+
 ## Running it
 
 ```
