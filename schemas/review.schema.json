@@ -99,7 +99,32 @@
               "answer": { "type": "string" },
               "source": {
                 "type": "string",
-                "enum": ["user", "repository", "derived"]
+                "enum": ["user", "repository", "derived", "unanswered"]
+              },
+              "asked": {
+                "description": "True only when this question was included in the bounded user interview. Repository-derived inputs are false.",
+                "type": "boolean"
+              },
+              "evidence_checked": {
+                "description": "Repository files or artifacts checked before resolving this input or deciding it still needed a human answer.",
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "decision_dimensions": {
+                "description": "Decisions that plausible answers can change. Required semantically when asked is true.",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": ["severity", "confidence", "recommendation"]
+                }
+              },
+              "expected_decision_value": {
+                "description": "Ordinal interview rank. Required semantically when asked is true; never fabricate a numeric probability.",
+                "type": "string",
+                "enum": ["highest", "high", "medium", "low"]
               }
             }
           }
@@ -131,6 +156,11 @@
         "additionalProperties": false,
         "required": ["kind", "source"],
         "properties": {
+          "id": {
+            "description": "Stable review-local identifier used by findings to cite this artifact.",
+            "type": "string",
+            "pattern": "^RUNTIME-[0-9]{3,}$"
+          },
           "kind": {
             "type": "string",
             "enum": [
@@ -174,6 +204,16 @@
         },
         "critical_paths_identified": { "type": "integer", "minimum": 0 },
         "critical_paths_analyzed": { "type": "integer", "minimum": 0 },
+        "shared_resources_identified": {
+          "description": "Pools, queues, event loops, worker sets, locks, datastores, caches, and downstreams identified during the final coverage sweep.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "shared_resources_analyzed": {
+          "description": "Identified shared resources whose in-scope acquisition, bounds, release, contention, and observability were examined.",
+          "type": "integer",
+          "minimum": 0
+        },
         "technology_support": {
           "description": "Registry tier per detected technology, so reduced depth is visible rather than silent.",
           "type": "array",
@@ -251,6 +291,21 @@
         "properties": {
           "question": { "type": "string" },
           "what_it_would_change": { "type": "string" },
+          "decision_dimensions": {
+            "description": "Severity, confidence, or recommendation decisions this unresolved question can change.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["severity", "confidence", "recommendation"]
+            }
+          },
+          "expected_decision_value": {
+            "description": "Ordinal value used to rank this question in descending order.",
+            "type": "string",
+            "enum": ["highest", "high", "medium", "low"]
+          },
           "affects": {
             "type": "array",
             "items": { "type": "string", "pattern": "^PERF-[0-9]{3,}$" }
@@ -323,7 +378,7 @@
       }
     },
     "considered_not_reported": {
-      "description": "Candidates examined and discarded, with the reason. Evidence that the review had a filter — and the honest home for \"theoretically inefficient, not worth optimizing\".",
+      "description": "Plausible, material candidates examined and discarded but worth revisiting if evidence or workload changes. This is not the private candidate ledger and must not accumulate obvious noise.",
       "type": "array",
       "items": {
         "type": "object",
@@ -332,7 +387,23 @@
         "properties": {
           "observation": { "type": "string" },
           "why_discarded": { "type": "string" },
-          "location": { "type": "string" }
+          "location": { "type": "string" },
+          "path": {
+            "description": "Critical path or shared resource this candidate could affect.",
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_checked": {
+            "description": "Support and counter-evidence examined before disposition.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "revisit_when": {
+            "description": "Measurement, workload change, or new evidence that would justify reopening this candidate.",
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },

@@ -10,7 +10,10 @@ Run with: python -m unittest discover -s tests
 
 import json
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +24,7 @@ import pr_comment  # noqa: E402
 import validate_review  # noqa: E402
 
 EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
+SEMANTIC_CASES = ROOT / "tests" / "fixtures" / "semantic-validation-cases.json"
 
 
 def finding(**overrides):
@@ -192,7 +196,8 @@ class SarifConversionTests(unittest.TestCase):
         review = change_scoped(verdict="PASS",
                                findings=[finding(severity="Critical", confidence="High")])
         sarif = to_sarif.to_sarif(review)
-        self.assertEqual(sarif["runs"][0]["properties"]["verdict"], "PASS")
+        self.assertEqual(sarif["runs"][0]["properties"]["verdict"], "FAIL")
+        self.assertEqual(sarif["runs"][0]["properties"]["declaredVerdict"], "PASS")
         self.assertEqual(sarif["runs"][0]["properties"]["derivedVerdict"], "FAIL")
 
 
@@ -213,8 +218,27 @@ class PullRequestCommentTests(unittest.TestCase):
         self.assertIn("Low", body)
 
     def test_unknown_is_spelled_out_as_not_a_pass(self):
-        body = pr_comment.render(change_scoped(verdict="UNKNOWN"))
+        body = pr_comment.render(change_scoped(
+            verdict="UNKNOWN",
+            completeness={"unknowns": [
+                {"subject": "the changed worker", "reason": "not-examined"}]}))
         self.assertIn("not** a pass", body)
+
+    def test_comment_uses_the_derived_verdict_not_a_contradictory_declaration(self):
+        body = pr_comment.render(change_scoped(
+            verdict="PASS", findings=[finding(severity="High", confidence="High")]))
+        self.assertIn("**FAIL**", body)
+        self.assertNotIn("**PASS**", body)
+
+    def test_comment_footer_reflects_the_configured_gate(self):
+        review = change_scoped(verdict="PASS")
+        self.assertIn("does not block merges", pr_comment.render(review, "never"))
+        self.assertIn("FAIL blocks", pr_comment.render(review, "fail"))
+        self.assertIn("WARN and FAIL block", pr_comment.render(review, "warn"))
+
+    def test_full_review_footer_says_a_configured_gate_does_not_apply(self):
+        self.assertIn("configured warn gate does not apply",
+                      pr_comment.render({"mode": "full", "findings": []}, "warn"))
 
     def test_the_absence_of_runtime_evidence_is_stated(self):
         body = pr_comment.render({"findings": [finding()], "runtime_evidence": []})
@@ -285,7 +309,8 @@ class ReviewValidationTests(unittest.TestCase):
         review = self.valid()
         review["findings"][0]["confidence"] = "Confirmed"
         problems = validate_review.validate(review, self.SCHEMAS)
-        self.assertTrue(any("no runtime evidence" in p for p in problems), problems)
+        self.assertTrue(any("cites no valid runtime artifact" in p for p in problems),
+                        problems)
 
     def test_a_dangling_root_cause_reference_is_caught(self):
         review = self.valid()
@@ -316,21 +341,200 @@ class ReviewValidationTests(unittest.TestCase):
         problems = validate_review.validate(review, self.SCHEMAS)
         self.assertEqual([p for p in problems if "canonical algorithm" in p], [])
 
-    def test_two_findings_sharing_a_stable_id_are_flagged_for_a_human_glance(self):
+    def colliding_review(self):
         review = self.valid()
         second = json.loads(json.dumps(review["findings"][0]))
         second["id"] = "PERF-002"
-        # Distinct root cause so this doesn't also trip the dangling-reference check.
-        review["root_causes"][0]["findings"].append("PERF-002")
+        second["root_cause_id"] = "ROOT-002"
+        second["problem"] = "A separate related-row lookup also runs once per order."
+        review["root_causes"].append({
+            "id": "ROOT-002", "description": second["problem"], "findings": ["PERF-002"]})
         review["findings"].append(second)
+        return review
+
+    def test_canonical_stable_id_collision_is_advisory(self):
+        review = self.colliding_review()
+        problems, summary = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(summary["findings"], 2)
+        self.assertEqual(len(summary["warnings"]), 1)
+        self.assertIn("share stable_id", summary["warnings"][0])
+        self.assertIn("PERF-001", summary["warnings"][0])
+        self.assertIn("PERF-002", summary["warnings"][0])
+
+    def test_collision_warning_does_not_hide_invalid_canonical_ids(self):
+        review = self.colliding_review()
+        for finding in review["findings"]:
+            finding["stable_id"] = "deadbeefdeadbeef"
         problems = validate_review.validate(review, self.SCHEMAS)
-        self.assertTrue(any("share stable_id" in p for p in problems), problems)
+        self.assertEqual(sum("canonical algorithm" in p for p in problems), 2)
+
+    def test_collision_warning_is_permutation_invariant_and_does_not_change_verdict(self):
+        review = self.colliding_review()
+        review["mode"], review["verdict"] = "change-scoped", "FAIL"
+        problems, before = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        review["findings"].reverse()
+        problems, after = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(before, after)
+        self.assertEqual(after["verdict"], "FAIL")
+
+    def test_collision_warnings_survive_cli_and_publishing(self):
+        review = self.colliding_review()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for entry_point, extra in ((validate_review.main, []),
+                                       (validate_review.main, ["--summary-json"]),
+                                       (to_sarif.main, []), (pr_comment.main, [])):
+                with self.subTest(entry_point=entry_point.__module__, extra=extra):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = entry_point(["--review", str(path)] + extra)
+                    self.assertEqual(result, 0)
+                    if entry_point is validate_review.main:
+                        self.assertIn("share stable_id", stderr.getvalue())
+                        if extra:
+                            summary = json.loads(stdout.getvalue())
+                            self.assertIn("share stable_id", summary["warnings"][0])
+                        else:
+                            self.assertIn("valid review (2 finding(s))", stdout.getvalue())
+                    elif entry_point is to_sarif.main:
+                        run = json.loads(stdout.getvalue())["runs"][0]
+                        self.assertEqual(len(run["results"]), 2)
+                        self.assertEqual({f["properties"]["id"] for f in run["results"]},
+                                         {"PERF-001", "PERF-002"})
+                        self.assertIn("share stable_id", run["properties"]["validationWarnings"][0])
+                    else:
+                        self.assertIn("### Validation warnings", stdout.getvalue())
+                        self.assertIn("share stable_id", stdout.getvalue())
+
+    def test_valid_review_without_collisions_has_no_warning(self):
+        problems, summary = validate_review.validate_and_summarize(self.valid(), self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(summary["warnings"], [])
 
     def test_a_schema_violation_is_caught(self):
         review = self.valid()
         del review["findings"][0]["counter_evidence"]
         problems = validate_review.validate(review, self.SCHEMAS)
         self.assertTrue(any("counter_evidence" in p for p in problems), problems)
+
+    def test_semantic_validation_negative_fixtures(self):
+        cases = json.loads(SEMANTIC_CASES.read_text(encoding="utf-8"))
+        for case in cases:
+            with self.subTest(case=case["name"]):
+                review = self.valid()
+                for operation in case["operations"]:
+                    parts = operation["path"].strip("/").split("/")
+                    parent = review
+                    for part in parts[:-1]:
+                        parent = parent[int(part)] if isinstance(parent, list) else parent[part]
+                    key = parts[-1]
+                    if operation["op"] == "set":
+                        if isinstance(parent, list):
+                            parent[int(key)] = operation["value"]
+                        else:
+                            parent[key] = operation["value"]
+                    elif operation["op"] == "delete":
+                        if isinstance(parent, list):
+                            del parent[int(key)]
+                        else:
+                            del parent[key]
+                    elif operation["op"] == "append":
+                        parent[key].append(operation["value"])
+                    else:
+                        self.fail("unknown fixture operation %s" % operation["op"])
+                problems = validate_review.validate(review, self.SCHEMAS)
+                self.assertTrue(any(case["problem"] in item for item in problems), problems)
+
+    def test_confirmed_finding_with_a_matching_runtime_citation_is_valid(self):
+        review = self.valid()
+        finding = review["findings"][0]
+        finding["confidence"] = "Confirmed"
+        finding["priority"] = "P0"
+        review["runtime_evidence"] = [{
+            "id": "RUNTIME-001", "kind": "profile", "source": "profile.json"}]
+        finding["evidence"].append({
+            "statement": "The profile attributes 41% of samples to this query loop.",
+            "kind": "runtime", "runtime_evidence_id": "RUNTIME-001"})
+        self.assertEqual(validate_review.validate(review, self.SCHEMAS), [])
+
+    def test_malformed_nested_values_are_reported_without_crashing(self):
+        review = self.valid()
+        review["reproducibility"] = "not an object"
+        review["findings"][0]["location"] = "not an object"
+        problems = validate_review.validate(review, self.SCHEMAS)
+        self.assertTrue(any("expected type object" in problem for problem in problems),
+                        problems)
+
+    def test_malformed_scalar_fields_return_schema_errors(self):
+        paths = (
+            ("schema_version",), ("reproducibility", "spec"),
+            ("findings", 0, "id"), ("findings", 0, "root_cause_id"),
+            ("root_causes", 0, "id"), ("root_causes", 0, "findings", 0),
+            ("runtime_evidence", 0, "id"),
+            ("findings", 0, "evidence", 0, "runtime_evidence_id"),
+            ("findings", 0, "severity"), ("findings", 0, "confidence"),
+            ("findings", 0, "location", "file"),
+            ("findings", 0, "location", "symbol"),
+            ("findings", 0, "category"), ("findings", 0, "stable_id"),
+            ("workload", "inputs", 0, "expected_decision_value"),
+            ("decision_changing_questions", 0, "expected_decision_value"),
+        )
+        for path in paths:
+            for value in ([], {}, True, 7, None):
+                with self.subTest(path=path, value=value):
+                    review = self.valid()
+                    review["runtime_evidence"] = [{
+                        "id": "RUNTIME-001", "kind": "profile", "source": "profile.json"}]
+                    review["findings"][0]["evidence"][0].update({
+                        "kind": "runtime", "runtime_evidence_id": "RUNTIME-001"})
+                    review["workload"]["inputs"] = [{
+                        "asked": True, "source": "unanswered",
+                        "expected_decision_value": "high"}]
+                    review["decision_changing_questions"] = [{
+                        "expected_decision_value": "high"}]
+                    parent = review
+                    for key in path[:-1]:
+                        parent = parent[key]
+                    parent[path[-1]] = value
+                    problems, summary = validate_review.validate_and_summarize(
+                        review, self.SCHEMAS)
+                    self.assertTrue(any("expected type" in p for p in problems), problems)
+                    self.assertEqual(summary["findings"], 1)
+
+    def test_cli_and_publishers_reject_malformed_ids_without_output(self):
+        review = self.valid()
+        review["findings"][0]["id"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for entry_point in (validate_review.main, to_sarif.main, pr_comment.main):
+                with self.subTest(entry_point=entry_point.__module__):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = entry_point(["--review", str(path)])
+                    self.assertEqual(result, 1)
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertIn("expected type string", stderr.getvalue())
+
+    def test_publishers_refuse_a_review_with_a_false_declared_verdict(self):
+        review = self.valid()
+        review["mode"] = "change-scoped"
+        review["verdict"] = "PASS"  # Its High/High finding derives FAIL.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for publisher in (to_sarif.main, pr_comment.main):
+                with self.subTest(publisher=publisher.__module__):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = publisher(["--review", str(path)])
+                    self.assertEqual(result, 1)
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertIn("verdict mismatch", stderr.getvalue())
 
 
 if __name__ == "__main__":

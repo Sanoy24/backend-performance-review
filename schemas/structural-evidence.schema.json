@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/structural-evidence.schema.json",
+  "title": "Optional structural discovery evidence",
+  "description": "Vendor-neutral, advisory hints for a review. Every relationship has source-code locations for both endpoints and the evidence for the relationship.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "producer"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "repository_commit": {
+      "description": "Commit indexed by the producer, when the source is committed. The reviewer must check it matches the reviewed revision.",
+      "type": "string",
+      "minLength": 1
+    },
+    "call_edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["caller", "callee", "call_site"],
+        "properties": {
+          "caller": { "$ref": "#/$defs/location" },
+          "callee": { "$ref": "#/$defs/location" },
+          "call_site": { "$ref": "#/$defs/location" }
+        }
+      }
+    },
+    "query_shapes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["owner", "query_site", "evidence", "operation", "multiplicity", "bound"],
+        "properties": {
+          "owner": { "$ref": "#/$defs/location" },
+          "query_site": { "$ref": "#/$defs/location" },
+          "evidence": { "$ref": "#/$defs/location" },
+          "operation": { "type": "string", "enum": ["read", "write", "mixed", "unknown"] },
+          "multiplicity": { "type": "string", "enum": ["once", "per-item", "per-batch", "unknown"] },
+          "bound": { "type": "string", "enum": ["bounded", "unbounded", "unknown"] }
+        }
+      }
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["changed", "affected", "evidence", "relation"],
+        "properties": {
+          "changed": { "$ref": "#/$defs/location" },
+          "affected": { "$ref": "#/$defs/location" },
+          "evidence": { "$ref": "#/$defs/location" },
+          "relation": { "type": "string", "enum": ["calls", "called-by", "queries", "shares-resource"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "symbol"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "symbol": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

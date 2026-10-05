@@ -6,7 +6,7 @@ license: MIT
 compatibility: Requires read access to the target repository. Optional accelerator scripts require Python 3.8+ (standard library only). No network access required.
 allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *)
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   spec: backend-performance-review/2.0
 ---
 
@@ -127,11 +127,20 @@ layer gate, not just the ones the script happened to name.
 load tests, dashboards-as-code, and SLOs exist in the repo? This sets the ceiling on the
 confidence any finding in this review can reach. Do it now, not at the end.
 
+If the user supplies call-graph, query-shape, or changed-path output, or explicitly opts
+into an available structural producer, load `methodology/structural-evidence.md`. Treat
+its edges as source-located leads to verify, not findings. No structural indexer is
+required or recommended by default; source inspection remains the fallback.
+
 Load: `methodology/discovery.md`.
 
 ### Phase 2 — Workload
-Extract repo-derived workload signals, then ask the user the bounded workload interview
-(at most 7 questions, asked once, in one message — see `methodology/workload.md`).
+Extract repo-derived workload signals and use manifests, configuration, deployment files,
+observability artifacts, and code to answer question candidates before asking the user.
+Then apply the decision-change gate in `methodology/workload.md`: a question survives only
+when plausible answers can change severity, confidence, or recommendation. Rank survivors
+by expected decision value and ask zero to seven once, in one message. Seven is a maximum,
+not a quota.
 
 If the user cannot or will not answer: **proceed anyway**. Do not block. Record the
 unknowns and cap workload-dependent findings at `Medium` confidence.
@@ -153,17 +162,32 @@ Determine which layers are actually present. Load only their references, resolve
 In order, for present layers only:
 `application → data access → database → cache → distributed → infrastructure`
 
+Accumulate observations in the private candidate ledger defined by
+`methodology/bottleneck-analysis.md`; do not score, recommend, or apply the output budget
+during discovery.
+
 ### Phase 6 — Synthesis
-Merge findings that share a root cause. Score Severity and Confidence. Derive Priority
-from the matrix — never guess it. Apply the output budget.
+Complete the critical-path and shared-resource coverage sweep. Give every candidate a
+disposition, then merge promoted candidates that share a root cause. Score Severity and
+Confidence and derive Priority from the matrix — never guess it. Apply the output budget
+only after discovery, disposition, and root-cause merging are complete.
 
 Load: `methodology/bottleneck-analysis.md`.
 
 ### Phase 7 — Report
-Produce the report using `templates/review-report.md`. Every significant recommendation
-needs a validation path. Emit the machine-readable JSON alongside the Markdown (template
-§10, `schemas/review.schema.json`) — the Markdown is authoritative; the JSON is the same
-content in a form that can be diffed and scored. Compute each finding's `stable_id` by
+Produce the report using `templates/review-report.md`. Make its first screen a decision
+surface in this order: overall assessment, at most three actions, at most three
+decision-changing unknowns, and at most three validation commands. Those are projections
+of the complete findings and plans later in the report, never replacements for them. Put
+detailed evidence, counter-evidence, alternatives, trade-offs, and the complete validation
+plan after that summary; do not gain brevity by deleting required reasoning.
+
+Every significant recommendation needs a validation path. Include a copyable
+repository-local command when the evidence supports one, with its purpose and its own
+production-safety label; omit rather than invent a command. Emit the machine-readable JSON
+alongside the Markdown (template §10, `schemas/review.schema.json`) — the Markdown is
+authoritative; the JSON is the same content in a form that can be diffed and scored,
+including any commands under `validation.commands`. Compute each finding's `stable_id` by
 running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <location.file>
 --symbol <location.symbol> --category <category>` — never invent this value by reasoning.
 Two independently-run reviews were found to disagree completely on a hand-computed
@@ -251,7 +275,9 @@ Alternatives:         Other options considered, with the preferred one named and
 Trade-offs:           Complexity, memory, consistency, operational burden, new failure
                       modes.
 Validation:           How to prove it worked. Specific measurements, each labelled
-                      safe-on-production or not-safe-on-production.
+                      safe-on-production or not-safe-on-production. Include concrete
+                      commands with purpose and per-command safety where justified; omit
+                      rather than invent them.
 ```
 
 Findings sharing a root cause are merged, not enumerated.
@@ -260,7 +286,8 @@ Findings sharing a root cause are merged, not enumerated.
 
 Full format for the top 10–15 findings by priority. Everything else goes in one ranked
 table: ID, severity, confidence, priority, location, one-line summary. Deduplicate
-*before* capping.
+*before* capping. The budget controls presentation depth only: it never limits candidate
+discovery, deletes a surviving finding, or turns a finding into `considered_not_reported`.
 
 ## Reference routing
 

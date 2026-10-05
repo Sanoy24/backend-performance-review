@@ -1,0 +1,59 @@
+{
+  "truth": {
+    "repository": {
+      "name": "permutation-matching-fixture",
+      "commit": "0123456789abcdef"
+    },
+    "expected": [
+      {
+        "id": "GT-BROAD",
+        "location": {
+          "file": "src/shared.py"
+        },
+        "category": "data-access",
+        "mechanism": "a broad item that matches either finding",
+        "severity": "High"
+      },
+      {
+        "id": "GT-SPECIFIC",
+        "location": {
+          "file": "src/shared.py",
+          "symbol": "wanted"
+        },
+        "category": "data-access",
+        "mechanism": "a specific item that matches only one finding",
+        "severity": "High"
+      }
+    ],
+    "acceptable": [],
+    "forbidden": []
+  },
+  "review": {
+    "findings": [
+      {
+        "id": "PERF-SPECIFIC",
+        "category": "data-access",
+        "severity": "High",
+        "confidence": "High",
+        "priority": "P1",
+        "location": {
+          "file": "src/shared.py",
+          "symbol": "wanted"
+        },
+        "recommendation": "Batch the related lookup."
+      },
+      {
+        "id": "PERF-OTHER",
+        "category": "data-access",
+        "severity": "High",
+        "confidence": "High",
+        "priority": "P1",
+        "location": {
+          "file": "src/shared.py",
+          "symbol": "other"
+        },
+        "recommendation": "Batch the related lookup."
+      }
+    ]
+  }
+}

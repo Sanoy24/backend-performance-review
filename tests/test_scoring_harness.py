@@ -8,20 +8,26 @@ Run with: python -m unittest discover -s tests
 """
 
 import copy
+import itertools
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmark" / "scoring"))
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "skills" / "backend-performance-review" / "scripts"))
 
 import score as scorer  # noqa: E402
 import json_schema_lite as schema_lite  # noqa: E402
+import compute_stable_id as stable_ids  # noqa: E402
 
 EXAMPLE_REVIEW = ROOT / "docs" / "examples" / "review.example.json"
 FIXTURE = ROOT / "tests" / "fixtures" / "example-ground-truth.json"
+PERMUTATION_FIXTURE = ROOT / "tests" / "fixtures" / "permutation-matching-case.json"
 SCHEMAS = ROOT / "schemas"
 
 
@@ -36,6 +42,8 @@ def finding(**overrides):
         "recommendation": "Batch the related lookup into a single query.",
     }
     base.update(overrides)
+    if "stable_id" not in overrides:
+        base["stable_id"] = stable_ids.compute_for_finding(base)
     return base
 
 
@@ -190,11 +198,100 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(clean["counts"]["false_positives"], 0)
         self.assertEqual(clean["counts"]["false_negatives"], 0)
         self.assertEqual(clean["restraint"]["forbidden_reported"], [])
+        self.assertEqual(clean["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": True})
+        self.assertEqual(clean["case_outcome"]["known_traps_avoided"], 1)
+        self.assertIn("known traps avoided: 1 of 1", scorer.render(clean))
 
         manufactured = scorer.score(annotation, {
             "findings": [finding(location={"file": "src/config_loader.py"})]})
         self.assertEqual(manufactured["counts"]["false_positives"], 1)
         self.assertEqual(manufactured["overall"]["precision"], 0.0)
+        self.assertEqual(manufactured["case_outcome"]["abstention"], {
+            "occurred": False, "matches_annotation": None})
+        self.assertEqual(manufactured["case_outcome"]["known_traps_avoided"], 0)
+
+    def test_abstaining_on_required_finding_conflicts_with_annotation(self):
+        result = scorer.score(truth(), {"findings": []})
+        self.assertEqual(result["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": False})
+        self.assertFalse(result["case_outcome"]["no_required_findings"])
+
+    def test_unknown_is_reported_separately_from_abstention(self):
+        annotation = truth(expected=[])
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        result = scorer.score(annotation, review)
+        self.assertEqual(result["case_outcome"]["abstention"], {
+            "occurred": True, "matches_annotation": True})
+        self.assertEqual(result["case_outcome"]["unknown_verdict"], {
+            "declared": True, "derived": True, "expected": None,
+            "scope_matches": None, "correctness": None})
+        self.assertEqual(result["case_outcome"]["verdict"], {
+            "declared": "UNKNOWN", "derived": "UNKNOWN", "expected": None,
+            "scope_matches": None, "correctness": None})
+        self.assertIn("(unadjudicated)", scorer.render(result))
+        self.assertIsNone(scorer.score(annotation, {"findings": []})["case_outcome"]
+                          ["unknown_verdict"]["declared"])
+
+    def test_unknown_correctness_requires_expert_change_scope_truth(self):
+        annotation = truth(expected=[], change_scope={
+            "diff_base": "1111111111111111111111111111111111111111",
+            "expected_verdict": "UNKNOWN",
+            "rationale": "The changed worker cannot be examined from the supplied source.",
+            "unknowns": [{"subject": "worker", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the generated worker source."}],
+        })
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "reproducibility": {"repository": {
+                "diff_base": "1111111111111111111111111111111111111111"}},
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertEqual(outcome, {
+            "declared": True, "derived": True, "expected": True,
+            "scope_matches": True, "correctness": True})
+        self.assertEqual(scorer.score(annotation, review)["case_outcome"]["verdict"], {
+            "declared": "UNKNOWN", "derived": "UNKNOWN", "expected": "UNKNOWN",
+            "scope_matches": True, "correctness": True})
+
+        annotation["change_scope"]["expected_verdict"] = "PASS"
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertEqual(outcome["expected"], False)
+        self.assertFalse(outcome["correctness"])
+
+    def test_unknown_correctness_is_withheld_for_a_different_diff_base(self):
+        annotation = truth(expected=[], change_scope={
+            "diff_base": "1" * 40, "expected_verdict": "UNKNOWN",
+            "rationale": "The relevant source is unavailable.",
+            "unknowns": [{"subject": "worker", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the worker source."}],
+        })
+        review = {
+            "mode": "change-scoped", "verdict": "UNKNOWN", "findings": [],
+            "reproducibility": {"repository": {"diff_base": "2" * 40}},
+            "completeness": {"unknowns": [{"subject": "worker", "reason": "not-examined"}]},
+        }
+        outcome = scorer.score(annotation, review)["case_outcome"]["unknown_verdict"]
+        self.assertFalse(outcome["scope_matches"])
+        self.assertIsNone(outcome["correctness"])
+
+    def test_candidate_rejection_correctness_is_not_inferred_from_free_text(self):
+        annotation = truth(expected=[], forbidden=[{
+            "id": "GT-F1", "location": {"file": "src/config_loader.py"},
+            "why_not": "bounded configuration list",
+        }])
+        review = {"findings": [], "considered_not_reported": [{
+            "observation": "Possible cache opportunity",
+            "why_discarded": "The list is bounded",
+            "location": "src/config_loader.py",
+        }]}
+        outcome = scorer.score(annotation, review)["case_outcome"]
+        self.assertEqual(outcome["candidate_rejections"], {
+            "reported": 1, "adjudicated_correct": None})
 
     def test_per_category_metrics_are_separated(self):
         annotation = truth(expected=[
@@ -208,6 +305,285 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(result["per_category"]["data-access"]["tp"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["fn"], 1)
         self.assertEqual(result["per_category"]["concurrency"]["recall"], 0.0)
+
+
+class CandidateRejectionAdjudicationTests(unittest.TestCase):
+    def setUp(self):
+        self.annotation = truth(forbidden=[{
+            "id": "GT-F1", "location": {"file": "src/config_loader.py"},
+            "category": "data-access", "why_not": "fixed configuration list",
+        }])
+        self.review = {"findings": [], "considered_not_reported": [{
+            "observation": "Possible repeated query", "why_discarded": "Fixed configuration list",
+            "location": "src/config_loader.py",
+        }]}
+
+    def adjudication(self, decisions):
+        return {
+            "schema_version": 1,
+            "truth_content_sha256": scorer.content_digest(self.annotation),
+            "review_content_sha256": scorer.content_digest(self.review),
+            "adjudicator": "independent engineer",
+            "adjudicated_at": "2026-09-20T12:00:00Z",
+            "decisions": decisions,
+        }
+
+    def test_correct_rejection_requires_explicit_adjudication(self):
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "The list has fixed size."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        self.assertEqual(result["case_outcome"]["candidate_rejections"], {
+            "reported": 1, "adjudicated_correct": 1, "adjudicated_incorrect": 0,
+            "adjudicated_acceptable": 0, "unresolved": 0, "correct_rate": 1.0,
+            "adjudicator": "independent engineer",
+        })
+
+    def test_rejecting_a_missed_required_finding_is_incorrect(self):
+        self.review["considered_not_reported"][0] = {
+            "observation": "One query per order", "why_discarded": "Assumed cheap",
+            "location": "src/orders/service.py",
+        }
+        decision = {"candidate_index": 0, "judgment": "incorrect_rejection",
+                    "ground_truth_id": "GT-001", "reason": "The defect is material."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        self.assertEqual(result["case_outcome"]["candidate_rejections"]["correct_rate"], 0.0)
+        self.assertEqual(result["case_outcome"]["candidate_rejections"]
+                         ["adjudicated_incorrect"], 1)
+
+    def test_unresolved_candidate_is_not_counted_as_correct(self):
+        decision = {"candidate_index": 0, "judgment": "unresolved",
+                    "reason": "Workload information is missing."}
+        result = scorer.score(self.annotation, self.review, self.adjudication([decision]))
+        summary = result["case_outcome"]["candidate_rejections"]
+        self.assertEqual(summary["unresolved"], 1)
+        self.assertIsNone(summary["correct_rate"])
+
+    def test_optional_finding_can_be_adjudicated_as_acceptable_nonreport(self):
+        self.annotation["acceptable"] = [{
+            "id": "GT-A1", "location": {"file": "src/config_loader.py"},
+            "category": "data-access", "mechanism": "minor optional work",
+        }]
+        decision = {"candidate_index": 0, "judgment": "acceptable_nonreport",
+                    "ground_truth_id": "GT-A1", "reason": "Valid but not material."}
+        summary = scorer.score(self.annotation, self.review, self.adjudication([decision]))[
+            "case_outcome"]["candidate_rejections"]
+        self.assertEqual(summary["adjudicated_acceptable"], 1)
+        self.assertIsNone(summary["correct_rate"])
+
+    def test_stale_review_digest_is_rejected(self):
+        adjudication = self.adjudication([{
+            "candidate_index": 0, "judgment": "unresolved", "reason": "No workload",
+        }])
+        self.review["considered_not_reported"][0]["why_discarded"] = "Changed after adjudication"
+        with self.assertRaisesRegex(ValueError, "review content digest"):
+            scorer.score(self.annotation, self.review, adjudication)
+
+    def test_truth_digest_is_bound_to_the_annotation(self):
+        adjudication = self.adjudication([{
+            "candidate_index": 0, "judgment": "unresolved", "reason": "No workload",
+        }])
+        self.annotation["forbidden"][0]["why_not"] = "Changed after adjudication"
+        with self.assertRaisesRegex(ValueError, "truth content digest"):
+            scorer.score(self.annotation, self.review, adjudication)
+
+    def test_adjudication_cannot_predate_review_generation(self):
+        self.review["reproducibility"] = {"generated_at": "2026-09-21T12:00:00Z"}
+        decision = {"candidate_index": 0, "judgment": "unresolved", "reason": "No workload"}
+        with self.assertRaisesRegex(ValueError, "must follow the frozen review"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_content_digest_ignores_json_key_order(self):
+        self.assertEqual(scorer.content_digest({"a": 1, "b": [2]}),
+                         scorer.content_digest({"b": [2], "a": 1}))
+
+    def test_correct_rejection_cannot_claim_a_reported_trap(self):
+        self.review["findings"] = [finding(location={"file": "src/config_loader.py"})]
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "Claimed avoidance."}
+        with self.assertRaisesRegex(ValueError, "unreported forbidden"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_every_candidate_needs_one_decision(self):
+        with self.assertRaisesRegex(ValueError, "one decision per candidate"):
+            scorer.score(self.annotation, self.review, self.adjudication([]))
+
+    def test_adjudication_rejects_ambiguous_and_duplicate_candidate_mapping(self):
+        self.review["considered_not_reported"].append({
+            "observation": "Another trap", "why_discarded": "Bounded",
+        })
+        decisions = [
+            {"candidate_index": 0, "judgment": "correct_rejection",
+             "ground_truth_id": "GT-F1", "reason": "Bounded."},
+            {"candidate_index": 0, "judgment": "unresolved", "reason": "No evidence."},
+        ]
+        with self.assertRaisesRegex(ValueError, "indices must be unique"):
+            scorer.score(self.annotation, self.review, self.adjudication(decisions))
+        decisions[1]["candidate_index"] = 1
+        decisions[1]["judgment"] = "correct_rejection"
+        decisions[1]["ground_truth_id"] = "GT-F1"
+        with self.assertRaisesRegex(ValueError, "cannot count for two candidates"):
+            scorer.score(self.annotation, self.review, self.adjudication(decisions))
+
+    def test_ambiguous_ground_truth_ids_cannot_be_adjudicated(self):
+        self.annotation["forbidden"][0]["id"] = "GT-001"
+        decision = {"candidate_index": 0, "judgment": "unresolved", "reason": "Ambiguous"}
+        with self.assertRaisesRegex(ValueError, "ground-truth IDs must be unique"):
+            scorer.score(self.annotation, self.review, self.adjudication([decision]))
+
+    def test_cli_accepts_frozen_post_run_adjudication(self):
+        decision = {"candidate_index": 0, "judgment": "correct_rejection",
+                    "ground_truth_id": "GT-F1", "reason": "Fixed configuration list."}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            truth_path, review_path = root / "truth.json", root / "review.json"
+            adjudication_path = root / "adjudication.json"
+            truth_path.write_text(json.dumps(self.annotation), encoding="utf-8")
+            review_path.write_text(json.dumps(self.review), encoding="utf-8")
+            adjudication_path.write_text(json.dumps(self.adjudication([decision])),
+                                         encoding="utf-8")
+            completed = subprocess.run([
+                sys.executable, str(ROOT / "benchmark/scoring/score.py"), "score",
+                "--truth", str(truth_path), "--review", str(review_path),
+                "--rejection-adjudication", str(adjudication_path), "--json",
+            ], capture_output=True, text=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        output = json.loads(completed.stdout)
+        self.assertEqual(output["case_outcome"]["candidate_rejections"]
+                         ["adjudicated_correct"], 1)
+        self.assertEqual(output["adjudication_fingerprints"]["review_content_sha256"],
+                         scorer.content_digest(self.review))
+
+
+class OptimalAssignmentTests(unittest.TestCase):
+    """Matching is a graph assignment problem, not a first-compatible-item search."""
+
+    def setUp(self):
+        case = json.loads(PERMUTATION_FIXTURE.read_text(encoding="utf-8"))
+        self.annotation = case["truth"]
+        self.review = case["review"]
+
+    def test_optimal_assignment_finds_two_matches_where_greedy_finds_one(self):
+        result = scorer.score(self.annotation, self.review)
+
+        self.assertEqual(result["counts"]["true_positives"], 2)
+        self.assertEqual(result["counts"]["false_negatives"], 0)
+        self.assertEqual(result["counts"]["false_positives"], 0)
+
+    def test_finding_and_expected_permutations_do_not_change_output(self):
+        baseline = scorer.score(self.annotation, self.review)
+
+        for expected in itertools.permutations(self.annotation["expected"]):
+            for findings in itertools.permutations(self.review["findings"]):
+                annotation = copy.deepcopy(self.annotation)
+                review = copy.deepcopy(self.review)
+                annotation["expected"] = list(expected)
+                review["findings"] = list(findings)
+                self.assertEqual(scorer.score(annotation, review), baseline)
+
+    def test_acceptable_and_forbidden_permutations_do_not_change_output(self):
+        broad = {
+            "id": "GT-BROAD", "location": {"file": "shared.py"},
+            "category": "data-access", "mechanism": "broad",
+        }
+        specific = {
+            "id": "GT-SPECIFIC", "location": {"file": "shared.py", "symbol": "wanted"},
+            "category": "data-access", "mechanism": "specific",
+        }
+        findings = [
+            finding(id="PERF-SPECIFIC", location={"file": "shared.py", "symbol": "wanted"}),
+            finding(id="PERF-OTHER", location={"file": "shared.py", "symbol": "other"}),
+        ]
+
+        for bucket, count_key in (("acceptable", "tolerated"),
+                                  ("forbidden", "forbidden_reported")):
+            annotation = truth(expected=[])
+            annotation[bucket] = [broad, specific]
+            if bucket == "forbidden":
+                for item in annotation[bucket]:
+                    item["why_not"] = "bounded fixture"
+            baseline = scorer.score(annotation, {"findings": findings})
+            self.assertEqual(baseline["counts"][count_key], 2)
+
+            for items_order in itertools.permutations(annotation[bucket]):
+                for findings_order in itertools.permutations(findings):
+                    permuted = copy.deepcopy(annotation)
+                    permuted[bucket] = list(items_order)
+                    self.assertEqual(
+                        scorer.score(permuted, {"findings": list(findings_order)}), baseline)
+
+    def test_equal_score_assignments_are_reported_for_adjudication(self):
+        annotation = truth(expected=[
+            {"id": "GT-A", "location": {"file": "shared.py"},
+             "category": "data-access", "mechanism": "first"},
+            {"id": "GT-B", "location": {"file": "shared.py"},
+             "category": "data-access", "mechanism": "second"},
+        ])
+        review = {"findings": [
+            finding(id="PERF-A", location={"file": "shared.py"}),
+            finding(id="PERF-B", location={"file": "shared.py"}),
+        ]}
+
+        ambiguities = scorer.score(annotation, review)["matching"]["ambiguities"]
+
+        self.assertEqual(len(ambiguities), 1)
+        self.assertEqual(ambiguities[0]["bucket"], "expected")
+        self.assertEqual(ambiguities[0]["reason"],
+                         "equal_cardinality_and_specificity")
+        self.assertNotEqual(ambiguities[0]["selected"], ambiguities[0]["alternative"])
+        self.assertIn("AMBIGUOUS MATCHING", scorer.render(scorer.score(annotation, review)))
+
+    def test_primary_symbol_matches_win_when_cardinality_is_equal(self):
+        annotation = truth(expected=[
+            {
+                "id": "GT-A", "location": {"file": "a.py", "symbol": "A"},
+                "also_locations": [{"file": "b.py", "symbol": "B"}],
+                "category": "data-access", "mechanism": "first",
+            },
+            {
+                "id": "GT-B", "location": {"file": "b.py", "symbol": "B"},
+                "also_locations": [{"file": "a.py", "symbol": "A"}],
+                "category": "data-access", "mechanism": "second",
+            },
+        ])
+        review = {"findings": [
+            finding(id="PERF-A", location={"file": "a.py", "symbol": "A"}),
+            finding(id="PERF-B", location={"file": "b.py", "symbol": "B"}),
+        ]}
+
+        assignments = scorer.score(annotation, review)["matching"]["assignments"]["expected"]
+
+        self.assertEqual([(pair["item"], pair["finding"]) for pair in assignments], [
+            ("GT-A", "PERF-A"), ("GT-B", "PERF-B"),
+        ])
+        self.assertTrue(all(pair["specificity"]["primary_location"] for pair in assignments))
+        self.assertTrue(all(pair["specificity"]["exact_symbol"] for pair in assignments))
+
+    def test_every_unmatched_item_has_a_deterministic_explanation(self):
+        annotation = truth(
+            expected=[{
+                "id": "GT-MISS", "location": {"file": "missing.py"},
+                "category": "memory", "mechanism": "not found",
+            }],
+            acceptable=[{
+                "id": "GT-OPTIONAL", "location": {"file": "optional.py"},
+                "category": "serialization", "mechanism": "not reported",
+            }],
+            forbidden=[{
+                "id": "GT-TRAP", "location": {"file": "trap.py"},
+                "category": "concurrency", "why_not": "bounded fixture",
+            }],
+        )
+        review = {"findings": [
+            finding(id="PERF-UNKNOWN", category="io", location={"file": "unknown.py"}),
+        ]}
+
+        unmatched = scorer.score(annotation, review)["matching"]["unmatched"]
+
+        self.assertEqual(unmatched["expected"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["acceptable"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["forbidden"][0]["reason"], "no_compatible_finding")
+        self.assertEqual(unmatched["findings"][0]["reason"],
+                         "no_compatible_ground_truth_item")
 
 
 class CalibrationTests(unittest.TestCase):
@@ -300,19 +676,18 @@ class StabilityTests(unittest.TestCase):
     """Turns docs/evaluation.md §3.18's hand diff into a number."""
 
     def test_caveats_are_always_present(self):
-        # Discovered by running two real independent reviews of the same repository: the
-        # (file, category) key undercounts agreement across a call-chain citation choice,
-        # and stable_id_agreement is not yet meaningful with no canonical hash algorithm
-        # specified. Both must stay visible in the output, not just in a docstring nobody
-        # reading the JSON would see.
+        # A canonical ID now exists. The remaining caveat is semantic: two reviews may cite
+        # opposite ends of one call chain, which changes the location-derived ID.
         result = scorer.stability({"findings": []}, {"findings": []})
         self.assertIn("caveats", result)
-        self.assertTrue(len(result["caveats"]) >= 2)
+        self.assertTrue(any("call chain" in caveat for caveat in result["caveats"]))
+        self.assertFalse(any("no canonical" in caveat for caveat in result["caveats"]))
 
     def test_identical_runs_are_fully_stable(self):
         run = {"findings": [finding()]}
         result = scorer.stability(run, copy.deepcopy(run))
         self.assertEqual(result["overlap"], 1.0)
+        self.assertEqual(result["stable_id_overlap"], 1.0)
         self.assertEqual(result["severity_agreement"], 1.0)
         self.assertEqual(result["priority_agreement"], 1.0)
 
@@ -330,6 +705,50 @@ class StabilityTests(unittest.TestCase):
         self.assertEqual(result["overlap"], 1.0, "same location and category")
         self.assertEqual(result["severity_agreement"], 0.0)
         self.assertEqual(result["priority_agreement"], 0.0)
+
+    def test_two_findings_with_one_stable_id_are_not_collapsed(self):
+        # The canonical algorithm deliberately collides for two distinct findings sharing a
+        # file, symbol, and category. Stability must preserve multiplicity even in that case.
+        first_finding = finding(location={"file": "shared.py", "symbol": "shared"})
+        second_finding = finding(id="PERF-002",
+                                 location={"file": "shared.py", "symbol": "shared"})
+        self.assertEqual(first_finding["stable_id"], second_finding["stable_id"])
+
+        result = scorer.stability(
+            {"findings": [first_finding, second_finding]},
+            {"findings": [copy.deepcopy(first_finding)]},
+        )
+
+        self.assertEqual(result["overlap"], 0.5)
+        self.assertEqual(result["shared"], 1)
+        self.assertEqual(len(result["only_in_a"]), 1)
+        self.assertEqual(result["stable_id_collisions"]["run_a"][0]["count"], 2)
+        self.assertEqual(result["approximate_location_category"]["overlap"], 0.5)
+
+    def test_canonical_ids_from_identical_inputs_agree_across_runs(self):
+        run_a = finding(id="PERF-001", location={
+            "file": "src/orders/service.py", "line": 10, "symbol": "OrderService.list",
+        })
+        run_b = finding(id="PERF-900", location={
+            "file": "SRC\\ORDERS\\SERVICE.PY", "line": 999, "symbol": "OrderService.list",
+        })
+        self.assertEqual(run_a["stable_id"], run_b["stable_id"])
+
+        result = scorer.stability({"findings": [run_a]}, {"findings": [run_b]})
+
+        self.assertEqual(result["stable_id_overlap"], 1.0)
+        self.assertEqual(result["shared"], 1)
+
+    def test_findings_without_stable_ids_use_only_the_named_approximation(self):
+        run_a = finding(stable_id=None)
+        run_b = finding(id="PERF-900", stable_id=None)
+
+        result = scorer.stability({"findings": [run_a]}, {"findings": [run_b]})
+
+        self.assertIsNone(result["overlap"])
+        self.assertEqual(result["missing_stable_ids"]["run_a"], ["PERF-001"])
+        self.assertEqual(result["missing_stable_ids"]["run_b"], ["PERF-900"])
+        self.assertEqual(result["approximate_location_category"]["overlap"], 1.0)
 
 
 class ShippedExampleTests(unittest.TestCase):
@@ -367,6 +786,36 @@ class ShippedExampleTests(unittest.TestCase):
         annotation = truth(forbidden=[{"id": "GT-F1", "location": {"file": "a.py"}}])
         errors = schema_lite.validate_file(annotation, SCHEMAS / "ground-truth.schema.json")
         self.assertTrue(any("why_not" in e for e in errors), errors)
+
+    def test_change_scope_truth_requires_a_pinned_base_verdict_and_rationale(self):
+        annotation = truth(change_scope={
+            "diff_base": "1" * 40,
+            "expected_verdict": "UNKNOWN",
+            "rationale": "The changed generated source is intentionally unavailable.",
+            "unknowns": [{"subject": "generated source", "reason": "not-examined",
+                          "what_would_resolve_it": "Supply the generated source."}],
+        })
+        self.assertEqual(schema_lite.validate_file(
+            annotation, SCHEMAS / "ground-truth.schema.json"), [])
+        for missing in ("diff_base", "expected_verdict", "rationale"):
+            invalid = copy.deepcopy(annotation)
+            del invalid["change_scope"][missing]
+            errors = schema_lite.validate_file(
+                invalid, SCHEMAS / "ground-truth.schema.json")
+            self.assertTrue(any(missing in error for error in errors), errors)
+
+        invalid = copy.deepcopy(annotation)
+        del invalid["change_scope"]["unknowns"]
+        errors = schema_lite.validate_file(invalid, SCHEMAS / "ground-truth.schema.json")
+        self.assertTrue(any("unknowns" in error for error in errors), errors)
+
+    def test_change_scope_truth_rejects_an_abbreviated_diff_base(self):
+        annotation = truth(change_scope={
+            "diff_base": "1234567", "expected_verdict": "PASS",
+            "rationale": "The change has no material performance effect.",
+        })
+        errors = schema_lite.validate_file(annotation, SCHEMAS / "ground-truth.schema.json")
+        self.assertTrue(any("diff_base" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
@@ -449,6 +898,19 @@ class DisciplineMetricTests(unittest.TestCase):
         review = {"findings": [finding(problem="The page size of 20 items bounds the loop.")]}
         result = scorer.discipline(review, repo_tokens={"20"})
         self.assertEqual(result["rates"]["unsourced_number"], 0.0)
+
+    def test_agent_installation_numbers_are_not_repository_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "service.py").write_text("PAGE_SIZE = 20\n", encoding="utf-8")
+            skill = root / ".claude" / "skills" / "backend-performance-review"
+            skill.mkdir(parents=True)
+            (skill / "reference.md").write_text(
+                "A generic example mentions 800ms.\n", encoding="utf-8")
+
+            tokens = scorer.repo_number_tokens(root)
+            self.assertIn("20", tokens)
+            self.assertNotIn("800", tokens)
 
     def test_a_bare_number_with_no_unit_is_never_flagged(self):
         # Line numbers, versions and counts are not performance claims. Flagging them would

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sanoy24/backend-performance-review/schemas/annotation-campaign.schema.json",
+  "title": "Blinded independent annotation campaign",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "campaign_id", "frozen_at", "cases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,79}$"
+    },
+    "frozen_at": { "type": "string", "format": "date-time" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository", "license", "reviewer_slots"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,79}$"
+          },
+          "repository": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "url", "commit", "workload"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "url": { "type": "string", "pattern": "^https://[^/\\s]+/\\S+$" },
+              "commit": {
+                "type": "string",
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+              },
+              "workload": { "type": "string", "minLength": 1 },
+              "language": { "type": "string" },
+              "framework": { "type": "string" },
+              "datastore": { "type": "string" }
+            }
+          },
+          "license": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["spdx", "evidence_url"],
+            "properties": {
+              "spdx": { "type": "string", "minLength": 1 },
+              "evidence_url": {
+                "type": "string",
+                "pattern": "^https://[^/\\s]+/\\S+$"
+              }
+            }
+          },
+          "reviewer_slots": {
+            "const": 2
+          },
+          "change_scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["diff_base"],
+            "properties": {
+              "diff_base": {
+                "type": "string",
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

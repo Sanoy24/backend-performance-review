@@ -62,7 +62,29 @@ files in the repository, which makes them `High` confidence without any runtime 
 
 ---
 
-## 2. Distinguish the bottleneck from its symptoms
+## 2. Keep a private candidate ledger
+
+Discovery is broad; reporting is selective. During layer analysis, record every plausible
+mechanism in private working state before deciding whether it deserves a finding. Do not
+assign `PERF-` identifiers, score, recommend, or apply the output budget while discovering.
+
+| Candidate | Evidence checked | Critical path or shared resource | Disposition |
+|:--|:--|:--|:--|
+| `CAND-001: <mechanism>` | `<support and counter-evidence locations>` | `<named path/resource>` | `promote | merge into CAND-nnn | discard | question | adjacent` — `<reason>` |
+
+Every candidate needs all four cells. `Evidence checked` records both support and the
+counter-evidence search; `path` prevents a locally true inefficiency from floating free of
+impact; `disposition` prevents silent deletion. The ledger is working memory, not a third
+review artifact: do not emit it wholesale in the report or JSON.
+
+A candidate becomes a finding only after it survives the workload, critical-path, evidence,
+alternative-explanation, counterfactual, and intent tests below. A discarded candidate enters
+`considered_not_reported` only when it was plausible and material enough that a future
+measurement or workload change could make it worth revisiting. Obvious noise stays private.
+
+---
+
+## 3. Distinguish the bottleneck from its symptoms
 
 A bottleneck is where the constraint actually is. Symptoms appear elsewhere and are more
 visible, which is why reviews that chase symptoms produce long, useless reports.
@@ -108,7 +130,7 @@ database."
 
 ---
 
-## 3. Discard aggressively
+## 4. Discard aggressively
 
 Most candidate observations should not become findings. Apply these tests:
 
@@ -135,9 +157,9 @@ explain in one sentence why it is fine? Try to construct that sentence first.
 
 ---
 
-## 4. Search for counter-evidence
+## 5. Search for counter-evidence
 
-§3 discards weak candidates. This step attacks the ones that survived.
+§4 discards weak candidates. This step attacks the ones that survived.
 
 The asymmetry is the problem. Having formed a hypothesis, you will naturally find more of
 what supports it — a second query in the same file reads as confirmation, and the reading
@@ -182,7 +204,7 @@ verdict issued once at the moment of discovery.
 
 ---
 
-## 5. Separate what is wrong from what should change
+## 6. Separate what is wrong from what should change
 
 Establish the problem completely before considering the fix.
 
@@ -202,7 +224,28 @@ Two practical consequences:
 
 ---
 
-## 6. Scoring
+## 7. Final coverage sweep
+
+Before selecting findings, sweep the complete discovery output one last time. This is a
+coverage check, not a demand to manufacture a candidate:
+
+- For every identified critical path, ask all four questions from §1 and record the outcome
+  in the private ledger, including an explicit “no material candidate” outcome where honest.
+- For every shared pool, queue, event loop, worker set, lock, datastore, cache, and downstream,
+  check every in-scope path that acquires or loads it, its bound, its release point, and whether
+  wait time or saturation is observable.
+- Reconcile symptoms that name the same constraint before scoring. A path-local candidate and
+  a shared-resource candidate may be one root cause with a wider blast radius.
+- If a path or shared resource could not be examined, record a `not-examined` completeness
+  unknown rather than treating absence of a finding as coverage. In change-scoped mode this
+  may mechanically produce `UNKNOWN`.
+
+Record analyzed and identified counts for both critical paths and shared resources in review
+completeness. Zero promoted findings after this sweep is a valid result.
+
+---
+
+## 8. Scoring
 
 Score Severity and Confidence per `rubrics.md`, write down all four severity factors, and
 derive Priority from the matrix. Do not choose the priority and reverse-engineer the
@@ -217,7 +260,7 @@ Two rules that are easy to get wrong:
 
 ---
 
-## 7. Recommendations that survive review
+## 9. Recommendations that survive review
 
 A recommendation is only complete when it addresses the principle rather than the symptom,
 and when it states its own cost.
@@ -251,7 +294,7 @@ storage, and planner surface. "Add an index" is a trade, and the write-side cost
 
 ---
 
-## 8. When you find nothing
+## 10. When you find nothing
 
 This happens, and it is a legitimate outcome. Do not treat an empty findings list as a
 failed review.
@@ -269,9 +312,18 @@ be trusted the next time.
 
 ---
 
-## 9. Output of this phase
+## 11. Output of this phase
 
-A findings list, deduplicated and scored, ordered by priority, with the output budget
-applied: full format for the top 10–15, a ranked table for the remainder. Plus the
-discarded-candidates note — a line or two on what you considered and rejected, which
-demonstrates the review had a filter.
+Finish this phase in order:
+
+1. Complete candidate discovery and the final coverage sweep.
+2. Give every candidate a disposition; search for counter-evidence before promoting one.
+3. Merge promoted candidates that share a root cause.
+4. Score the merged findings and derive priority.
+5. **Only now apply the output budget**: full format for the top 10–15 findings and a ranked
+   table for every remaining finding.
+
+The budget changes presentation depth, never whether a candidate is discovered or whether a
+surviving finding is retained. Emit `considered_not_reported` only for discarded candidates
+that were plausible, material, and worth revisiting; include their path or shared resource,
+evidence checked, discard reason, and the condition that would reopen them.

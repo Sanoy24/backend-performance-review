@@ -250,6 +250,11 @@
           "description": "When the runtime artifact was captured. A six-month-old trace is weaker evidence than a fresh one, and the reader cannot tell without this.",
           "type": "string",
           "format": "date-time"
+        },
+        "runtime_evidence_id": {
+          "description": "For kind=runtime, the review.runtime_evidence artifact this statement cites.",
+          "type": "string",
+          "pattern": "^RUNTIME-[0-9]{3,}$"
         }
       }
     },
@@ -312,6 +317,29 @@
         "guard": {
           "description": "A test, metric, or alert that stops the problem recurring once fixed.",
           "type": "string"
+        },
+        "commands": {
+          "description": "Concrete repository-local commands that establish a baseline or test the recommendation. Omit rather than invent one; every command carries its own safety label because commands in one validation plan can have different production risk.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["command", "purpose", "safety"],
+            "properties": {
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "safety": {
+                "type": "string",
+                "enum": ["safe-on-production", "not-safe-on-production"]
+              }
+            }
+          }
         }
       }
     }

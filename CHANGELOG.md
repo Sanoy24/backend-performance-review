@@ -37,6 +37,184 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-05
+
+A major release because the human report's first section changed structure — by this
+project's own definition a breaking change. The JSON interchange format is **additive-only**:
+no field in `finding`, `review`, or `ground-truth` was removed or renamed, so consumers of the
+machine-readable review are unaffected by the rename. The rest of the release hardens trust and
+measurement: one validator now owns publishability, the detector no longer reads its own
+installation, scoring is permutation-invariant, and the benchmark gained a versioned dataset
+plus independent-annotation tooling. No held-out evaluation case exists yet; nothing here is a
+new accuracy claim.
+
+### Changed — breaking
+
+- **Report section 1 is restructured.** Only section 1 changed; sections 2–11 keep their
+  numbers and titles.
+
+  | v1.1.0 | v2.0.0 |
+  |:--|:--|
+  | `## 1. Executive summary` | `## 1. Decision summary` |
+  | `### Overall assessment` | `### Overall assessment` (unchanged) |
+  | `### Most important findings` + `### Highest-risk bottlenecks` | `### Top three actions` |
+  | `### Major unknowns` | `### Key unknowns` |
+  | — | `### Validation commands` (new) |
+
+  *Migration:* anything that locates content by these Markdown headings must use the new
+  names. Full findings were never in section 1 and remain in section 7, unchanged.
+
+- **Validation is stricter, so some reviews that passed v1.1.0 now fail.** Each of these was
+  already wrong under the methodology; the validator now enforces it. *Migration:* drop
+  `verdict` from full reviews; let change-scoped verdicts be derived rather than asserted;
+  write timestamps as RFC 3339; make root-cause links agree in both directions; point every
+  runtime citation at a declared artifact; use a supported `schema_version` and `spec`.
+
+- **The Action fails on invalid configuration** instead of silently falling back. An unknown
+  `fail-on` value or a malformed boolean input now stops the job, where v1.1.0 treated it as
+  `never`/off. *Migration:* a workflow that passed only because of such a typo will now fail —
+  fix the input.
+
+### Added
+
+- A versioned benchmark registry explicitly classifies the ten historical annotations as
+  development-only, tracks annotation digests and change origins, and gates held-out scoring
+  on independent truth, pinned commits, source metadata, and matching review provenance.
+- Exploratory raw scoring now labels its evidence tier and registered development provenance;
+  registered held-out truth, including an unchanged copy, must use the guarded evaluator.
+- Benchmark scoring now exposes annotation-relative abstention, known-trap avoidance, and
+  declared versus derived `UNKNOWN` outcomes without inventing correctness for unadjudicated
+  uncertainty or free-text candidate rejections.
+- Optional post-run candidate adjudication binds decisions to frozen truth and review content,
+  distinguishes avoided traps, acceptable omissions, missed required findings, and unresolved
+  candidates, and refuses stale or duplicate mappings.
+- Held-out benchmark evaluation now requires an auditable pre-registration timestamp and URL,
+  monotonic annotation-version timestamps, and a review generated after the current truth
+  version was recorded.
+- Ground truth can now adjudicate a verdict for one pinned change, including structured
+  evidence gaps for an expected `UNKNOWN`; scoring withholds correctness for a different diff,
+  and held-out evaluation rejects change-scoped reviews without matching verdict truth.
+- Independent-annotation intake now validates two expert submissions against the same pinned
+  repository and workload, freezes their content digests, and emits candidate pairs,
+  disagreements, ambiguities, and unmatched judgments for human resolution. It explicitly
+  remains ineligible as held-out evidence until that separate adjudication is completed.
+- Content-bound annotation resolution now requires a distinct adjudicator to decide every
+  intake unit, traces every final item to an include decision, preserves issue-versus-trap
+  semantics, and emits schema-valid ground truth with frozen intake and resolution digests.
+  It does not register the result or claim that held-out protocol requirements were met.
+- Blinded annotation campaigns can now export two opaque expert packets per pinned
+  repository without including the skill, existing truth, other assignments, or coordinator
+  mapping. Each packet binds submissions to its package ID, workload, commit, optional diff
+  base, and campaign freeze time; export still makes no claim about reviewer isolation,
+  license verification, pre-registration, or held-out readiness.
+- Campaign collection now fails closed on changed packets or protocols and on missing, extra,
+  stale, cross-assigned, or same-reviewer submissions. It preserves exact returned bytes and
+  raw/content hashes, binds the campaign coordinator by raw/content hashes, then emits per-case
+  intake reports for human adjudication without changing held-out readiness.
+- Campaign resolution collection now requires exactly one content-bound third-reviewer
+  resolution per collected case, re-derives intake from preserved annotations, and
+  freezes raw decisions plus generated truth with raw/content and tool hashes. It remains
+  pending independent protocol review and cannot mark cases held-out-ready.
+- A reference-ablation harness can freeze and compare category-only, category-plus-
+  technology, and full routed bundles using paired, pinned reviews. It reports finding
+  changes, adjudicated unsupported claims, context tokens, elapsed time, and cost, while
+  withholding its measured-contribution score when ground-truth matching is unresolved.
+- The ablation harness can export opaque, reference-limited run packages for independent
+  reviewers, keeping ground truth and arm assignments outside each review package.
+  It rejects placeholder or abbreviated commit pins and non-finite usage measurements.
+  No empirical three-arm result is claimed yet.
+- Optional structural-discovery evidence now has a vendor-neutral, versioned contract for
+  call edges, query shapes, and changed paths, with file/symbol provenance at both endpoints
+  and the relationship site. A stdlib validator rejects malformed or unsafe paths and,
+  when given a target root, paths outside that repository. The skill treats output as
+  advisory and keeps manual discovery complete; each producer must pass an independent
+  paired benchmark before any default recommendation.
+- Workload interviews now use an auditable adaptive gate: repository and derived evidence
+  answer candidates first, only questions that can change severity, confidence, or
+  recommendation survive, and survivors are ranked by ordinal expected decision value.
+  Machine-readable inputs record whether a question was asked and what evidence was checked;
+  validation enforces decision metadata, descending value order, and the seven-question
+  maximum while allowing a zero-question interview.
+- Analysis now separates broad discovery from report selection through a private candidate
+  ledger, an explicit critical-path and shared-resource coverage sweep, recorded dispositions,
+  root-cause merging, and only then scoring and the output budget. Plausible discarded
+  candidates can retain evidence, affected path, and a revisit condition in
+  `considered_not_reported`; completeness can record analyzed/identified shared resources,
+  and validation rejects impossible or silently incomplete coverage counts.
+- The default human report and pull-request comment now open with a bounded decision surface:
+  assessment, the top three actions, three key unknowns, and three validation commands before
+  detailed evidence. Finding JSON can carry structured validation commands with purpose and
+  per-command production safety. Render contracts cover zero, one, five, and sixteen findings
+  while retaining the full evidence, counter-evidence, alternatives, and validation sections.
+- Maintained, standard-library workflow recipes now cover Claude Code, Codex CLI, and a
+  vendor-neutral manual flow with one prompt and artifact contract. A complete pull-request
+  workflow uses the official Codex Action's API-key proxy, hands off only the two review
+  artifacts, and validates in a fresh credential-free job before publishing. It disables
+  persisted checkout credentials and stays advisory by default. CI smoke-tests prompt
+  generation, both provider command plans, manual validation, and workflow ordering without
+  paid model calls.
+- README onboarding now follows one vendor-neutral, copy-paste journey from checkout and
+  environment diagnosis through an exact agent prompt, two expected artifacts, authoritative
+  validation, and a concrete success signal. It also includes five two-minute troubleshooting
+  paths and shows a generic finding transformed into an evidence-based one; platform-specific
+  discovery commands remain in the installation guide.
+- `scripts/doctor.py`, a standard-library installation diagnostic for Python compatibility,
+  project and personal skill discovery, `SKILL.md`/registry integrity, writable review-output
+  locations, and optional GitHub CLI availability. It prints remediation commands, supports
+  JSON output and explicit plugin/cache paths, never reads application secrets or credential
+  contents, and now runs in CI on Linux, macOS, and Windows at Python 3.8.
+
+### Fixed
+
+- The quickstart clones the release tag rather than a branch, so a local review runs a fixed,
+  released version that reports the correct version number. Both workflow jobs pin the same
+  tested immutable tool revision, and a no-model-call regression test exports that pinned Git
+  tree and runs its documented commands, preventing a valid-looking but unusable pin.
+  Repository invariants and the onboarding tests now fail if the quickstart tag diverges from
+  the skill's version or if the quickstart clones `develop`.
+
+- Known canonical stable-ID collisions are now advisory warnings instead of publication
+  blockers, consistent with the documented identity limitation. Validator summaries, PR
+  comments, and SARIF preserve the warning; canonical-ID mismatches and duplicate finding
+  IDs remain errors, and derived verdicts are unchanged.
+
+- Malformed scalar fields in reviews now return schema and semantic validation errors
+  instead of crashing identifier lookups, priority checks, or stable-ID computation.
+  The validator, SARIF CLI, and PR-comment CLI reject malformed IDs without publishing output.
+
+- The composite Action now rejects unknown `fail-on` values and malformed boolean inputs
+  before doing any work, rather than letting typos silently disable uploads, comments, or a
+  requested merge gate. Inputs reach shell steps through environment variables; comment
+  updates match both the marker and `github-actions[bot]`; and comment footers describe the
+  configured gate accurately. Live Action CI covers `never`, `fail`, `warn`, invalid
+  configuration, full mode, and `UNKNOWN`.
+- Review validation is now the single publishability boundary shared by the CLI, SARIF,
+  pull-request renderer, repository invariants, and composite Action. It rejects full-review
+  verdicts, missing or contradictory change-scoped verdicts, unsupported schema/spec
+  versions, inconsistent two-way root-cause links, and runtime citations that do not resolve
+  to a declared artifact. Published verdicts are always derived from review contents.
+- The stdlib JSON Schema reader now enforces RFC 3339 `date-time` fields instead of silently
+  treating `format` as advisory. Its exact supported keyword subset is documented and covered
+  by contract tests, while semantic-validation failures have one negative fixture per rule.
+- Stability scoring now uses canonical `stable_id` values as a multiset instead of collapsing
+  findings into a dictionary keyed by `(file, category)`. Repeated IDs remain separate and are
+  reported as collisions, severity/priority comparisons exclude ambiguous collision pairs,
+  missing IDs are explicit, and the former location/category view is retained only as a named
+  approximation. Stale claims that no canonical algorithm exists were removed.
+- Benchmark scoring now uses maximum-cardinality, maximum-specificity bipartite assignment
+  instead of first-match traversal. Reordering findings or `expected`, `acceptable`, and
+  `forbidden` annotations can no longer change the score; equal-score assignments are surfaced
+  for adjudication, and every unmatched item receives a deterministic explanation. The two
+  committed machine-readable treatment reports were recomputed with no primary count changes.
+- `detect_stack.py` no longer treats project-scoped agent installations under `.claude`,
+  `.agents`, `.opencode`, or `.codex` as application evidence. The scanner also excludes its
+  own resolved skill root when it lives under the target repository and refuses to read file
+  or directory symlink targets outside that repository. This prevents the installed registry
+  and technology references from falsely detecting every technology the skill knows about.
+- The benchmark's repository-number scan applies the same agent-state and external-symlink
+  boundary, so numbers mentioned only by an installed skill cannot make an unsupported
+  performance claim appear sourced.
+
 ## [1.1.0] — 2026-09-11
 
 ### Added — the first evidence that the methodology does (and does not) help

@@ -9,6 +9,7 @@ Run with: python -m unittest discover -s tests
 """
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -225,6 +226,67 @@ class PrismaSchemaFileTests(unittest.TestCase):
             if rec["signal"] == "postgres"
         )
         self.assertNotIn("weak_evidence", postgres)
+
+
+class InstallationIsolationTests(unittest.TestCase):
+    """Installing the skill inside a target repository must not change that target's stack.
+
+    Project-scoped installation is a documented, supported path. Agent state is tooling, not
+    application evidence, and a copied skill contains every registry token by construction.
+    """
+
+    def setUp(self):
+        self.entries, warnings = detect.parse_registry(REGISTRY)
+        self.assertEqual(warnings, [])
+
+    def signals_in(self, root, **scan_options):
+        records, _evidence, _secrets, warnings = detect.scan(
+            str(root), 256 * 1024, **scan_options)
+        self.assertEqual(warnings, [])
+        return matched_signals(records, self.entries)
+
+    def test_project_scoped_agent_installations_do_not_change_detection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "requirements.txt").write_text(
+                "psycopg2-binary==2.9.9\n", encoding="utf-8")
+            expected = self.signals_in(root)
+            self.assertIn("postgres", expected)
+
+            for agent_dir in (".claude", ".agents", ".opencode", ".codex"):
+                technology = (root / agent_dir / "skills" /
+                              "backend-performance-review" / "technology")
+                technology.mkdir(parents=True)
+                (technology / "cassandra.md").write_text(
+                    "cassandra-driver and scylla guidance\n", encoding="utf-8")
+
+            self.assertEqual(self.signals_in(root), expected)
+
+    def test_explicit_skill_root_is_excluded_outside_standard_agent_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill_root = root / "tools" / "backend-performance-review"
+            technology = skill_root / "technology"
+            technology.mkdir(parents=True)
+            (technology / "cassandra.md").write_text(
+                "cassandra-driver and scylla guidance\n", encoding="utf-8")
+
+            self.assertNotIn(
+                "cassandra",
+                self.signals_in(root, excluded_roots=[str(skill_root)]),
+            )
+
+    def test_symlink_outside_the_repository_is_not_read(self):
+        with tempfile.TemporaryDirectory() as target, tempfile.TemporaryDirectory() as outside:
+            root = Path(target)
+            external_manifest = Path(outside) / "requirements.txt"
+            external_manifest.write_text("psycopg2-binary==2.9.9\n", encoding="utf-8")
+            try:
+                (root / "requirements.txt").symlink_to(external_manifest)
+            except OSError as exc:
+                self.skipTest("file symlinks are unavailable: %s" % exc)
+
+            self.assertNotIn("postgres", self.signals_in(root))
 
 
 class WeakEvidenceProvenanceTests(unittest.TestCase):
