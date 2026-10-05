@@ -21,12 +21,12 @@ class GoldenPathTests(unittest.TestCase):
 
     def test_quickstart_has_copyable_checkout_and_doctor_commands(self):
         # The quickstart must pin the released tag matching the skill's own version, never a
-        # moving branch: a user who clones `develop` runs unreleased code that still reports
+        # moving branch: a user who clones `main` runs unreleased code that still reports
         # the last release's version number.
         self.assertIn(
             "git clone --branch v%s https://github.com/Sanoy24/backend-performance-review.git "
             "../backend-performance-review" % SKILL_VERSION, README)
-        self.assertNotIn("git clone --branch develop", README)
+        self.assertNotIn("git clone --branch main", README)
         self.assertIn(
             "python ../backend-performance-review/scripts/doctor.py --project . "
             "--skill-dir ../backend-performance-review/skills/backend-performance-review "
