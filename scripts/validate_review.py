@@ -68,7 +68,25 @@ def review_summary(review):
         "declared_verdict": review.get("verdict"),
         "derived_verdict": derived,
         "findings": len(_array(review.get("findings"))),
+        "warnings": validation_warnings(review),
     }
+
+
+def validation_warnings(review):
+    """Report accepted identity collisions separately from publishability errors."""
+    groups = {}
+    for finding in _array(_object(review).get("findings")):
+        if not isinstance(finding, dict):
+            continue
+        stable_id, finding_id = finding.get("stable_id"), finding.get("id")
+        if isinstance(stable_id, str) and stable_id and isinstance(finding_id, str):
+            groups.setdefault(stable_id, []).append(finding_id)
+    return [
+        "%s share stable_id %r. This accepted collision needs human review to confirm "
+        "that these are distinct findings; the ID alone cannot distinguish them."
+        % (", ".join(sorted(ids)), stable_id)
+        for stable_id, ids in sorted(groups.items()) if len(ids) > 1
+    ]
 
 
 def find_skill_scripts_dir(schema_dir):
@@ -344,7 +362,6 @@ def validate(review, schema_dir):
     if scripts_dir:
         sys.path.insert(0, str(scripts_dir))
         import compute_stable_id  # noqa: E402
-        seen_stable_ids = {}
         for finding in _array(review.get("findings")):
             if not isinstance(finding, dict):
                 continue
@@ -363,14 +380,6 @@ def validate(review, schema_dir):
                     "(scripts/compute_stable_id.py) computes %r from its own location/"
                     "category — recompute it, do not hand-invent one"
                     % (finding.get("id"), actual, expected))
-            if isinstance(actual, str) and actual in seen_stable_ids:
-                problems.append(
-                    "%s and %s share stable_id %r — a known, accepted collision case "
-                    "(same file, symbol, and category) but worth a human glance to confirm "
-                    "they are not actually the same finding reported twice"
-                    % (seen_stable_ids[actual], finding.get("id"), actual))
-            elif isinstance(actual, str) and actual:
-                seen_stable_ids[actual] = finding.get("id")
 
     return problems
 
@@ -396,6 +405,8 @@ def main(argv=None):
             return 1
 
     problems, summary = validate_and_summarize(review, Path(args.schema_dir))
+    for warning in summary["warnings"]:
+        print("warning: " + warning, file=sys.stderr)
     if problems:
         print("%d problem(s) in %s:" % (len(problems), args.review), file=sys.stderr)
         for problem in problems:

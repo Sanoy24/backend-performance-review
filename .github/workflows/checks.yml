@@ -143,6 +143,24 @@ jobs:
           python -c "import json; assert json.load(open('${{ runner.temp }}/never-fail.sarif'))['runs'][0]['properties']['verdict'] == 'FAIL'"
           grep -F "Advisory. This check does not block merges." "$RUNNER_TEMP/perf-comment.md"
 
+      - name: Canonical ID collisions publish with advisory warnings
+        id: collision
+        uses: ./
+        with:
+          review: ${{ runner.temp }}/action-reviews/collision.json
+          sarif-file: ${{ runner.temp }}/collision.sarif
+          comment: "false"
+          upload-sarif: "false"
+          fail-on: fail
+
+      - name: Confirm collisions preserve findings, warnings, and the derived verdict
+        run: |
+          test "${{ steps.collision.outputs.verdict }}" = "WARN"
+          test "${{ steps.collision.outputs.findings }}" = "2"
+          python -c "import json; r=json.load(open('${{ runner.temp }}/collision.sarif'))['runs'][0]; assert len(r['results']) == 2; assert r['properties']['verdict'] == 'WARN'; assert 'share stable_id' in r['properties']['validationWarnings'][0]"
+          grep -F "share stable_id" "$RUNNER_TEMP/perf-comment.md"
+          grep -F "share stable_id" "$RUNNER_TEMP/perf-review-summary.json"
+
       - name: FAIL is rejected under fail-on=fail
         id: fail_fail
         continue-on-error: true

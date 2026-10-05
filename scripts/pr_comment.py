@@ -110,7 +110,8 @@ def first_validation_commands(findings, limit=3):
 def render(review, fail_on="never"):
     lines = [MARKER, "## Backend Performance Review", ""]
 
-    verdict = validate_review.review_summary(review)["verdict"]
+    summary = validate_review.review_summary(review)
+    verdict = summary["verdict"]
     if verdict:
         lines.append("%s — %s" % (VERDICT_BADGE.get(verdict, verdict),
                                   VERDICT_MEANING.get(verdict, "")))
@@ -133,6 +134,11 @@ def render(review, fail_on="never"):
         completeness.get("review_confidence", "not recorded"),
         completeness.get("ranking_method", "not recorded")))
     lines.append("")
+
+    if summary["warnings"]:
+        lines.extend(["### Validation warnings", ""])
+        lines.extend("- " + warning for warning in summary["warnings"])
+        lines.append("")
 
     lines.append("### Top actions")
     lines.append("")
