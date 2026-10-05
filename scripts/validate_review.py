@@ -117,13 +117,13 @@ def _semantic_problems(review):
     review = _object(review)
 
     schema_version = review.get("schema_version")
-    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
+    if not isinstance(schema_version, str) or schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         problems.append(
             "unsupported schema_version %r; supported: %s. See CHANGELOG.md for migration "
             "guidance" % (schema_version, ", ".join(sorted(SUPPORTED_SCHEMA_VERSIONS))))
 
     spec = _object(review.get("reproducibility")).get("spec")
-    if spec not in SUPPORTED_SPECS:
+    if not isinstance(spec, str) or spec not in SUPPORTED_SPECS:
         problems.append(
             "unsupported methodology spec %r; supported: %s. Re-run the review with the "
             "current skills/backend-performance-review/SKILL.md"
@@ -168,7 +168,7 @@ def _semantic_problems(review):
                 "%s must name a severity, confidence, or recommendation decision"
                 % label)
         value = item.get("expected_decision_value")
-        if value not in decision_value_rank:
+        if not isinstance(value, str) or value not in decision_value_rank:
             problems.append("%s must declare expected_decision_value" % label)
         else:
             rank = decision_value_rank[value]
@@ -188,7 +188,7 @@ def _semantic_problems(review):
         if not isinstance(item, dict):
             continue
         value = item.get("expected_decision_value")
-        if value not in decision_value_rank:
+        if not isinstance(value, str) or value not in decision_value_rank:
             continue
         rank = decision_value_rank[value]
         if rank < previous_rank:
@@ -225,6 +225,8 @@ def _semantic_problems(review):
     finding_by_id = {}
     for finding in findings:
         finding_id = finding.get("id")
+        if not isinstance(finding_id, str):
+            continue  # The schema already reports the invalid identifier type.
         if finding_id in finding_by_id:
             problems.append("duplicate finding id %s" % finding_id)
         elif finding_id:
@@ -234,6 +236,8 @@ def _semantic_problems(review):
     cause_by_id = {}
     for cause in causes:
         cause_id = cause.get("id")
+        if not isinstance(cause_id, str):
+            continue
         if cause_id in cause_by_id:
             problems.append("duplicate root cause id %s" % cause_id)
         elif cause_id:
@@ -242,7 +246,7 @@ def _semantic_problems(review):
     for finding in findings:
         finding_id = finding.get("id")
         cause_id = finding.get("root_cause_id")
-        if not cause_id:
+        if not isinstance(cause_id, str) or not cause_id:
             continue
         cause = cause_by_id.get(cause_id)
         if cause is None:
@@ -256,6 +260,8 @@ def _semantic_problems(review):
     for cause in causes:
         cause_id = cause.get("id")
         for finding_id in _array(cause.get("findings")):
+            if not isinstance(finding_id, str):
+                continue
             finding = finding_by_id.get(finding_id)
             if finding is None:
                 problems.append("%s references %s, which no findings[] entry declares"
@@ -270,6 +276,8 @@ def _semantic_problems(review):
         if not isinstance(artifact, dict):
             continue
         artifact_id = artifact.get("id")
+        if not isinstance(artifact_id, str):
+            continue
         if artifact_id in runtime_by_id:
             problems.append("duplicate runtime evidence id %s" % artifact_id)
         elif artifact_id:
@@ -286,7 +294,7 @@ def _semantic_problems(review):
                 if not reference:
                     problems.append(
                         "%s has runtime evidence without runtime_evidence_id" % finding_id)
-                elif reference not in runtime_by_id:
+                elif not isinstance(reference, str) or reference not in runtime_by_id:
                     problems.append(
                         "%s cites %s, which no review.runtime_evidence[] artifact declares"
                         % (finding_id, reference))
@@ -317,6 +325,9 @@ def validate(review, schema_dir):
         for finding in _array(review.get("findings")):
             if not isinstance(finding, dict):
                 continue
+            if (not isinstance(finding.get("severity"), str)
+                    or not isinstance(finding.get("confidence"), str)):
+                continue
             expected = matrix.get((finding.get("severity"), finding.get("confidence")))
             if expected and finding.get("priority") != expected:
                 problems.append(
@@ -338,7 +349,9 @@ def validate(review, schema_dir):
             if not isinstance(finding, dict):
                 continue
             if (not isinstance(finding.get("location"), dict)
-                    or not isinstance(finding.get("category"), str)):
+                    or not isinstance(finding.get("category"), str)
+                    or not isinstance(finding["location"].get("file"), str)
+                    or not isinstance(finding["location"].get("symbol", ""), str)):
                 # Shape errors are already reported by the schema validator; the canonical
                 # algorithm intentionally assumes its documented input shape.
                 continue
