@@ -38,6 +38,17 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Correction to the first A/B comparison: the arms were probably not model-matched.** The
+  results said "same model", but the committed treatment output records `claude-sonnet-5`,
+  while the control was dispatched later without an explicit model and recorded none (most
+  likely `claude-opus-5`). The breadth result (~2.5x more control findings) is therefore
+  confounded and unconfirmed. The discipline result holds and arguably strengthens, since a
+  stronger unguided model still invented figures the guided arm did not. The results page
+  carries a dated correction with the original claims kept visible, and the protocol now
+  requires each arm's model to be pinned and recorded from run metadata.
+
 ### Changed
 
 - **Trunk-based again: `main` is the only long-lived branch, and releases are tags.** The

@@ -9,6 +9,26 @@ sure it is and what would refute it — and produced **no improvement in breadth
 the control was better: it reported roughly two and a half times as many findings, several of
 them real and absent from this project's own ground truth.
 
+> **Correction, 2026-10-05 — the two arms were probably not run on the same model.** This page
+> originally said "same model". The committed treatment output records its model as
+> `claude-sonnet-5` (`raw/gin-treatment-2.md`, `raw/rails-treatment-1.md`). The control runs
+> were dispatched later, without an explicit model, from a session then running Opus 5; their
+> prose reports record no model, so the control model **cannot be verified** and is most likely
+> `claude-opus-5`. The protocol required matched models; this run did not meet that requirement.
+>
+> What that changes:
+>
+> - **The breadth result is confounded and should not be relied on.** A stronger model in the
+>   control arm could explain the ~2.5× finding-count gap on its own, with no contribution from
+>   the methodology.
+> - **The discipline result survives, and if anything strengthens.** If the control was the
+>   stronger model, it still invented performance figures that the guided arm did not — the
+>   confound runs against the treatment, not for it.
+>
+> Both arms must be re-run on one explicitly pinned model before the breadth question can be
+> answered. The original text below is kept as written, with the two affected statements
+> marked, so the correction can be checked against what was claimed.
+
 ---
 
 ## 1. What was run
@@ -18,7 +38,7 @@ them real and absent from this project's own ground truth.
 | `gin-realworld` @ `626c372` | 2 runs (5 and 8 findings) | 2 runs (14 and 13 findings) |
 | `rails-realworld` @ `a2ae4ff` | 1 run (4 findings) | 1 run (15 findings) |
 
-Same model, same commits. The treatment runs were not produced for this comparison — they are
+Same commits. ~~Same model~~ — **not verified, and probably not; see the correction above.** The treatment runs were not produced for this comparison — they are
 the blind passes from the first real validation run, committed to the corpus before an A/B was
 designed, and so cannot have been tuned to win it.
 
@@ -160,7 +180,8 @@ finds less. Whether the treatment's narrower output reflects useful restraint or
 is not answerable from three runs, and the eight `acceptable` entries the treatment arm did
 surface across its own runs suggest the gap is narrower than the raw counts imply.
 
-**Not tested at all:** model-independence (one model), cost and latency, and whether a reader
+**Not tested at all:** model-independence — and, per the correction above, the two arms were
+not even matched on model — cost and latency, and whether a reader
 acting on either report gets a faster system. That last one is the question that actually
 matters, and nothing here touches it.
 

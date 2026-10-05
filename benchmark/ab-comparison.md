@@ -64,6 +64,13 @@ named no file, `location.file` is empty — it is not resolved by going and look
 temptation runs the other way too: a transcriber who wants the treatment to win can flatten a
 good control finding. Both directions are failures.
 
+**The model must be pinned and recorded per arm, from the run itself.** The first comparison
+broke this: the treatment output recorded `claude-sonnet-5`, while the control was dispatched
+later without an explicit model and its prose reports recorded none. Record each arm's model
+from run metadata rather than relying on the arm's own output, which a prose-only control
+will not contain. *(Added 2026-10-05, after the run — see the correction in
+`ab-results/first-comparison.md`.)*
+
 **A single model says nothing about model-independence.** This measures whether the
 methodology helps *this* model. Whether it helps others is a separate open question — see
 `docs/roadmap.md`, and item 75 in [review-response.md](../docs/review-response.md).
