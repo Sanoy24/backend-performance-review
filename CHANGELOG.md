@@ -128,8 +128,8 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
-- Quickstart and both jobs in the maintained GitHub workflow now select the same tested
-  immutable development revision containing the doctor and recipe helpers. The default
+- Quickstart now clones `develop` to include the doctor, recipe helpers, and updated workflow
+  example. Both workflow jobs pin the same tested immutable tool revision. The default
   release branch lacked those helpers. A no-model-call regression test exports the pinned
   Git tree and runs its documented commands, preventing a valid-looking but unusable pin.
 

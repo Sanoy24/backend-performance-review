@@ -27,14 +27,13 @@ This path works with any coding agent that can read a local file. Run these comm
 the backend repository you want reviewed:
 
 ```bash
-git clone https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
-git -C ../backend-performance-review checkout 3b68afffa56d54bc08ee57f7e59dc7f297149dbe
+git clone --branch develop https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
 python ../backend-performance-review/scripts/doctor.py --project . --skill-dir ../backend-performance-review/skills/backend-performance-review --output .
 ```
 
-The pinned development revision includes the doctor and workflow helpers used here. It has
-passed the repository checks and is not a tagged release. Keep it pinned for reproducibility;
-update to a newer verified revision when needed.
+These helpers and the maintained workflow example currently live on `develop` and are not
+part of the tagged release. The workflow itself pins its executable tool checkouts to a tested
+immutable revision. To freeze a local review setup, record the checkout's commit before use.
 
 The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
 prompt into your coding agent:

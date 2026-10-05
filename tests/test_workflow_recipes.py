@@ -159,12 +159,13 @@ class GitHubWorkflowContractTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, self.workflow)
 
-    def test_both_jobs_and_quickstart_use_the_same_immutable_tool_revision(self):
+    def test_both_jobs_use_the_same_pin_and_quickstart_gets_the_updated_example(self):
         refs = re.findall(r"(?m)^\s+ref: ([0-9a-f]{40})\s*$", self.workflow)
         self.assertEqual(len(refs), 2)
         self.assertEqual(refs[0], refs[1])
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("git -C ../backend-performance-review checkout " + refs[0], readme)
+        self.assertIn("git clone --branch develop", readme)
+        self.assertNotIn("git -C ../backend-performance-review checkout " + refs[0], readme)
 
     def test_pinned_checkout_can_run_the_documented_helpers_without_model_calls(self):
         refs = re.findall(r"(?m)^\s+ref: ([0-9a-f]{40})\s*$", self.workflow)
