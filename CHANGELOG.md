@@ -40,6 +40,12 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **Correction: the first A/B results overstated one example.** They said a checkable code
+  fact and an unmeasured prediction in an unguided report sat "under the same bold
+  Critical". The report actually rated them Medium and Critical. The underlying point holds
+  (neither carried any evidence grade), but the claim was wrong. A paraphrase that had been
+  set in quotation marks as though verbatim is now marked as a paraphrase.
+
 - **Correction to the first A/B comparison: the arms were probably not model-matched.** The
   results said "same model", but the committed treatment output records `claude-sonnet-5`,
   while the control was dispatched later without an explicit model and recorded none (most
@@ -267,6 +273,8 @@ a **mixed** result reported in full rather than summarised into a win.
   falsifier-adjacent sentence, and it was a global caveat, not a per-finding disclosure.
   Control output carries no confidence or evidence-grade axis at all, so a code fact and an
   unmeasured prediction are typeset identically under the same bold **Critical**.
+  *[Corrected 2026-10-05: the two examples were rated Medium and Critical, not both
+  Critical; see the Unreleased "Fixed" entry.]*
   **What did not:** breadth. The control reported ~2.5× more findings, avoided both `forbidden`
   traps unaided — explicitly noticing the already-batched favorites path that `GT-F01` exists to
   test — and found two real issues this project's own ground truth did not contain.

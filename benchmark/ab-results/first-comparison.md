@@ -125,10 +125,15 @@ reached.
 
 A reader of a control report cannot distinguish:
 
-- a fact read directly off the code (*"`common.Bind` has no `MaxBytesReader`"* — checkable, certain), from
+- a fact read directly off the code (that `common.Bind` never wraps the request body in
+  `MaxBytesReader` — paraphrased; checkable, certain), from
 - an inference about production behaviour (*"WAL alone typically gives the largest single throughput win available in this codebase"* — an unmeasured prediction)
 
-Both are typeset identically, under a bold **Critical**. This is not a formatting quibble: the
+~~Both are typeset identically, under a bold **Critical**.~~ *Corrected 2026-10-05: they were
+not — the report rated the body-size finding **Medium** and the WAL finding **Critical**
+(`raw/gin-control-1.md`, findings 10 and 3).* The point stands without the overstatement:
+each carries only a severity label, with nothing to say whether it was read off the code or
+predicted, so a severity rank is all the reader gets. This is not a formatting quibble: the
 two-axis split (severity = how bad, confidence = how sure) is the single most load-bearing
 idea in the methodology, and its absence is what lets an unmeasured prediction inherit the
 authority of a code fact.
