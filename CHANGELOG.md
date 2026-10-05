@@ -128,6 +128,10 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Malformed scalar fields in reviews now return schema and semantic validation errors
+  instead of crashing identifier lookups, priority checks, or stable-ID computation.
+  The validator, SARIF CLI, and PR-comment CLI reject malformed IDs without publishing output.
+
 - The composite Action now rejects unknown `fail-on` values and malformed boolean inputs
   before doing any work, rather than letting typos silently disable uploads, comments, or a
   requested merge gate. Inputs reach shell steps through environment variables; comment

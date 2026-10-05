@@ -405,6 +405,57 @@ class ReviewValidationTests(unittest.TestCase):
         self.assertTrue(any("expected type object" in problem for problem in problems),
                         problems)
 
+    def test_malformed_scalar_fields_return_schema_errors(self):
+        paths = (
+            ("schema_version",), ("reproducibility", "spec"),
+            ("findings", 0, "id"), ("findings", 0, "root_cause_id"),
+            ("root_causes", 0, "id"), ("root_causes", 0, "findings", 0),
+            ("runtime_evidence", 0, "id"),
+            ("findings", 0, "evidence", 0, "runtime_evidence_id"),
+            ("findings", 0, "severity"), ("findings", 0, "confidence"),
+            ("findings", 0, "location", "file"),
+            ("findings", 0, "location", "symbol"),
+            ("findings", 0, "category"), ("findings", 0, "stable_id"),
+            ("workload", "inputs", 0, "expected_decision_value"),
+            ("decision_changing_questions", 0, "expected_decision_value"),
+        )
+        for path in paths:
+            for value in ([], {}, True, 7, None):
+                with self.subTest(path=path, value=value):
+                    review = self.valid()
+                    review["runtime_evidence"] = [{
+                        "id": "RUNTIME-001", "kind": "profile", "source": "profile.json"}]
+                    review["findings"][0]["evidence"][0].update({
+                        "kind": "runtime", "runtime_evidence_id": "RUNTIME-001"})
+                    review["workload"]["inputs"] = [{
+                        "asked": True, "source": "unanswered",
+                        "expected_decision_value": "high"}]
+                    review["decision_changing_questions"] = [{
+                        "expected_decision_value": "high"}]
+                    parent = review
+                    for key in path[:-1]:
+                        parent = parent[key]
+                    parent[path[-1]] = value
+                    problems, summary = validate_review.validate_and_summarize(
+                        review, self.SCHEMAS)
+                    self.assertTrue(any("expected type" in p for p in problems), problems)
+                    self.assertEqual(summary["findings"], 1)
+
+    def test_cli_and_publishers_reject_malformed_ids_without_output(self):
+        review = self.valid()
+        review["findings"][0]["id"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for entry_point in (validate_review.main, to_sarif.main, pr_comment.main):
+                with self.subTest(entry_point=entry_point.__module__):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = entry_point(["--review", str(path)])
+                    self.assertEqual(result, 1)
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertIn("expected type string", stderr.getvalue())
+
     def test_publishers_refuse_a_review_with_a_false_declared_verdict(self):
         review = self.valid()
         review["mode"] = "change-scoped"
