@@ -128,6 +128,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Quickstart and both jobs in the maintained GitHub workflow now select the same tested
+  immutable development revision containing the doctor and recipe helpers. The default
+  release branch lacked those helpers. A no-model-call regression test exports the pinned
+  Git tree and runs its documented commands, preventing a valid-looking but unusable pin.
+
 - Known canonical stable-ID collisions are now advisory warnings instead of publication
   blockers, consistent with the documented identity limitation. Validator summaries, PR
   comments, and SARIF preserve the warning; canonical-ID mismatches and duplicate finding

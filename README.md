@@ -23,13 +23,18 @@ Performance principle → observed implementation → technology manifestation
 
 ## Quickstart: your first validated review
 
-This path works with any coding agent that can read a local file. Run these two commands from
+This path works with any coding agent that can read a local file. Run these commands from
 the backend repository you want reviewed:
 
 ```bash
 git clone https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
+git -C ../backend-performance-review checkout 3b68afffa56d54bc08ee57f7e59dc7f297149dbe
 python ../backend-performance-review/scripts/doctor.py --project . --skill-dir ../backend-performance-review/skills/backend-performance-review --output .
 ```
+
+The pinned development revision includes the doctor and workflow helpers used here. It has
+passed the repository checks and is not a tagged release. Keep it pinned for reproducibility;
+update to a newer verified revision when needed.
 
 The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
 prompt into your coding agent:

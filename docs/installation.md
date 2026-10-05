@@ -242,9 +242,11 @@ cp backend-performance-review/examples/workflows/github-actions.yml \
   .github/workflows/backend-performance-review.yml
 ```
 
-The example follows `main` so it becomes usable with the release that introduces these
-recipes. After a successful trial, pin both review-tool checkouts to the same released tag or
-full commit SHA for reproducible runs.
+The example pins both review-tool checkouts to the same tested development commit,
+`3b68afffa56d54bc08ee57f7e59dc7f297149dbe`, which contains the helpers these recipes require.
+This is not a tagged release. The README quickstart uses the same revision; checking out the
+current release branch alone does not supply these development helpers. When updating,
+verify the replacement's helper scripts and keep both jobs on the same immutable revision.
 
 Create the repository secret `OPENAI_API_KEY`. The official agent Action keeps the key behind
 its API proxy; validation and publishing run in a separate job that never receives it or reuses

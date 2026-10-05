@@ -1,11 +1,14 @@
 """Smoke-test every maintained workflow without making a paid model call."""
 
 import importlib.util
+import io
 import json
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -155,8 +158,36 @@ class GitHubWorkflowContractTests(unittest.TestCase):
                 "persist-credentials: false"):
             with self.subTest(required=required):
                 self.assertIn(required, self.workflow)
-        self.assertEqual(self.workflow.count("ref: main"), 2)
-        self.assertIn("pin a release tag or commit SHA", self.workflow)
+
+    def test_both_jobs_and_quickstart_use_the_same_immutable_tool_revision(self):
+        refs = re.findall(r"(?m)^\s+ref: ([0-9a-f]{40})\s*$", self.workflow)
+        self.assertEqual(len(refs), 2)
+        self.assertEqual(refs[0], refs[1])
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("git -C ../backend-performance-review checkout " + refs[0], readme)
+
+    def test_pinned_checkout_can_run_the_documented_helpers_without_model_calls(self):
+        refs = re.findall(r"(?m)^\s+ref: ([0-9a-f]{40})\s*$", self.workflow)
+        self.assertEqual(len(refs), 2)
+        archive = subprocess.run(
+            ["git", "-C", str(ROOT), "archive", "--format=zip", refs[0]],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary)
+            with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+                bundle.extractall(checkout)
+            doctor = subprocess.run(
+                [sys.executable, "-I", str(checkout / "scripts/doctor.py"),
+                 "--project", str(checkout), "--output", str(checkout)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
+            prompt = subprocess.run(
+                [sys.executable, str(checkout / "scripts/workflow_recipe.py"), "prompt",
+                 "--project", str(checkout), "--mode", "change-scoped",
+                 "--base-ref", "origin/main"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            self.assertEqual(prompt.returncode, 0, prompt.stderr)
+            self.assertIn("mode to change-scoped", prompt.stdout)
 
     def test_example_does_not_expose_credentials_to_untrusted_forks(self):
         self.assertNotRegex(self.workflow, r"(?m)^\s*pull_request_target\s*:")
