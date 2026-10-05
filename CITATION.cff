@@ -7,8 +7,8 @@ authors:
 url: "https://github.com/Sanoy24/backend-performance-review"
 repository-code: "https://github.com/Sanoy24/backend-performance-review"
 license: MIT
-version: 1.1.0
-date-released: 2026-09-11
+version: 2.0.0
+date-released: 2026-10-05
 keywords:
   - performance-engineering
   - ai-agents

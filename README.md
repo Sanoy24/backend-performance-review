@@ -16,7 +16,7 @@ Performance principle → observed implementation → technology manifestation
 ```
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-informational.svg)](CHANGELOG.md)
 [![checks](https://github.com/Sanoy24/backend-performance-review/actions/workflows/checks.yml/badge.svg)](.github/workflows/checks.yml)
 
 ---
@@ -27,13 +27,13 @@ This path works with any coding agent that can read a local file. Run these comm
 the backend repository you want reviewed:
 
 ```bash
-git clone --branch develop https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
+git clone --branch v2.0.0 https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
 python ../backend-performance-review/scripts/doctor.py --project . --skill-dir ../backend-performance-review/skills/backend-performance-review --output .
 ```
 
-These helpers and the maintained workflow example currently live on `develop` and are not
-part of the tagged release. The workflow itself pins its executable tool checkouts to a tested
-immutable revision. To freeze a local review setup, record the checkout's commit before use.
+This clones the `v2.0.0` release tag, so the skill and helpers you run are a fixed, released
+version rather than a moving branch. The maintained workflow example separately pins both of
+its tool checkouts to one tested, immutable commit.
 
 The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
 prompt into your coding agent:

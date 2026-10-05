@@ -37,6 +37,44 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-05
+
+A major release because the human report's first section changed structure — by this
+project's own definition a breaking change. The JSON interchange format is **additive-only**:
+no field in `finding`, `review`, or `ground-truth` was removed or renamed, so consumers of the
+machine-readable review are unaffected by the rename. The rest of the release hardens trust and
+measurement: one validator now owns publishability, the detector no longer reads its own
+installation, scoring is permutation-invariant, and the benchmark gained a versioned dataset
+plus independent-annotation tooling. No held-out evaluation case exists yet; nothing here is a
+new accuracy claim.
+
+### Changed — breaking
+
+- **Report section 1 is restructured.** Only section 1 changed; sections 2–11 keep their
+  numbers and titles.
+
+  | v1.1.0 | v2.0.0 |
+  |:--|:--|
+  | `## 1. Executive summary` | `## 1. Decision summary` |
+  | `### Overall assessment` | `### Overall assessment` (unchanged) |
+  | `### Most important findings` + `### Highest-risk bottlenecks` | `### Top three actions` |
+  | `### Major unknowns` | `### Key unknowns` |
+  | — | `### Validation commands` (new) |
+
+  *Migration:* anything that locates content by these Markdown headings must use the new
+  names. Full findings were never in section 1 and remain in section 7, unchanged.
+
+- **Validation is stricter, so some reviews that passed v1.1.0 now fail.** Each of these was
+  already wrong under the methodology; the validator now enforces it. *Migration:* drop
+  `verdict` from full reviews; let change-scoped verdicts be derived rather than asserted;
+  write timestamps as RFC 3339; make root-cause links agree in both directions; point every
+  runtime citation at a declared artifact; use a supported `schema_version` and `spec`.
+
+- **The Action fails on invalid configuration** instead of silently falling back. An unknown
+  `fail-on` value or a malformed boolean input now stops the job, where v1.1.0 treated it as
+  `never`/off. *Migration:* a workflow that passed only because of such a typo will now fail —
+  fix the input.
+
 ### Added
 
 - A versioned benchmark registry explicitly classifies the ten historical annotations as
@@ -128,10 +166,12 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
-- Quickstart now clones `develop` to include the doctor, recipe helpers, and updated workflow
-  example. Both workflow jobs pin the same tested immutable tool revision. The default
-  release branch lacked those helpers. A no-model-call regression test exports the pinned
-  Git tree and runs its documented commands, preventing a valid-looking but unusable pin.
+- The quickstart clones the release tag rather than a branch, so a local review runs a fixed,
+  released version that reports the correct version number. Both workflow jobs pin the same
+  tested immutable tool revision, and a no-model-call regression test exports that pinned Git
+  tree and runs its documented commands, preventing a valid-looking but unusable pin.
+  Repository invariants and the onboarding tests now fail if the quickstart tag diverges from
+  the skill's version or if the quickstart clones `develop`.
 
 - Known canonical stable-ID collisions are now advisory warnings instead of publication
   blockers, consistent with the documented identity limitation. Validator summaries, PR

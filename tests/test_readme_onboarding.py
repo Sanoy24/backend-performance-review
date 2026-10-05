@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 INSTALLATION = (ROOT / "docs" / "installation.md").read_text(encoding="utf-8")
+SKILL_VERSION = re.search(
+    r"(?m)^\s*version:\s*(\d+\.\d+\.\d+)\s*$",
+    (ROOT / "skills" / "backend-performance-review" / "SKILL.md").read_text(encoding="utf-8"),
+).group(1)
 
 
 class GoldenPathTests(unittest.TestCase):
@@ -16,9 +20,13 @@ class GoldenPathTests(unittest.TestCase):
                         README.index("## Why this exists"))
 
     def test_quickstart_has_copyable_checkout_and_doctor_commands(self):
+        # The quickstart must pin the released tag matching the skill's own version, never a
+        # moving branch: a user who clones `develop` runs unreleased code that still reports
+        # the last release's version number.
         self.assertIn(
-            "git clone --branch develop https://github.com/Sanoy24/backend-performance-review.git "
-            "../backend-performance-review", README)
+            "git clone --branch v%s https://github.com/Sanoy24/backend-performance-review.git "
+            "../backend-performance-review" % SKILL_VERSION, README)
+        self.assertNotIn("git clone --branch develop", README)
         self.assertIn(
             "python ../backend-performance-review/scripts/doctor.py --project . "
             "--skill-dir ../backend-performance-review/skills/backend-performance-review "
