@@ -367,6 +367,14 @@ def check_version_coherence():
     else:
         fail("README.md: could not find the version badge to check")
 
+    # The quickstart must clone the release tag, not a branch. A clone of `develop` runs
+    # unreleased code that still reports the last release's version number.
+    clone_match = re.search(r"git clone --branch v(\d+\.\d+\.\d+) ", readme_text)
+    if clone_match:
+        sources["README.md quickstart clone tag"] = clone_match.group(1)
+    else:
+        fail("README.md: the quickstart must clone a release tag (git clone --branch vX.Y.Z)")
+
     for label, value in sources.items():
         if value != current:
             fail(f"{label} is '{value}', but CHANGELOG.md's newest entry is "
