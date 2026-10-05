@@ -76,6 +76,13 @@ jobs:
 
 Outputs: `verdict`, `findings`, `sarif-file`.
 
+Known collisions between correctly computed stable IDs are advisory. They appear in the
+validation log, PR comment, and SARIF `runs[].properties.validationWarnings`; all findings
+are preserved. They do not change the verdict or the `fail-on` policy. Inspect the named
+report-local finding IDs before treating a collision as a duplicate. Consumers that match
+only the shared fingerprint cannot automatically distinguish those findings. Incorrect
+canonical IDs and duplicate report-local IDs still prevent publication.
+
 ---
 
 ## Why `fail-on` defaults to `never`

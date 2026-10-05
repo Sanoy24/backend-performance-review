@@ -260,6 +260,15 @@ findings sharing a file, symbol, and category collide, and it does not resolve t
 citing one bug at different points in a call chain — that needs a human-curated
 `also_locations` entry or is reported as a known gap, not silently assumed away.
 
+Canonical stable-ID collisions are advisory validation warnings, not publishability errors.
+The validator's summary JSON includes a `warnings` array; the CLI also writes warnings to
+stderr, the PR comment displays them, and SARIF carries them in
+`runs[].properties.validationWarnings`. Distinct findings remain separate report entries
+with their report-local IDs. Consumers matching only stable IDs or SARIF fingerprints cannot
+distinguish a colliding group automatically and must inspect those entries. The canonical
+algorithm and fingerprints remain unchanged; mismatched canonical IDs and duplicate
+report-local finding IDs still fail validation. Warnings do not change the derived verdict.
+
 The validator (`scripts/json_schema_lite.py`) is stdlib-only for the same reason the registry
 reader is: the one command CONTRIBUTING tells a contributor to run must work on a clean
 checkout with nothing installed. The trade is identical too — it supports only the subset

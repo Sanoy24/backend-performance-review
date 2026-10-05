@@ -30,7 +30,16 @@ def build():
         "what_would_resolve_it": "Include the worker in the review scope",
     })
 
-    return {"full": full, "fail": fail, "warn": warn, "unknown": unknown}
+    collision = copy.deepcopy(warn)
+    second = copy.deepcopy(collision["findings"][0])
+    second.update({"id": "PERF-002", "root_cause_id": "ROOT-002",
+                   "problem": "A separate related-row lookup also runs once per order."})
+    collision["findings"].append(second)
+    collision["root_causes"].append({
+        "id": "ROOT-002", "description": second["problem"], "findings": ["PERF-002"]})
+
+    return {"full": full, "fail": fail, "warn": warn, "unknown": unknown,
+            "collision": collision}
 
 
 def main(argv=None):

@@ -341,15 +341,79 @@ class ReviewValidationTests(unittest.TestCase):
         problems = validate_review.validate(review, self.SCHEMAS)
         self.assertEqual([p for p in problems if "canonical algorithm" in p], [])
 
-    def test_two_findings_sharing_a_stable_id_are_flagged_for_a_human_glance(self):
+    def colliding_review(self):
         review = self.valid()
         second = json.loads(json.dumps(review["findings"][0]))
         second["id"] = "PERF-002"
-        # Distinct root cause so this doesn't also trip the dangling-reference check.
-        review["root_causes"][0]["findings"].append("PERF-002")
+        second["root_cause_id"] = "ROOT-002"
+        second["problem"] = "A separate related-row lookup also runs once per order."
+        review["root_causes"].append({
+            "id": "ROOT-002", "description": second["problem"], "findings": ["PERF-002"]})
         review["findings"].append(second)
+        return review
+
+    def test_canonical_stable_id_collision_is_advisory(self):
+        review = self.colliding_review()
+        problems, summary = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(summary["findings"], 2)
+        self.assertEqual(len(summary["warnings"]), 1)
+        self.assertIn("share stable_id", summary["warnings"][0])
+        self.assertIn("PERF-001", summary["warnings"][0])
+        self.assertIn("PERF-002", summary["warnings"][0])
+
+    def test_collision_warning_does_not_hide_invalid_canonical_ids(self):
+        review = self.colliding_review()
+        for finding in review["findings"]:
+            finding["stable_id"] = "deadbeefdeadbeef"
         problems = validate_review.validate(review, self.SCHEMAS)
-        self.assertTrue(any("share stable_id" in p for p in problems), problems)
+        self.assertEqual(sum("canonical algorithm" in p for p in problems), 2)
+
+    def test_collision_warning_is_permutation_invariant_and_does_not_change_verdict(self):
+        review = self.colliding_review()
+        review["mode"], review["verdict"] = "change-scoped", "FAIL"
+        problems, before = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        review["findings"].reverse()
+        problems, after = validate_review.validate_and_summarize(review, self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(before, after)
+        self.assertEqual(after["verdict"], "FAIL")
+
+    def test_collision_warnings_survive_cli_and_publishing(self):
+        review = self.colliding_review()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.json"
+            path.write_text(json.dumps(review), encoding="utf-8")
+            for entry_point, extra in ((validate_review.main, []),
+                                       (validate_review.main, ["--summary-json"]),
+                                       (to_sarif.main, []), (pr_comment.main, [])):
+                with self.subTest(entry_point=entry_point.__module__, extra=extra):
+                    stdout, stderr = StringIO(), StringIO()
+                    with redirect_stdout(stdout), redirect_stderr(stderr):
+                        result = entry_point(["--review", str(path)] + extra)
+                    self.assertEqual(result, 0)
+                    if entry_point is validate_review.main:
+                        self.assertIn("share stable_id", stderr.getvalue())
+                        if extra:
+                            summary = json.loads(stdout.getvalue())
+                            self.assertIn("share stable_id", summary["warnings"][0])
+                        else:
+                            self.assertIn("valid review (2 finding(s))", stdout.getvalue())
+                    elif entry_point is to_sarif.main:
+                        run = json.loads(stdout.getvalue())["runs"][0]
+                        self.assertEqual(len(run["results"]), 2)
+                        self.assertEqual({f["properties"]["id"] for f in run["results"]},
+                                         {"PERF-001", "PERF-002"})
+                        self.assertIn("share stable_id", run["properties"]["validationWarnings"][0])
+                    else:
+                        self.assertIn("### Validation warnings", stdout.getvalue())
+                        self.assertIn("share stable_id", stdout.getvalue())
+
+    def test_valid_review_without_collisions_has_no_warning(self):
+        problems, summary = validate_review.validate_and_summarize(self.valid(), self.SCHEMAS)
+        self.assertEqual(problems, [])
+        self.assertEqual(summary["warnings"], [])
 
     def test_a_schema_violation_is_caught(self):
         review = self.valid()

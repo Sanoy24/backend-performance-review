@@ -215,6 +215,7 @@ def to_sarif(review, include_adjacent=False):
             "verdict": summary["verdict"],
             "declaredVerdict": summary["declared_verdict"],
             "derivedVerdict": summary["derived_verdict"],
+            "validationWarnings": summary["warnings"],
             "reviewConfidence": completeness.get("review_confidence"),
             "evidenceAvailable": completeness.get("evidence_available"),
             "rankingMethod": completeness.get("ranking_method"),

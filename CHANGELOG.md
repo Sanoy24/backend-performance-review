@@ -128,6 +128,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Known canonical stable-ID collisions are now advisory warnings instead of publication
+  blockers, consistent with the documented identity limitation. Validator summaries, PR
+  comments, and SARIF preserve the warning; canonical-ID mismatches and duplicate finding
+  IDs remain errors, and derived verdicts are unchanged.
+
 - Malformed scalar fields in reviews now return schema and semantic validation errors
   instead of crashing identifier lookups, priority checks, or stable-ID computation.
   The validator, SARIF CLI, and PR-comment CLI reject malformed IDs without publishing output.
