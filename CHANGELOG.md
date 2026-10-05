@@ -128,6 +128,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- Quickstart now clones `develop` to include the doctor, recipe helpers, and updated workflow
+  example. Both workflow jobs pin the same tested immutable tool revision. The default
+  release branch lacked those helpers. A no-model-call regression test exports the pinned
+  Git tree and runs its documented commands, preventing a valid-looking but unusable pin.
+
 - Known canonical stable-ID collisions are now advisory warnings instead of publication
   blockers, consistent with the documented identity limitation. Validator summaries, PR
   comments, and SARIF preserve the warning; canonical-ID mismatches and duplicate finding

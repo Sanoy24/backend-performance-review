@@ -17,7 +17,7 @@ class GoldenPathTests(unittest.TestCase):
 
     def test_quickstart_has_copyable_checkout_and_doctor_commands(self):
         self.assertIn(
-            "git clone https://github.com/Sanoy24/backend-performance-review.git "
+            "git clone --branch develop https://github.com/Sanoy24/backend-performance-review.git "
             "../backend-performance-review", README)
         self.assertIn(
             "python ../backend-performance-review/scripts/doctor.py --project . "

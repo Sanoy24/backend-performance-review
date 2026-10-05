@@ -25,9 +25,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Sanoy24/backend-performance-review
-          # Start with main so the recipe works at release; pin a release tag or commit SHA
-          # after the first successful run in your repository.
-          ref: main
+          # Tested development revision containing the workflow helpers. Keep both jobs
+          # on this same immutable commit; update only after validating its replacement.
+          ref: 3b68afffa56d54bc08ee57f7e59dc7f297149dbe
           path: .backend-performance-review
           persist-credentials: false
 
@@ -85,7 +85,7 @@ jobs:
         with:
           repository: Sanoy24/backend-performance-review
           # Keep this identical to the generation job.
-          ref: main
+          ref: 3b68afffa56d54bc08ee57f7e59dc7f297149dbe
           path: .backend-performance-review
           persist-credentials: false
 
