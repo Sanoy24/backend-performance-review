@@ -25,9 +25,10 @@ Breaking changes carry a migration note in the entry.
 
 ## Release cadence
 
-What a change *is* (major/minor/patch, above) is separate from *when it ships*. From v0.6.0
-onward, work accumulates on `develop` and a release is cut deliberately, at a milestone, rather
-than every time `main` moves — see [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests).
+What a change *is* (major/minor/patch, above) is separate from *when it ships*. Work lands on
+`main` continuously, and a release is a tag cut deliberately, at a milestone, rather than every
+time `main` moves — see [CONTRIBUTING.md §2](CONTRIBUTING.md#2-branching-and-pull-requests).
+(From v0.6.0 to v2.0.0 a separate `develop` branch played that role; tags do it now.)
 Patch and minor releases still happen when something genuinely warrants shipping sooner (a
 detection bug that silently drops a signal, for instance); they are just no longer the default
 response to a batch of merges. Between releases, version numbers stay at the last released
@@ -36,6 +37,15 @@ value and `[Unreleased]` accumulates.
 ---
 
 ## [Unreleased]
+
+### Changed
+
+- **Trunk-based again: `main` is the only long-lived branch, and releases are tags.** The
+  `develop` branch is retired; pull requests target `main`. The v0.6.0 reason for a second
+  branch — stop releasing every time `main` moves — is now met by tags, since the quickstart
+  clones a release tag and CI enforces it. The second branch's cost was real: squash merges
+  made the two diverge by commit even with identical content, so every release from v1.0.0
+  to v2.0.0 needed hand-resolved conflicts plus a sync pull request. See CONTRIBUTING.md §2.
 
 ## [2.0.0] — 2026-10-05
 

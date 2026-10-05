@@ -168,7 +168,7 @@ class GitHubWorkflowContractTests(unittest.TestCase):
             encoding="utf-8")
         version = re.search(r"(?m)^\s*version:\s*(\d+\.\d+\.\d+)\s*$", skill).group(1)
         self.assertIn("git clone --branch v%s" % version, readme)
-        self.assertNotIn("git clone --branch develop", readme)
+        self.assertNotIn("git clone --branch main", readme)
         self.assertNotIn("git -C ../backend-performance-review checkout " + refs[0], readme)
 
     def test_pinned_checkout_can_run_the_documented_helpers_without_model_calls(self):
