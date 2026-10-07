@@ -306,6 +306,18 @@ def _is_within(path, root):
         return False
 
 
+def is_installed_skill(directory):
+    """True when `directory` is an Agent Skills directory: it holds a SKILL.md.
+
+    Forty-plus agents read that format, each installing project skills under its own path
+    (`.github/skills` for Copilot, among others), so no list of directory names stays
+    complete. The format itself is the reliable marker, and an installed skill is tooling,
+    never application evidence. Callers apply this below the target root only, so a
+    repository that is itself a skill is still scanned.
+    """
+    return os.path.isfile(os.path.join(directory, "SKILL.md"))
+
+
 def scan(repo, max_bytes, excluded_roots=None):
     """Return (records, evidence_files, secret_files, warnings).
 
@@ -346,6 +358,8 @@ def scan(repo, max_bytes, excluded_roots=None):
             if not _is_within(resolved_dir, repo):
                 continue
             if any(_is_within(resolved_dir, path) for path in excluded):
+                continue
+            if is_installed_skill(full_dir):
                 continue
             kept_dirs.append(name)
         dirnames[:] = kept_dirs

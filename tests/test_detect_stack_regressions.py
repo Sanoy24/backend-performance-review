@@ -8,6 +8,7 @@ found in a real lockfile, CI workflow, or compose file during that evaluation.
 Run with: python -m unittest discover -s tests
 """
 
+import shutil
 import sys
 import tempfile
 import unittest
@@ -261,6 +262,55 @@ class InstallationIsolationTests(unittest.TestCase):
                     "cassandra-driver and scylla guidance\n", encoding="utf-8")
 
             self.assertEqual(self.signals_in(root), expected)
+
+    def test_the_real_skill_installed_where_copilot_puts_it_changes_nothing(self):
+        # Regression: GitHub Copilot installs project skills under `.github/skills/`, which
+        # the agent-directory list did not cover. A two-signal Flask app reported all 39
+        # signals once this skill sat there, because its registry and every technology
+        # reference were read as application evidence.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "requirements.txt").write_text("flask==3.0.0\n", encoding="utf-8")
+            expected = self.signals_in(root)
+
+            shutil.copytree(str(SKILL),
+                            str(root / ".github" / "skills" / "backend-performance-review"))
+
+            self.assertEqual(self.signals_in(root), expected)
+
+    def test_any_installed_skill_is_excluded_wherever_an_agent_puts_it(self):
+        # Forty-plus agents read the Agent Skills format, each with its own install path, so
+        # a list of directory names will always be behind. A directory holding a SKILL.md is
+        # an installed skill by the format's own definition, and never application code.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "requirements.txt").write_text(
+                "psycopg2-binary==2.9.9\n", encoding="utf-8")
+            expected = self.signals_in(root)
+            self.assertIn("postgres", expected)
+
+            for install in (".github/skills/perf", ".cursor/skills/perf",
+                            ".gemini/skills/perf", ".windsurf/skills/perf",
+                            "tooling/ai/some-unrelated-skill"):
+                skill_dir = root / install
+                (skill_dir / "notes").mkdir(parents=True)
+                (skill_dir / "SKILL.md").write_text(
+                    "---\nname: perf\ndescription: test fixture\n---\n", encoding="utf-8")
+                (skill_dir / "notes" / "cassandra.md").write_text(
+                    "cassandra-driver and scylla guidance\n", encoding="utf-8")
+
+            self.assertEqual(self.signals_in(root), expected)
+
+    def test_a_skill_md_at_the_target_root_does_not_hide_the_target(self):
+        # The rule removes skills installed INSIDE the target. A repository that is itself a
+        # skill is still the thing the user asked to review, so its root is always scanned.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "SKILL.md").write_text(
+                "---\nname: x\ndescription: fixture\n---\n", encoding="utf-8")
+            (root / "requirements.txt").write_text(
+                "psycopg2-binary==2.9.9\n", encoding="utf-8")
+            self.assertIn("postgres", self.signals_in(root))
 
     def test_explicit_skill_root_is_excluded_outside_standard_agent_directories(self):
         with tempfile.TemporaryDirectory() as directory:

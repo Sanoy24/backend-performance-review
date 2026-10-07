@@ -283,6 +283,11 @@ Properties worth knowing before you run it on someone else's code:
   `.codex`). The last group is load-bearing for project-scoped installation: a copied skill
   contains every registry token and technology reference, but those files are tooling rather
   than evidence about the application being reviewed.
+- It skips **any directory holding a `SKILL.md`**, wherever it sits below the target root.
+  That is the Agent Skills format's own marker for an installed skill, so it covers every
+  agent's install path — `.github/skills` for GitHub Copilot, among others — rather than
+  relying on a list of directory names that falls behind each new agent. A `SKILL.md` at the
+  target root itself is ignored by this rule: a repository that is a skill is still reviewed.
 - It does not follow a file or directory symlink outside the target repository, and explicitly
   excludes its own resolved skill directory if installed somewhere else beneath the target.
 - It caps per-file and total bytes read, and caps file count. On a very large repository the

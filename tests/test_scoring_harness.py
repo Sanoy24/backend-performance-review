@@ -912,6 +912,24 @@ class DisciplineMetricTests(unittest.TestCase):
             self.assertIn("20", tokens)
             self.assertNotIn("800", tokens)
 
+    def test_skill_installed_under_any_agent_path_is_not_repository_evidence(self):
+        # Copilot installs project skills under .github/skills, which the directory-name
+        # list missed. A directory holding a SKILL.md is an installed skill wherever it sits,
+        # and its numbers must not make an invented figure look sourced.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "service.py").write_text("PAGE_SIZE = 20\n", encoding="utf-8")
+            for install in (".github/skills/perf", ".cursor/skills/perf"):
+                skill = root / install
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text("---\nname: perf\n---\n", encoding="utf-8")
+                (skill / "reference.md").write_text(
+                    "A generic example mentions 800ms.\n", encoding="utf-8")
+
+            tokens = scorer.repo_number_tokens(root)
+            self.assertIn("20", tokens)
+            self.assertNotIn("800", tokens)
+
     def test_a_bare_number_with_no_unit_is_never_flagged(self):
         # Line numbers, versions and counts are not performance claims. Flagging them would
         # bury the one kind of number that actually misleads a reader.
