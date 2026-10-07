@@ -1,8 +1,8 @@
 # Second A/B comparison — one pinned model
 
-**Status: pre-registered, not yet run.** This design was committed before any run in this
-comparison started. Results will be appended below the line at the end, without editing
-anything above it.
+**Status: run and adjudicated, 2026-10-07.** The design below was committed before any run
+started (PR #100); the results were appended afterwards without editing it, apart from this
+status line.
 
 ## Why this run exists
 
@@ -53,4 +53,94 @@ reported here with the same prominence.
 
 ## Results
 
-*Not yet run.*
+**The breadth cost is real.** With the model held fixed, the guided arm found 69% as many
+distinct real performance issues as the plain arm, below the 75% line fixed in advance. The
+discipline result also replicates: the plain arm invented performance figures and stated no
+falsifiers, and the guided arm did neither.
+
+### The model was held fixed
+
+Every one of the six runs used `claude-opus-5-5` on every API call, read from each run's own
+transcript metadata. The same check settles the first comparison's open question: its
+treatment ran on `claude-sonnet-5` and its control on `claude-opus-5`. The confound reported
+there is now **confirmed**, not suspected.
+
+### Breadth: distinct real issues per run
+
+Raw finding counts are not comparable: the methodology requires merging findings that share a
+root cause, while the plain reports bundle several items under one heading. Each report was
+therefore mapped onto a common list of distinct issues for its repository, every issue was
+checked against the source, and a run was credited only for issues it reported as findings.
+Issues seen but placed in `considered_not_reported`, mentioned only as context, or filed as a
+correctness finding were not credited. The same rules applied to both arms.
+
+| Run | Plain | Guided |
+|:--|--:|--:|
+| `gin-realworld` #1 | 11 | 6 |
+| `gin-realworld` #2 | 12 | 7 |
+| `rails-realworld` | 9 | 9 |
+| **Mean** | **10.7** | **7.3** (69%) |
+
+Two observations matter more than the mean:
+
+1. **The whole gap is in gin.** On Rails the arms tied 9–9, each catching one issue the other
+   missed: the guided run found Puma's default 16 threads against a 5-connection database pool
+   (verified: Puma 3.4.0, no config file, `pool: 5`); the plain run found one-row-at-a-time
+   cascading deletes.
+2. **The guided arm caught the high-severity issues.** Every issue the plain reports rated
+   Critical or High in gin was found by the guided arm too — the per-item N+1, missing
+   indexes, unbounded page sizes, and writes on read paths — with one exception: guided run #1
+   did not report SQLite's journal, timeout and pool configuration as a finding of its own.
+
+What the guided arm missed in gin, all verified against the source:
+
+| Issue | Plain runs | Guided runs | Why the guided arm missed it |
+|:--|:-:|:-:|:--|
+| Favorite/follow soft-deletes accumulate without bound | 2/2 | 0/2 | Mentioned once as context for the index finding, never reported |
+| Filtered lists fetch in several steps and page before sorting | 2/2 | 0/2 | Run #1 filed it as a correctness finding only |
+| Saving a comment re-saves its loaded associations | 2/2 | 0/2 | Never surfaced |
+| Feed loads full user rows to build `IN` lists | 2/2 | 0/2 | **Seen and dropped** in both runs' `considered_not_reported` |
+| Count recomputed on every list request | 1/2 | 0/2 | **Seen and dropped** by run #1 |
+
+One plain-arm claim was **rejected** in adjudication: both plain gin runs reported Gin's debug
+mode as a cost. It is not a per-request one — debug mode adds route-registration logging at
+startup, and the per-request access log runs in either mode. Guided run #1 examined exactly
+this and correctly left it out ("Debug mode only adds route-registration logging"). It was
+first counted for the plain arm and removed on checking, which moved the result from 65% to
+69%; the verdict is unchanged.
+
+That splits the gap into **two distinct failure modes**, which call for different fixes:
+
+- **Over-filtering:** real issues are found, then judged not worth reporting. A selection or
+  materiality problem.
+- **Missed discovery:** real issues are never surfaced at all. A coverage problem: write paths
+  and table growth over time were not examined.
+
+### Discipline: the first comparison's result replicates
+
+| | Plain | Guided |
+|:--|:-:|:-:|
+| Unsourced performance estimates | **3** across 3 runs | **0** |
+| Hedge or falsifier language in the reports | **0** lines of 826 | Every finding (schema-required) |
+| Schema-valid machine output | — | 3 of 3 |
+
+The three unsourced estimates: bcrypt "roughly 50–100 ms per call" and "about 50–100 ms of CPU"
+(one in each gin plain run), and SQLite statements at "~20–100 µs" each. Every unit-bearing
+number in all six reports was extracted with `score.py`'s own pattern and adjudicated by hand.
+The guided arm's numbers were a test script's 500 ms delay and a 5000 ms busy timeout, both read
+from the repositories. As in the first comparison, falsifiability is enforced by the guided
+arm's schema, so that row shows the format working, not better reasoning; the unsourced-estimate
+row is the behavioural one.
+
+### What this decides
+
+- **Phase 2 (breadth recovery) goes ahead.** Its premise is no longer an artefact of a model
+  mismatch.
+- **It now has a diagnosis.** Over-filtering and missed discovery are separate problems. The
+  first is a change to how candidates are judged material; the second is a change to what the
+  coverage sweep examines — write paths and table growth over time.
+- **The cost of fixing it must not be the discipline.** Phase 2's own exit criterion already
+  says so: unsourced-number and trap performance must not regress.
+
+**n = 3 per arm, two repositories, one model.** Directional, not a general result. Raw output
+for every run is in [`raw-second/`](raw-second/).

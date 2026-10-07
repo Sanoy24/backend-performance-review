@@ -28,6 +28,13 @@ them real and absent from this project's own ground truth.
 > Both arms must be re-run on one explicitly pinned model before the breadth question can be
 > answered. The original text below is kept as written, with the two affected statements
 > marked, so the correction can be checked against what was claimed.
+>
+> **Update, 2026-10-07 — confirmed, and the breadth question answered.** The run transcripts
+> settle what the reports could not: every treatment run used `claude-sonnet-5` and every
+> control run used `claude-opus-5`, on every API call. The arms were not model-matched. The
+> [second comparison](second-comparison.md) then re-ran both arms on one pinned model. The
+> breadth cost held — the guided arm found 69% as many distinct real issues, below the 75% line
+> fixed in advance — and the discipline result replicated.
 
 ---
 
