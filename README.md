@@ -35,6 +35,17 @@ This clones the `v2.0.0` release tag, so the skill and helpers you run are a fix
 version rather than a moving branch. The maintained workflow example separately pins both of
 its tool checkouts to one tested, immutable commit.
 
+**Only want the skill inside your agent?** The [Agent Skills](https://agentskills.io) installer
+adds it to Claude Code, GitHub Copilot, Cursor, Codex, and other agents that read the format,
+pinned to the same release:
+
+```bash
+npx skills add https://github.com/Sanoy24/backend-performance-review/tree/v2.0.0/skills/backend-performance-review
+```
+
+That installs the skill alone. The doctor and `validate_review.py` used below come from the
+clone above.
+
 The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
 prompt into your coding agent:
 

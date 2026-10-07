@@ -369,6 +369,11 @@ def check_version_coherence():
 
     # The quickstart must clone the release tag, not a branch. A clone of `main` runs
     # unreleased code that still reports the last release's version number.
+    installer_match = re.search(
+        r"backend-performance-review/tree/v(\d+\.\d+\.\d+)/skills/", readme_text)
+    if installer_match:
+        sources["README.md skill-installer tag"] = installer_match.group(1)
+
     clone_match = re.search(r"git clone --branch v(\d+\.\d+\.\d+) ", readme_text)
     if clone_match:
         sources["README.md quickstart clone tag"] = clone_match.group(1)
@@ -620,6 +625,52 @@ def check_schema_is_referenced():
 
 
 # ---------------------------------------------------------------------------
+# The Agent Skills specification (agentskills.io/specification)
+#
+# Forty-plus agents load skills in this format, and its reference validator rejects any
+# frontmatter field outside the spec. `when_to_use` -- a Claude Code extension -- once made the
+# official validator reject this skill outright, and kept its trigger phrases invisible to
+# every other agent, which read only `description`. Enforced here so it cannot come back.
+# ---------------------------------------------------------------------------
+
+SPEC_FRONTMATTER_FIELDS = {"name", "description", "license", "compatibility",
+                           "metadata", "allowed-tools"}
+
+
+def check_agent_skills_spec():
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    parts = text.split("---", 2)
+    if len(parts) < 3 or parts[0].strip():
+        fail("SKILL.md: frontmatter must open the file between '---' lines")
+        return
+    frontmatter = parts[1]
+    keys = re.findall(r"(?m)^([A-Za-z_][A-Za-z0-9_-]*):", frontmatter)
+    extra = sorted(set(keys) - SPEC_FRONTMATTER_FIELDS)
+    if extra:
+        fail("SKILL.md: frontmatter fields outside the Agent Skills spec: %s — the reference "
+             "validator rejects them, and other agents never read them" % ", ".join(extra))
+
+    name = re.search(r"(?m)^name:\s*(.+?)\s*$", frontmatter)
+    if not name:
+        fail("SKILL.md: missing required 'name'")
+    else:
+        value = name.group(1)
+        if (len(value) > 64 or not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", value)
+                or value != SKILL.name):
+            fail("SKILL.md: name '%s' must be lowercase-hyphenated, at most 64 characters, "
+                 "and match its directory '%s'" % (value, SKILL.name))
+
+    description = re.search(r"(?m)^description:\s*(.+?)\s*$", frontmatter)
+    if not description:
+        fail("SKILL.md: missing required 'description'")
+    elif len(description.group(1)) > 1024:
+        fail("SKILL.md: description is %d characters; the spec allows 1024"
+             % len(description.group(1)))
+
+    compatibility = re.search(r"(?m)^compatibility:\s*(.+?)\s*$", frontmatter)
+    if compatibility and len(compatibility.group(1)) > 500:
+        fail("SKILL.md: compatibility exceeds the spec's 500 characters")
+
 
 def check_benchmark_dataset():
     try:
@@ -643,6 +694,7 @@ def main():
     check_ground_truth_files_validate()
     check_benchmark_dataset()
     check_schema_is_referenced()
+    check_agent_skills_spec()
     if entries:
         check_tier_summary_counts(entries)
         check_technology_registry_consistency(entries)

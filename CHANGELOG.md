@@ -38,7 +38,23 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- **One-line install into any Agent Skills agent, pinned to the release.** The README now
+  offers `npx skills add .../tree/v2.0.0/skills/backend-performance-review` for users who
+  want only the skill inside Claude Code, Copilot, Cursor, Codex, or another agent that reads
+  the format. The installer's own docs show no pinning syntax; the `tree/<tag>/` form was
+  verified to resolve the tag. Version coherence now covers that tag too.
+
 ### Fixed
+
+- **The skill failed the Agent Skills reference validator.** `skills-ref validate` rejected
+  `SKILL.md` for its `when_to_use` field, a Claude Code extension outside the spec. Worse, every
+  agent other than Claude Code reads only `description` to decide whether to load a skill, so
+  the trigger phrases ("why is this slow", "will this scale") were invisible to them. They are
+  now part of `description` (715 of 1,024 characters), `allowed-tools` uses the spec's
+  space-separated form (which Claude Code also accepts), the skill passes the validator, and
+  the repository invariants now fail on any frontmatter field outside the spec.
 
 - **Installing the skill where GitHub Copilot puts it corrupted detection.** Copilot installs
   project skills under `.github/skills/`, which the agent-directory list did not cover. With

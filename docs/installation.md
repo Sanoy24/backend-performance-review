@@ -60,16 +60,21 @@ update this table with the new date and note the change in `CHANGELOG.md`.
 
 ```yaml
 name:            backend-performance-review
-description:     <trigger conditions — see below>
-when_to_use:     <additional trigger phrases>
+description:     <trigger conditions and trigger phrases — see below>
 license:         MIT
 compatibility:   <environment requirements>
-allowed-tools:   Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *)
+allowed-tools:   Read Grep Glob Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) …
 metadata:        {version, spec}
 ```
 
-Every one of these is in the portable [Agent Skills](https://agentskills.io) subset except
-`when_to_use`, which Claude Code supports and other consumers ignore harmlessly.
+Every one of these is in the [Agent Skills](https://agentskills.io/specification) spec, and the
+skill passes the spec's reference validator (`skills-ref validate`). It once also carried
+`when_to_use`, a Claude Code extension; that is now folded into `description`, for two reasons.
+The reference validator rejects any field outside the spec, so a strict consumer would refuse
+the skill. And every agent except Claude Code reads only `description` when deciding whether
+to load a skill, so the trigger phrases were invisible to them. `check_repo_invariants.py` now
+fails on any non-spec field. `allowed-tools` is space-separated, the form both the spec and
+Claude Code accept.
 
 Two notes on specific fields:
 
@@ -77,8 +82,8 @@ Two notes on specific fields:
   decide whether to load the skill at all. It is written as *trigger conditions* — the
   situations in which the skill should fire — rather than as a summary of what the skill is.
   A description reading "A skill for backend performance reviews" would be correct and
-  useless. `description` and `when_to_use` are truncated together at 1,536 characters in the
-  skill listing, so the key use cases come first.
+  useless. The spec caps it at 1,024 characters and Claude Code truncates its skill listing
+  at 1,536, so the key use cases come first.
 - **`allowed-tools`** pre-approves the read-only tools the review needs plus the bundled
   detection script, so a review does not generate a permission prompt per file. The grant
   lasts for the invoking turn only. `${CLAUDE_SKILL_DIR}` expands to the installed skill
@@ -301,7 +306,7 @@ Output is JSON on stdout; diagnostics go to stderr.
 
 Three paths, in decreasing order of how often they happen:
 
-1. **Automatic.** The model reads the `description` and `when_to_use` fields from the skill
+1. **Automatic.** The model reads the `description` field from the skill
    listing and loads the skill when a request matches — "why is this endpoint slow", "review
    this service for performance", "will this scale".
 2. **Explicit.** You type `/backend-performance-review`.

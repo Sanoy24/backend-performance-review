@@ -1,10 +1,9 @@
 ---
 name: backend-performance-review
-description: Reviews backend codebases for performance bottlenecks using an evidence-first, workload-driven methodology. Use when investigating latency, throughput, slow endpoints, database or query performance, N+1 queries, connection pool exhaustion, event-loop blocking, lock contention, memory or CPU pressure, queue lag, or timeout and retry storms — and when asked to audit, review, or improve the performance or scalability of a backend service, API, worker, or data layer.
-when_to_use: Trigger phrases include "performance review", "why is this slow", "audit performance", "find bottlenecks", "will this scale", "review this service for performance", "perf review of this PR". Works on any language, framework, runtime, or datastore.
+description: Reviews backend codebases for performance bottlenecks using an evidence-first, workload-driven methodology. Use when investigating latency, throughput, slow endpoints, database or query performance, N+1 queries, connection pool exhaustion, event-loop blocking, lock contention, memory or CPU pressure, queue lag, or timeout and retry storms — and when asked to audit, review, or improve the performance or scalability of a backend service, API, worker, or data layer. Trigger phrases include "performance review", "why is this slow", "audit performance", "find bottlenecks", "will this scale", "review this service for performance", "perf review of this PR". Works on any language, framework, runtime, or datastore.
 license: MIT
 compatibility: Requires read access to the target repository. Optional accelerator scripts require Python 3.8+ (standard library only). No network access required.
-allowed-tools: Read, Grep, Glob, Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *), Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *)
+allowed-tools: Read Grep Glob Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *)
 metadata:
   version: 2.0.0
   spec: backend-performance-review/2.0
