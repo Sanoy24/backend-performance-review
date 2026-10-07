@@ -1015,10 +1015,14 @@ def repo_number_tokens(repo_root):
     tokens = set()
     root = os.path.realpath(os.path.abspath(repo_root))
     for dirpath, dirnames, filenames in os.walk(root):
+        # A directory holding a SKILL.md is an installed agent skill (the Agent Skills format's
+        # own marker), wherever an agent put it -- `.github/skills` for Copilot, among others.
+        # Its numbers are tooling, and counting them would let an invented figure look sourced.
         dirnames[:] = [
             name for name in dirnames
             if name.casefold() not in SKIP_DIR_NAMES
             and _is_within_repo(os.path.join(dirpath, name), root)
+            and not os.path.isfile(os.path.join(dirpath, name, "SKILL.md"))
         ]
         for name in filenames:
             path = os.path.join(dirpath, name)

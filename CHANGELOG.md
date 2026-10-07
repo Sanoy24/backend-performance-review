@@ -40,6 +40,15 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **Installing the skill where GitHub Copilot puts it corrupted detection.** Copilot installs
+  project skills under `.github/skills/`, which the agent-directory list did not cover. With
+  this skill there, a two-signal Flask app reported all 39 signals and routed 59 reference
+  files instead of 5. The detector and the benchmark's number scan now skip any directory
+  holding a `SKILL.md` — the Agent Skills format's own marker — below the target root, so
+  the fix covers every agent's install path rather than adding one more name to a list.
+  Regression tests copy the real skill into `.github/skills` and plant fixture skills under
+  Cursor, Gemini, Windsurf, and arbitrary paths.
+
 - **Correction: the first A/B results overstated one example.** They said a checkable code
   fact and an unmeasured prediction in an unguided report sat "under the same bold
   Critical". The report actually rated them Medium and Critical. The underlying point holds
