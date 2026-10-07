@@ -1,0 +1,560 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-07T00:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "detect_stack.py (bundled with skill 2.0.0)",
+    "model": "Claude Code agent, claude-opus-5-5",
+    "repository": {
+      "name": "golang-gin-realworld-example-app",
+      "commit": "626c372d259472148d93303f74aa9b9a1cdcef24"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "Default and maximum page size for article list and feed",
+        "answer": "Default 20 when limit fails to parse; no maximum; negative values accepted",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["articles/models.go:182-190", "articles/models.go:271-278"]
+      },
+      {
+        "question": "Database engine, journal mode, busy timeout, pool configuration",
+        "answer": "SQLite file at DB_PATH (default ./data/gorm.db); DSN is a bare path, no PRAGMAs; SetMaxIdleConns(10), no SetMaxOpenConns",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["common/database.go:49-69", "readme.md:89-94"]
+      },
+      {
+        "question": "Deployment topology (instances, workers, containers)",
+        "answer": "No Dockerfile, k8s, Procfile or IaC; README runs a single `go run hello.go` process; AGENTS.md describes SQLite as for development/testing",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["readme.md", "AGENTS.md", ".github/workflows/ci.yml", "scripts/run-api-tests.sh"]
+      },
+      {
+        "question": "Is this service serving real users on SQLite (one process, one file), and roughly what request rate do the list endpoints see?",
+        "answer": "unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["readme.md", "AGENTS.md", ".github/workflows/ci.yml"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Roughly how many rows are in follow_models, favorite_models, article_models, comment_models?",
+        "answer": "unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["articles/models.go", "users/models.go", "data/.gitkeep"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Does anything in front of the app cap or reject large/negative limit values?",
+        "answer": "unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["hello.go", "articles/routers.go"],
+        "decision_dimensions": ["severity"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "How often are write endpoints hit concurrently?",
+        "answer": "unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["articles/routers.go", "users/routers.go"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Is there a specific complaint (slow profile page, 'database is locked' errors) behind this review?",
+        "answer": "unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["readme.md", "AGENTS.md"],
+        "decision_dimensions": ["recommendation"],
+        "expected_decision_value": "medium"
+      }
+    ],
+    "scenarios": ["normal", "large-dataset", "high-concurrency"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "partially-instrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Every non-test Go source file read in full; tests skimmed for the paths in question; spec prose documents and Postman collection not reviewed",
+    "critical_paths_identified": 6,
+    "critical_paths_analyzed": 6,
+    "shared_resources_identified": 3,
+    "shared_resources_analyzed": 3,
+    "technology_support": [
+      { "technology": "go", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "sqlite", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "rest", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "gorm", "tier": "generic" }
+    ],
+    "unknowns": [
+      { "subject": "Production deployment and process count", "reason": "no-evidence-exists", "what_would_resolve_it": "Owner answer or deployment configuration" },
+      { "subject": "Request rate and read/write mix per route", "reason": "no-evidence-exists", "what_would_resolve_it": "Aggregated Gin access logs per route" },
+      { "subject": "Table row counts and growth", "reason": "no-evidence-exists", "what_would_resolve_it": "SELECT COUNT(*) per table on a copy of the DB file" },
+      { "subject": "Effective busy_timeout and journal_mode of the deployed DB", "reason": "no-evidence-exists", "what_would_resolve_it": "PRAGMA journal_mode / busy_timeout via the app's connection" },
+      { "subject": "GORM loader/logger behavior beyond the documented API", "reason": "technology-unsupported", "what_would_resolve_it": "SQL logging at logger.Info in staging" },
+      { "subject": "gRPC (protobuf in go.sum only)", "reason": "out-of-scope", "what_would_resolve_it": "No gRPC service exists in code; indirect dependency only" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Default page size 20, no maximum, negative accepted (articles/models.go:187-190, 275-278)",
+      "Comment list unpaginated (articles/models.go:164-168)",
+      "Tag list returns all rows (articles/models.go:170-175)",
+      "Only indexes declared: article_models.slug, tag_models.tag, user_models.email, gorm.Model deleted_at (struct tags)",
+      "No retention or archival job for any table (whole repo)",
+      "SQLite DSN is a bare path with no PRAGMAs; MaxIdleConns 10, MaxOpenConns unset (common/database.go:57-66)",
+      "AuthMiddleware registered twice for authenticated route groups (hello.go:43, 48)"
+    ],
+    "unknown": [
+      "Request rate per route; p95/p99 latency; any SLO",
+      "Row counts for every table",
+      "Whether a proxy caps the limit parameter",
+      "Effective busy_timeout/journal_mode on the deployed DB"
+    ],
+    "assumed": [
+      "Single process against one SQLite file, as README run instructions show (affects PERF-004)",
+      "follow_models and favorite_models are the fastest-growing tables (affects PERF-001, PERF-002)",
+      "Anonymous article list and tag list are the most-hit routes (affects PERF-001, PERF-003, PERF-005)"
+    ],
+    "derived": [
+      "Queries per default anonymous GET /api/articles = fixed set + 1 follow_models SELECT per returned article = 20 extra at default limit; from articles/models.go:189 and the per-article loop at articles/serializers.go:134-139 -> users/serializers.go:35",
+      "Rows visited by follow checks per list request ~= returned articles x follow_models rows, if each check scans; from the derivation above and missing index on follow_models (users/models.go:36-42)",
+      "GET /api/articles/:slug/comments issues 1 follow_models SELECT per comment with unbounded comment count; from articles/serializers.go:173-180 and articles/models.go:164-168"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Is this service serving real users on SQLite, and at what request rate?",
+      "what_it_would_change": "Dev/demo only: all PERF findings drop to P3. Production: PERF-003 and PERF-004 stay P1, and an engine change becomes a real alternative.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001", "PERF-002", "PERF-003", "PERF-004"]
+    },
+    {
+      "question": "Row counts of follow_models, favorite_models, article_models, comment_models?",
+      "what_it_would_change": "Small tables bound PERF-002 to Low; large or growing tables raise its confidence to High.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-002", "PERF-005"]
+    },
+    {
+      "question": "Does a proxy cap or reject large/negative limit values?",
+      "what_it_would_change": "A cap would bound PERF-003 to Medium/Low and limit PERF-001 amplification.",
+      "decision_dimensions": ["severity"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-003", "PERF-001"]
+    },
+    {
+      "question": "How often are write endpoints hit concurrently?",
+      "what_it_would_change": "High write concurrency makes PERF-004's lock wait more likely and makes WAL or a server DB worth considering.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-004"]
+    },
+    {
+      "question": "Is there a specific complaint behind this review?",
+      "what_it_would_change": "The review would be reorganised around confirming that symptom.",
+      "decision_dimensions": ["recommendation"],
+      "expected_decision_value": "medium"
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Author follow status computed by a per-row query inside list/comment serialization", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "No server-enforced upper bound on list page size; comments unpaginated", "findings": ["PERF-003"] },
+    { "id": "ROOT-003", "description": "Lazy get-or-create write issued on a second connection while the request's own SQLite read transaction holds the file lock", "findings": ["PERF-004"] },
+    { "id": "ROOT-004", "description": "Schema created by AutoMigrate with no indexes on foreign-key/filter columns", "findings": ["PERF-002"] },
+    { "id": "ROOT-005", "description": "Tag listing unbounded by usage or count", "findings": ["PERF-005"] },
+    { "id": "ROOT-006", "description": "Auth middleware attached twice to the authenticated route chain", "findings": ["PERF-006"] },
+    { "id": "ROOT-007", "description": "No query-level or per-route metrics", "findings": ["PERF-007"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "1b7c64fd1b53e6fc",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "users/serializers.go", "line": 35, "symbol": "ProfileSerializer.Response" },
+      "problem": "Each article in list/feed responses and each comment in comment lists serializes its author via ProfileSerializer.Response, which runs isFollowing, a separate follow_models SELECT. Query count grows with result size.",
+      "performance_principle": "Do not repeat a per-item lookup that can be answered for the whole set in one round trip.",
+      "evidence": [
+        { "statement": "Loop over s.Articles calls ResponseWithPreloaded per article", "kind": "static", "file": "articles/serializers.go", "line": 134 },
+        { "statement": "ResponseWithPreloaded -> ArticleUserSerializer.Response -> ProfileSerializer.Response -> myUserModel.isFollowing(...)", "kind": "static", "file": "users/serializers.go", "line": 35 },
+        { "statement": "isFollowing runs db.Where(FollowModel{...}).First(&follow): one query per call", "kind": "static", "file": "users/models.go", "line": 121 },
+        { "statement": "Same chain per comment in CommentsSerializer.Response", "kind": "static", "file": "articles/serializers.go", "line": 173 },
+        { "statement": "Favorites were already batched (BatchGetFavoriteCounts/Status); follow status was not", "kind": "static", "file": "articles/serializers.go", "line": 122 },
+        { "statement": "Default limit 20 => 20 follow queries per default list request on top of the fixed set", "kind": "derived", "file": "articles/models.go", "line": 189 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "service", "amplification": "Nx" },
+      "conditions": "List/feed/comment endpoints are a meaningful share of traffic and page sizes or comment counts exceed a handful. Traffic is unknown; I assume the anonymous list is the most-hit route because it backs the home page.",
+      "counter_evidence": [
+        { "statement": "Searched for per-request memoisation of follow status or a batch helper for follows: none", "effect": "no-effect" },
+        { "statement": "No deduplication by author: isFollowing is called once per article, not once per distinct author", "effect": "no-effect" },
+        { "statement": "SQLite is embedded, so each query is an in-process call rather than a network round trip; it is cheaper but still pays preparation, locking and the PERF-002 scan. Severity kept at High, not Critical", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "With an embedded DB, small tables and the default page of 20, the extra queries may each cost under a millisecond and be invisible at demo-level traffic.",
+      "recommendation": "Collect the distinct author user IDs in the page and run one SELECT following_id FROM follow_models WHERE followed_by_id = ? AND following_id IN (?), skipping it for anonymous viewers. Pass the set into a preloaded author serializer, mirroring BatchGetFavoriteStatus.",
+      "alternatives": [
+        { "option": "Batch follow status per response (one IN query)", "preferred": true, "why": "Removes the work; same pattern already used for favorites; constant query count" },
+        { "option": "Deduplicate by author within a page", "preferred": false, "why": "Still O(distinct authors)" },
+        { "option": "Cache follow status across requests", "preferred": false, "why": "Needs invalidation; hides the query; no hit-rate evidence" }
+      ],
+      "trade_offs": "The serializer API changes; single-article and comment paths need the same plumbing; the IN-list size is bounded by page size once PERF-003 is fixed.",
+      "validation": {
+        "metric": "follow_models SELECT count per GET /api/articles?limit=N request (test SQL log)",
+        "expectation": "Follow queries drop from N to 1 per request, independent of N; the latency change is unquantified until measured",
+        "falsifier": "The count was already constant, or latency is unchanged once the count drops (the path was not query-bound)",
+        "safety": "not-safe-on-production",
+        "guard": "Test asserting the SQL statement count for GET /api/articles?limit=N does not depend on N",
+        "commands": [
+          { "command": "go test ./articles/ -run TestArticleListWithFilters -v", "purpose": "Test DB uses GORM logger.Info, so every SQL statement is printed; count follow_models SELECTs per list request", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "a384f3e184e58d53",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "articles/models.go", "line": 187, "symbol": "FindManyArticle" },
+      "tags": ["quick-win"],
+      "problem": "limit is parsed from the query string with no maximum, and a negative value makes GORM omit LIMIT. The comment list has no limit at all. One anonymous request can load every article with preloads and then run PERF-001's per-row query for each.",
+      "performance_principle": "Every request's work must have a server-enforced upper bound that does not depend on data the server does not control.",
+      "evidence": [
+        { "statement": "limit_int, errLimit := strconv.Atoi(limit): defaults only on parse failure, no clamp", "kind": "static", "file": "articles/models.go", "line": 187 },
+        { "statement": "tx.Offset(offset_int).Limit(limit_int).Preload(...).Find(&models)", "kind": "static", "file": "articles/models.go", "line": 259 },
+        { "statement": "Same uncapped limit in GetArticleFeed", "kind": "static", "file": "articles/models.go", "line": 275 },
+        { "statement": "Comments loaded via Association(\"Comments\").Find with no limit", "kind": "static", "file": "articles/models.go", "line": 166 },
+        { "statement": "List routes are anonymous (registered before AuthMiddleware(true))", "kind": "static", "file": "hello.go", "line": 44 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "system-wide", "amplification": "Nx" },
+      "conditions": "Matters once the article table, or one article's comment count, is large enough that a full load is noticeable. Any client, including an unauthenticated one, can trigger it. I assume no proxy caps the parameter; none is visible in the repo.",
+      "counter_evidence": [
+        { "statement": "Searched for a maximum page size, a validator on limit, or middleware: none", "effect": "no-effect" },
+        { "statement": "Description/Body capped at 2048 by validators, so per-row size is bounded but row count is not", "effect": "no-effect", "file": "articles/validators.go", "line": 13 }
+      ],
+      "why_this_might_not_matter": "With a few hundred articles a full load is cheap, and well-behaved RealWorld clients send small limits.",
+      "recommendation": "Clamp limit to [1, MAX] and offset to >= 0 in FindManyArticle and GetArticleFeed; add limit/offset or a hard cap to the comment list.",
+      "alternatives": [
+        { "option": "Server-side clamp on limit/offset; paginate comments", "preferred": true, "why": "Removes the unbounded case with a few lines; no change for normal clients" },
+        { "option": "Reverse-proxy rule", "preferred": false, "why": "Not in repo; easy to lose; does not cover comments" },
+        { "option": "Keyset pagination", "preferred": false, "why": "Larger API change; not needed to bound the work" }
+      ],
+      "trade_offs": "Clients asking for more than MAX get a truncated page; the comment API gains parameters (an extension to the RealWorld spec).",
+      "validation": {
+        "metric": "Returned row count for limit=-1 and for a large limit",
+        "expectation": "After the fix, len(articles) <= MAX for any limit",
+        "falsifier": "limit=-1 already returns at most 20 rows (GORM emitted a LIMIT); only the large-positive case would remain",
+        "safety": "not-safe-on-production",
+        "guard": "Unit test with hostile limit values asserting a capped length",
+        "commands": [
+          { "command": "curl -s 'http://localhost:8080/api/articles?limit=-1' | head -c 300", "purpose": "Check whether a negative limit removes the LIMIT clause (run against a local copy)", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "39b3d132f9c3942a",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "concurrency",
+      "location": { "file": "articles/models.go", "line": 216, "symbol": "FindManyArticle" },
+      "tags": ["needs-measurement"],
+      "problem": "FindManyArticle opens a transaction and reads inside it, taking a SHARED lock under SQLite's default rollback journal. It then calls GetArticleUserModel, which runs FirstOrCreate on a different pooled connection. For a user with no article_user_models row, that INSERT cannot commit while the request's own transaction holds SHARED. It waits up to the driver busy timeout and fails; the error is ignored and the response is an empty list.",
+      "performance_principle": "Never hold a lock while waiting on a resource that the lock itself blocks; keep read paths free of writes.",
+      "evidence": [
+        { "statement": "tx := db.Begin(); tx.Where(users.UserModel{...}).First(&userModel); GetArticleUserModel(userModel)", "kind": "static", "file": "articles/models.go", "line": 192 },
+        { "statement": "Same for the favorited branch", "kind": "static", "file": "articles/models.go", "line": 237 },
+        { "statement": "GetArticleUserModel uses common.GetDB() (not tx) and FirstOrCreate", "kind": "static", "file": "articles/models.go", "line": 59 },
+        { "statement": "DSN is a bare path: default journal mode, no app-set busy timeout or WAL", "kind": "static", "file": "common/database.go", "line": 57 },
+        { "statement": "Tests hit ?author= only for a user with an existing row or a nonexistent user (early return); the trigger path is untested", "kind": "static", "file": "articles/unit_test.go", "line": 1116 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "rare", "growth": "O(1)", "blast_radius": "system-wide" },
+      "conditions": "SQLite in default journal mode, and a profile/favorites list requested for a registered user who has never authored, commented, favorited, or browsed while logged in. Frequency is unknown. A non-zero busy timeout gives a stall that blocks new readers via the PENDING lock; a zero timeout gives a fast, wrong, empty response.",
+      "counter_evidence": [
+        { "statement": "Searched for PRAGMA journal_mode=WAL or DSN options: none (WAL would avoid the reader/writer wait)", "effect": "no-effect" },
+        { "statement": "The effect depends on a driver default busy timeout not visible in the repo, and was not run to confirm", "effect": "lowers-confidence" },
+        { "statement": "When the row already exists, FirstOrCreate only reads and does not conflict. Bounds frequency to first-touch users (severity High, not Critical)", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "Most users worth viewing have probably authored something, so their row exists. With a zero busy timeout this is a wrong empty page rather than a stall.",
+      "recommendation": "Look up article_user_models read-only through tx (no create). If absent, return empty without inserting. Reconsider whether read paths need explicit transactions at all.",
+      "alternatives": [
+        { "option": "Read-only lookup through tx; no create on read paths", "preferred": true, "why": "Removes the lock inversion and the hidden write; fixes the wrong empty result" },
+        { "option": "Switch to WAL journal mode", "preferred": false, "why": "Removes reader/writer blocking generally but adds checkpoint management and keeps a write on a GET path" },
+        { "option": "Set an explicit busy timeout", "preferred": false, "why": "Only chooses between a stall and an error" }
+      ],
+      "trade_offs": "Needs separate get and get-or-create helpers. WAL, if adopted, adds a WAL file, checkpointing, and filesystem shared-memory requirements.",
+      "validation": {
+        "metric": "Latency of GET /api/articles?author=<fresh user> and of concurrent readers; presence of an article_user_models INSERT in the SQL log",
+        "expectation": "After the fix: no INSERT, no lock wait, correct result",
+        "falsifier": "Before the fix the request returns promptly and the INSERT succeeds (WAL or another locking mode is in effect)",
+        "safety": "not-safe-on-production",
+        "guard": "Regression test on a freshly registered author asserting status, small latency, and no error",
+        "commands": [
+          { "command": "sqlite3 data/gorm.db \"PRAGMA journal_mode;\"", "purpose": "Confirm whether the rollback-journal locking model applies", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "7a9aed9e568b890e",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "users/models.go", "line": 36, "symbol": "FollowModel" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "AutoMigrate creates indexes only on slug, tag, email and deleted_at. Lookups by follow_models(following_id, followed_by_id), favorite_models(favorite_id, favorite_by_id), article_models.author_id, comment_models.article_id and article_user_models.user_model_id have no usable index and likely scan; PERF-001 runs one scan per returned row.",
+      "performance_principle": "A lookup on a request path should cost in proportion to its result, not to the size of the table.",
+      "evidence": [
+        { "statement": "FollowModel has no index tags", "kind": "static", "file": "users/models.go", "line": 36 },
+        { "statement": "ArticleUserModel.UserModelID, FavoriteModel.FavoriteID/FavoriteByID, CommentModel.ArticleID, ArticleModel.AuthorID have no index tags", "kind": "static", "file": "articles/models.go", "line": 23 },
+        { "statement": "No migration directory or raw CREATE INDEX in the repo", "kind": "static" },
+        { "statement": "Hot predicates on these columns: isFollowing, GetArticleUserModel, favoritesCount, isFavoriteBy, BatchGetFavoriteCounts/Status, getComments, favorited filter, feed author_id IN", "kind": "static", "file": "articles/models.go", "line": 98 },
+        { "statement": "Rows visited for follow checks per list request ~= returned articles x follow_models rows", "kind": "derived" }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service", "amplification": "Nx" },
+      "conditions": "follow_models, favorite_models, article_models or comment_models grow past the point where scanning is cheap relative to the request. Row counts are unknown; I assume unbounded growth since no retention job exists. Confidence is capped at Medium.",
+      "counter_evidence": [
+        { "statement": "Searched struct tags, migrations and raw SQL for indexes: none beyond slug/tag/email/deleted_at", "effect": "no-effect" },
+        { "statement": "article_tags join table has a composite primary key, so tag preloads by article are indexed; only the article-by-tag direction may not be", "effect": "bounds-impact" },
+        { "statement": "For small tables a SQLite scan is a fast in-memory B-tree walk", "effect": "lowers-confidence" }
+      ],
+      "why_this_might_not_matter": "At demo scale the scans cost microseconds and indexes would be pure write overhead.",
+      "recommendation": "Add composite indexes matching predicates via index: tags: follow_models(followed_by_id, following_id); favorite_models(favorite_id, favorite_by_id) and (favorite_by_id); article_models(author_id, updated_at); comment_models(article_id); unique article_user_models(user_model_id). Verify each with EXPLAIN QUERY PLAN.",
+      "alternatives": [
+        { "option": "Targeted composite indexes verified by query plan", "preferred": true, "why": "Makes each lookup proportional to its result; small declarative change" },
+        { "option": "Single-column index on every FK", "preferred": false, "why": "Serves the two-column predicates less well" },
+        { "option": "Cache follow/favorite state", "preferred": false, "why": "Hides the scans; needs invalidation; no hit-rate evidence" }
+      ],
+      "trade_offs": "Write cost on follow/favorite/comment/article create (lengthens SQLite's single write-lock hold slightly), file size, and a one-time index build in AutoMigrate at startup.",
+      "validation": {
+        "metric": "EXPLAIN QUERY PLAN shape for each hot predicate",
+        "expectation": "Plans change from SCAN (or search on the deleted_at index only) to SEARCH USING INDEX on the filter columns",
+        "falsifier": "Plans already show SEARCH on the filter columns",
+        "safety": "safe-on-production",
+        "guard": "Test asserting no full SCAN for follow/favorite lookups",
+        "commands": [
+          { "command": "sqlite3 data/gorm.db \"EXPLAIN QUERY PLAN SELECT * FROM follow_models WHERE following_id = 1 AND followed_by_id = 2 AND deleted_at IS NULL ORDER BY id LIMIT 1;\"", "purpose": "Show whether the follow check scans", "safety": "safe-on-production" },
+          { "command": "sqlite3 data/gorm.db \"EXPLAIN QUERY PLAN SELECT favorite_id, COUNT(*) FROM favorite_models WHERE favorite_id IN (1,2,3) AND deleted_at IS NULL GROUP BY favorite_id;\"", "purpose": "Show whether the batched favorite count scans", "safety": "safe-on-production" },
+          { "command": "sqlite3 data/gorm.db \".indexes\"", "purpose": "List the indexes that actually exist", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "6fe139d3987c3f3e",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "articles/models.go", "line": 173, "symbol": "getAllTags" },
+      "tags": ["scalability-risk"],
+      "problem": "GET /api/tags returns every tag row ever created, with no limit and no filter for tags still in use; tags are never deleted.",
+      "performance_principle": "Response size and query cost should be bounded by what the client can use, not by accumulated history.",
+      "evidence": [
+        { "statement": "db.Find(&models) over tag_models with no limit", "kind": "static", "file": "articles/models.go", "line": 173 },
+        { "statement": "Tags are created on demand in setTags and never removed; tagList has no max count", "kind": "static", "file": "articles/models.go", "line": 310 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Matters only once distinct tags number in the many; growth is user-driven. I assume slow growth unless abused.",
+      "counter_evidence": [
+        { "statement": "Single sequential read of a narrow table with no N+1; hence Medium and not High", "effect": "bounds-impact" },
+        { "statement": "Searched for pagination or caching: none", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Tag vocabularies are usually small, and one sequential read of a narrow table is cheap.",
+      "recommendation": "Return the top-N most-used tags (join article_tags, GROUP BY, ORDER BY count, LIMIT), or at least cap the result; optionally cap tags per article in the validator.",
+      "alternatives": [
+        { "option": "Top-N popular tags with LIMIT", "preferred": true, "why": "Bounds the work and matches the UI's popular-tags purpose" },
+        { "option": "In-process cache with TTL", "preferred": false, "why": "Keeps an unbounded payload; adds staleness" }
+      ],
+      "trade_offs": "Rarely used tags are no longer listed; the popularity query is more complex but bounded.",
+      "validation": {
+        "metric": "Response length of GET /api/tags compared with SELECT COUNT(*) FROM tag_models",
+        "expectation": "Response length <= N after the fix, independent of table size",
+        "falsifier": "The tag count stays small over time; close the item",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "sqlite3 data/gorm.db \"SELECT COUNT(*) FROM tag_models;\"", "purpose": "Current tag cardinality", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "e9a40df11d17de06",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "hello.go", "line": 48, "symbol": "main" },
+      "tags": ["quick-win"],
+      "problem": "AuthMiddleware(false) and AuthMiddleware(true) are both in the chain for authenticated groups, so the JWT is verified twice and the user row is selected twice per authenticated request.",
+      "performance_principle": "Do not repeat per-request work whose result is already available.",
+      "evidence": [
+        { "statement": "v1.Use(AuthMiddleware(false)) then v1.Use(AuthMiddleware(true)) before registering authenticated groups", "kind": "static", "file": "hello.go", "line": 43 },
+        { "statement": "Each run calls UpdateContextUserModel -> db.First(&myUserModel, id)", "kind": "static", "file": "users/middlewares.go", "line": 34 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "endpoint", "amplification": "2x" },
+      "conditions": "Every authenticated request; the cost is constant and small.",
+      "counter_evidence": [
+        { "statement": "The extra query is a primary-key lookup and is cheap; hence Low", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Have the strict middleware reuse the context set by the optional one, or register authenticated routes on a group that has only AuthMiddleware(true).",
+      "trade_offs": "Minimal; keep the 401 behaviour for a missing token.",
+      "validation": {
+        "metric": "user_models SELECTs per authenticated request in the test SQL log",
+        "expectation": "2 lookups become 1",
+        "falsifier": "Only one lookup is observed before the fix",
+        "safety": "not-safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "b4aed51ea0f4d1c1",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "observability",
+      "location": { "file": "hello.go", "line": 35, "symbol": "main" },
+      "tags": ["needs-measurement"],
+      "problem": "The only runtime signals are Gin's stdout access log and GORM's default slow-SQL/error log. There are no per-route latency metrics, no query count per request, no pool/lock-wait visibility, and no pprof.",
+      "performance_principle": "A system cannot be tuned in a direction it cannot measure.",
+      "evidence": [
+        { "statement": "gin.Default() only; no metrics/tracing/pprof imports anywhere", "kind": "static", "file": "hello.go", "line": 35 },
+        { "statement": "Production DB opened with the default GORM logger config", "kind": "static", "file": "common/database.go", "line": 57 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "offline", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service" },
+      "conditions": "Whenever the service runs beyond local development.",
+      "counter_evidence": [
+        { "statement": "Gin's access log includes per-request latency, so timing is recoverable from logs; hence Low", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Add a GORM callback that counts queries and their duration per request, logged with the access log; optionally mount net/http/pprof on an internal port. Sequence early.",
+      "trade_offs": "Small per-query overhead; pprof must not be exposed publicly.",
+      "validation": {
+        "metric": "Query count per request present in logs",
+        "expectation": "List requests show a count that scales with page size before the PERF-001 fix and stays constant after",
+        "falsifier": "Not applicable beyond the presence of the signal; this is enabling work",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "database/sql pool has no SetMaxOpenConns against a SQLite file",
+      "why_discarded": "More connections add no write concurrency on SQLite and can add SQLITE_BUSY, but write concurrency is unknown and no write-heavy path was found",
+      "location": "common/database.go:61-66",
+      "path": "SQLite database file / database/sql pool",
+      "evidence_checked": ["common/database.go:49-69", "articles/routers.go", "users/routers.go"],
+      "revisit_when": "'database is locked' errors appear in logs or concurrent write traffic is shown"
+    },
+    {
+      "observation": "COUNT(*) plus OFFSET on every unfiltered list request",
+      "why_discarded": "Linear in article count, but a sequential count of an integer-keyed table is the cheapest scan; dominated by PERF-001/002 absent size evidence",
+      "location": "articles/models.go:257-259",
+      "path": "GET /api/articles",
+      "evidence_checked": ["articles/models.go:255-260"],
+      "revisit_when": "GORM slow-SQL log shows the count or deep-offset queries"
+    },
+    {
+      "observation": "bcrypt at DefaultCost on register/login",
+      "why_discarded": "Deliberate CPU cost for password hashing (a security property); bounded per request",
+      "location": "users/models.go:63",
+      "path": "POST /api/users, POST /api/users/login",
+      "evidence_checked": ["users/models.go:57-75", "users/routers.go:373-409"],
+      "revisit_when": "Login rate is high enough that CPU saturation shows in profiles"
+    },
+    {
+      "observation": "Feed IN-lists sized by the viewer's follow count",
+      "why_discarded": "Bounded by one user's followings; the unindexed author_id part is covered by PERF-002",
+      "location": "articles/models.go:281-302",
+      "path": "GET /api/articles/feed",
+      "evidence_checked": ["articles/models.go:266-308", "users/models.go:143-154"],
+      "revisit_when": "Users with very large follow counts exist"
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "The JWT HMAC signing secret is a hard-coded string constant committed to source (value not reproduced); a second constant acts as a sentinel password that bypasses re-hashing on update. Anyone with repository access can mint a token for any user ID.",
+      "evidence": [
+        { "statement": "const JWTSecret and const RandomPassword defined in source with #nosec", "kind": "static", "file": "common/utils.go", "line": 41 },
+        { "statement": "Used to sign tokens in GenToken and to verify in AuthMiddleware", "kind": "static", "file": "users/middlewares.go", "line": 60 }
+      ],
+      "recommendation": "Load the secret from the environment or a secret store at startup, fail closed if absent, and rotate it since the current value is public.",
+      "location": "common/utils.go:41",
+      "assessed_properly_by": "A dedicated security review; gosec already runs in CI but with -no-fail, so it does not gate merges"
+    },
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "GORM struct conditions skip zero-valued fields, so for anonymous viewers (ID 0) isFollowing/isFavoriteBy become 'does anyone follow/favorite this', and the result is reported as the viewer's own state.",
+      "evidence": [
+        { "statement": "isFollowing uses Where(FollowModel{FollowingID: v.ID, FollowedByID: u.ID}) with u.ID = 0 for anonymous", "kind": "static", "file": "users/models.go", "line": 124 },
+        { "statement": "isFavoriteBy uses Where(FavoriteModel{...FavoriteByID: user.ID}) with ID 0 from GetArticleUserModel for anonymous; the list path guards this but the single-article path does not", "kind": "static", "file": "articles/models.go", "line": 79 }
+      ],
+      "recommendation": "Short-circuit to false when the viewer ID is 0, or use explicit placeholder conditions; the PERF-001 batched query would naturally do this.",
+      "location": "users/models.go:124",
+      "assessed_properly_by": "Correctness-focused API tests for anonymous viewers"
+    },
+    {
+      "id": "COR-002",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "The unfiltered list paginates with no ORDER BY. The tag/author/favorited branches take an unordered page first and sort only within that page, so pages are not globally newest-first and can repeat or skip articles.",
+      "evidence": [
+        { "statement": "Offset/Limit without Order in the default branch", "kind": "static", "file": "articles/models.go", "line": 259 },
+        { "statement": "Association page fetched with Offset/Limit, then re-queried with Order(updated_at desc) only within the page", "kind": "static", "file": "articles/models.go", "line": 199 }
+      ],
+      "recommendation": "Apply ORDER BY (e.g. created_at DESC, id DESC) in the same query that applies OFFSET/LIMIT, joining through the filters in one query.",
+      "location": "articles/models.go:259",
+      "assessed_properly_by": "A pagination correctness test suite"
+    }
+  ]
+}

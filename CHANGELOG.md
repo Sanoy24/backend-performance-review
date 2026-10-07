@@ -40,6 +40,18 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- **The second A/B comparison, on one pinned model.** Pre-registered before any run (#100),
+  then run with all six arms on `claude-opus-5-5`, verified from each run's transcript.
+  **Discipline replicates:** three unsourced performance estimates in the plain arm, none in
+  the guided arm, and no hedge or falsifier language in 826 lines of plain output. **The
+  breadth cost is real:** the guided arm found 69% as many distinct real issues, below the 75%
+  line fixed in advance. The gap sits entirely on one repository; the guided arm caught the
+  high-severity issues; and the misses split into over-filtering (seen, then dropped) and
+  missed discovery (write paths, table growth). One plain-arm claim was rejected on checking —
+  Gin debug mode as a per-request cost — which a guided run had correctly left out. The same
+  transcripts confirm the first comparison's confound: treatment `claude-sonnet-5`, control
+  `claude-opus-5`. Raw output for every run is in `benchmark/ab-results/raw-second/`.
+
 - **One-line install into any Agent Skills agent, pinned to the release.** The README now
   offers `npx skills add .../tree/v2.0.0/skills/backend-performance-review` for users who
   want only the skill inside Claude Code, Copilot, Cursor, Codex, or another agent that reads
