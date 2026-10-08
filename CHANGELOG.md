@@ -38,6 +38,20 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- **The third A/B comparison: breadth recovered, Phase 2 not met.** Pre-registered (#103) and
+  run on Node and Spring Boot repositories that played no part in #102's tuning, all six arms
+  on `claude-opus-5-5`. Guided breadth reached 87% of plain (the bar was 75%) and the guided
+  arm invented no performance figures while the plain arm invented five. But both guided Node
+  runs reported the single-process finding that repository's `forbidden` trap says to decline,
+  so under the rule fixed in advance Phase 2 is not met. Neither invented a core count — both
+  made it conditional — and the plain runs hit the same trap harder, but the trap as written
+  was reported. It exposes a real conflict between #102's promote-if-real rule and
+  deployment-dependent mechanisms, to be settled before the next comparison. Also surfaced: one
+  guided review failed the official validator, which agents cannot run because it is not
+  bundled with the skill. Raw output is in `benchmark/ab-results/raw-third/`.
+
 ### Changed
 
 - **Breadth recovery, aimed at the two causes the second A/B comparison found.** On one pinned
@@ -51,8 +65,6 @@ value and `[Unreleased]` accumulates.
   growth over time (soft-deleted and append-only data with no bound), and fixed work repeated
   on every request. Contract tests pin both. **Not yet shown to work:** it was written against
   the gin misses, so it needs evaluation on repositories it was not tuned on.
-
-### Added
 
 - **The second A/B comparison, on one pinned model.** Pre-registered before any run (#100),
   then run with all six arms on `claude-opus-5-5`, verified from each run's transcript.
@@ -71,6 +83,13 @@ value and `[Unreleased]` accumulates.
   want only the skill inside Claude Code, Copilot, Cursor, Codex, or another agent that reads
   the format. The installer's own docs show no pinning syntax; the `tree/<tag>/` form was
   verified to resolve the tag. Version coherence now covers that tag too.
+
+- **Trunk-based again: `main` is the only long-lived branch, and releases are tags.** The
+  `develop` branch is retired; pull requests target `main`. The v0.6.0 reason for a second
+  branch — stop releasing every time `main` moves — is now met by tags, since the quickstart
+  clones a release tag and CI enforces it. The second branch's cost was real: squash merges
+  made the two diverge by commit even with identical content, so every release from v1.0.0
+  to v2.0.0 needed hand-resolved conflicts plus a sync pull request. See CONTRIBUTING.md §2.
 
 ### Fixed
 
@@ -105,15 +124,6 @@ value and `[Unreleased]` accumulates.
   stronger unguided model still invented figures the guided arm did not. The results page
   carries a dated correction with the original claims kept visible, and the protocol now
   requires each arm's model to be pinned and recorded from run metadata.
-
-### Changed
-
-- **Trunk-based again: `main` is the only long-lived branch, and releases are tags.** The
-  `develop` branch is retired; pull requests target `main`. The v0.6.0 reason for a second
-  branch — stop releasing every time `main` moves — is now met by tags, since the quickstart
-  clones a release tag and CI enforces it. The second branch's cost was real: squash merges
-  made the two diverge by commit even with identical content, so every release from v1.0.0
-  to v2.0.0 needed hand-resolved conflicts plus a sync pull request. See CONTRIBUTING.md §2.
 
 ## [2.0.0] — 2026-10-05
 
