@@ -124,6 +124,14 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **The URLshortener answer key pointed at files that do not exist.** It was annotated against an
+  unpinned clone, and three of its locations named `healthCheck.go`, `token.go`, and the Redis
+  client under `service.go`, none of which exist at any pinned state. The key is now pinned to
+  `34b4cb38` with each location moved to where the mechanism actually is, recorded as annotation
+  version 2 in `benchmark/dataset.json`. No mechanism, verdict, or severity changed. The fourth
+  comparison adjudicated these traps by meaning for exactly this reason, so its results are
+  unaffected.
+
 - **The skill failed the Agent Skills reference validator.** `skills-ref validate` rejected
   `SKILL.md` for its `when_to_use` field, a Claude Code extension outside the spec. Worse, every
   agent other than Claude Code reads only `description` to decide whether to load a skill, so

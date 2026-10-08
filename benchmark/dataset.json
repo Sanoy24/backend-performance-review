@@ -60,7 +60,8 @@
       "split": "development",
       "pre_registered_before_review": false,
       "license": {"spdx": null, "evidence_url": null},
-      "annotations": [{"version": 1, "sha256": "1e31d8dfc358d7e58b19d5ac3496bb5a78c1b76b2b8c84f52d2baf0f307b83be", "origin": "baseline-existing-corpus"}]
+      "annotations": [{"version": 1, "sha256": "1e31d8dfc358d7e58b19d5ac3496bb5a78c1b76b2b8c84f52d2baf0f307b83be", "origin": "baseline-existing-corpus"},
+                      {"version": 2, "sha256": "0a54ff7e6f293ac58b941f78a4094f8cd808708d7e00fb42f2f75cab908cec0d", "origin": "maintainer-relocation", "reason": "Pinned the commit and moved three locations to files that exist at it (healthCheck.go, token.go, and the Redis client under service.go did not); no mechanism, verdict, or severity changed", "affected_runs": []}]
     }
   }
 }
