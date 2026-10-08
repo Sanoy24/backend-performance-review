@@ -51,6 +51,17 @@ value and `[Unreleased]` accumulates.
   checks fire, and that the bundled files stay byte-identical to the root copies. The bundled
   copy catches the exact failure that slipped through.
 
+- **The fourth A/B comparison: discipline held, breadth not, Phase 2 not met.** Pre-registered
+  (#107) and run on URLshortener (Go, Redis) and the FastAPI full-stack template, neither used in
+  any tuning, all six arms on `claude-opus-5-5`. The guided arm made no unsourced performance
+  estimate (the plain arm made eight) and hit none of the four `forbidden` traps (the plain arm
+  hit one twice). All three guided reviews passed the bundled validator, and #105 turned two
+  deployment-dependent mechanisms into questions. But guided breadth was 65% of plain against a
+  75% bar, so Phase 2 is not met. The loss is concentrated in small items, some discarded as
+  minor against #102's rule: excluding four startup-only or per-allocation items lifts it to
+  81%, and every High-severity issue was found by every guided run. Raw output is in
+  `benchmark/ab-results/raw-fourth/`.
+
 - **The third A/B comparison: breadth recovered, Phase 2 not met.** Pre-registered (#103) and
   run on Node and Spring Boot repositories that played no part in #102's tuning, all six arms
   on `claude-opus-5-5`. Guided breadth reached 87% of plain (the bar was 75%) and the guided

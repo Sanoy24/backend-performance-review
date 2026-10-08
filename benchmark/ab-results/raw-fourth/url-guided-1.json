@@ -1,0 +1,656 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-08T12:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "detect_stack.py bundled with skill 2.0.0 (script declares no version of its own)",
+    "model": "Claude Code agent, claude-opus-5-5",
+    "repository": {
+      "name": "urlshortener (module github.com/slytomcat/URLshortener)"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "Configured token length, token-creation timeout and default expiry",
+        "answer": "TokenLength default 6, Timeout default 500 ms, DefaultExp default 1 day; all overridable by environment variables whose production values are not in the repository",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["tools.go:22-27", "tools.go:47-52", "README.md:127-131"]
+      },
+      {
+        "question": "Instance count, worker model and container limits",
+        "answer": "One container named urlshortener in docker-compose.yml with network_mode: host, no replica count, no CPU or memory limits; one Go process using net/http's goroutine-per-connection model. No Kubernetes, autoscaling or probe configuration exists in the repository",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["docker-compose.yml:1-9", "dockerfile:1-4", "urlshortener.go:66-91", "service.go:611-614"]
+      },
+      {
+        "question": "Read/write shape of the HTTP surface",
+        "answer": "One pure read route (GET /<token> redirect: 1 Redis GET). Three routes that write to Redis: POST /api/v1/token and GET /ui/generate (SETNX loop), POST /api/v1/expire (EXPIRE). GET /api/v1/healthcheck performs a full write-read-expire self-test. GET / and GET /favicon.ico touch no datastore",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["service.go:97-140", "dataBaseRedis.go:50-77"]
+      },
+      {
+        "question": "Token keyspace size",
+        "answer": "64^6 = 68,719,476,736 possible tokens at the default length of 6 (64-symbol URL-safe alphabet). Derived from TokenLength=6 and the alphabet accepted by CheckAlphabet",
+        "source": "derived",
+        "asked": false,
+        "evidence_checked": ["tools.go:47", "shortToken.go:38-50", "shortToken.go:61-69"]
+      },
+      {
+        "question": "Is the service behind a reverse proxy or load balancer that enforces client read/idle timeouts and a maximum request body size, and with what limits?",
+        "answer": "No answer available; nobody could be asked. The default listen address localhost:8080 and README demo domain suggest a fronting proxy, but no proxy configuration exists in the repository",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["tools.go:49-51", "docker-compose.yml:5-9", "README.md:25-27", "repository-wide search for nginx/caddy/traefik/haproxy configuration (none found)"],
+        "decision_dimensions": ["severity", "confidence", "recommendation"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Roughly how many active (unexpired) tokens exist in production, what TokenLength is configured, and do clients send exp <= 0 or very large exp values?",
+        "answer": "No answer available; nobody could be asked",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["tools.go:22-27", "dataBaseRedis.go:50-56", "README.md:49-57"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "What is the peak request rate, order of magnitude, for redirects versus token creation?",
+        "answer": "No answer available; nobody could be asked. No load test, rate limit or SLO exists in the repository",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["repository-wide search for load tests, rate limiting, SLO documents (none found)", "service.go:97-140"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Is GET /api/v1/healthcheck polled by an orchestrator or uptime monitor, how often, with what timeout, and under which URLSHORTENER_MODE?",
+        "answer": "No answer available; nobody could be asked. No probe configuration exists in the repository",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["docker-compose.yml:1-9", ".github/workflows/go.yml:1-75", "README.md:96-105"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Where does the process's stderr log stream go in production (Docker json-file, journald, a log shipper), and is log volume a cost or disk concern?",
+        "answer": "No answer available; nobody could be asked. docker-compose.yml declares no logging driver",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["docker-compose.yml:1-9", "urlshortener.go:30", "README.md:141-143"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Is the production Redis dedicated to this service, and what are its persistence mode, maxmemory and maxmemory-policy?",
+        "answer": "No answer available; nobody could be asked. Only a test-purpose docker run script (redis:5.0.7-alpine, no maxmemory or persistence flags) exists",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["redisDockerRun.sh:1-9", ".github/workflows/go.yml:12-17", "dataBaseRedis.go:33-47"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "medium"
+      }
+    ],
+    "scenarios": ["normal", "peak", "degraded-dependency", "large-dataset"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Every non-test Go source file (urlshortener.go, service.go, dataBaseRedis.go, shortToken.go, tools.go) read in full; go.mod, dockerfile, docker-compose.yml, build.sh, redisDockerRun.sh, CI workflow and README read; test files read only for benchmarks and test intent. .env_sample noted by presence only and not opened.",
+    "critical_paths_identified": 7,
+    "critical_paths_analyzed": 7,
+    "shared_resources_identified": 5,
+    "shared_resources_analyzed": 5,
+    "technology_support": [
+      {"technology": "go", "tier": "deep", "detection_confidence": 0.84},
+      {"technology": "redis", "tier": "deep", "detection_confidence": 0.9},
+      {"technology": "docker", "tier": "deep", "detection_confidence": 0.84}
+    ],
+    "unknowns": [
+      {"subject": "Production request rate, active token count and latency targets", "reason": "no-evidence-exists", "what_would_resolve_it": "Request-rate and latency metrics per route; redis-cli INFO keyspace on the production instance"},
+      {"subject": "Whether a reverse proxy bounds client time and body size", "reason": "no-evidence-exists", "what_would_resolve_it": "The proxy or load balancer configuration that fronts the service"},
+      {"subject": "go-redis v7 client defaults actually in effect (pool size, dial/read/write/pool timeouts)", "reason": "out-of-scope", "what_would_resolve_it": "Read the vendored go-redis v7.4.1 Options defaults; the repository sets only Addrs and Password, so library defaults apply but were not read in this review"},
+      {"subject": "Production Redis persistence, maxmemory and eviction policy", "reason": "no-evidence-exists", "what_would_resolve_it": "redis-cli INFO persistence, CONFIG GET maxmemory*, on the production instance"},
+      {"subject": "gRPC/protobuf detection", "reason": "out-of-scope", "what_would_resolve_it": "Detector matched protobuf only in go.sum as a transitive test dependency; no gRPC import exists in any .go file, so the signal was discarded as a false positive"}
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Single Go binary on net/http, one goroutine per connection; no worker limit, no middleware (service.go:97-140, service.go:611-614)",
+      "http.Server built with only Addr and Handler; no ReadTimeout, ReadHeaderTimeout, WriteTimeout, IdleTimeout or MaxHeaderBytes (service.go:611-614)",
+      "Request bodies read with io.ReadAll and no size limit (service.go:143-149)",
+      "Redis is the only datastore and the system of record; client built with only Addrs and Password (dataBaseRedis.go:36-39)",
+      "Token creation retries SETNX in a tight loop until success or the configured timeout, default 500 ms (service.go:500-522, tools.go:48)",
+      "Negative expiry is coerced to 0, which SETNX treats as no TTL (dataBaseRedis.go:51-55)",
+      "Every request logs remote address, method, URI and the full header map synchronously via the standard logger (service.go:98)",
+      "Health check makes three loopback HTTP calls with the default client and writes to Redis (service.go:227-337)",
+      "Process shutdown issues BGSAVE to Redis (dataBaseRedis.go:91-97)",
+      "Binary is UPX-compressed at build time (build.sh:4)",
+      "No metrics, tracing, pprof, load tests or SLOs; benchmark sources exist for token generation and Redis SET but no results are committed (shortToken_test.go:107-128, dataBaseRedis_test.go:176-200)",
+      "Default deployment: one container, network_mode host, no resource limits (docker-compose.yml:1-9)"
+    ],
+    "unknown": [
+      "Peak request rate per route",
+      "Number of active tokens and fill fraction of the token keyspace",
+      "Whether a reverse proxy enforces client timeouts and body-size limits",
+      "Health-check polling interval and mode",
+      "Production Redis topology, persistence and memory policy",
+      "Where logs go and at what cost"
+    ],
+    "assumed": [
+      "No proxy-level body-size or client-timeout limit is guaranteed (affects PERF-001, PERF-002)",
+      "Redirects dominate traffic, as is typical for a URL shortener; nothing in the repository measures this (affects PERF-005)",
+      "The keyspace fill fraction is currently low, so token creation usually succeeds on the first SETNX (affects PERF-003)"
+    ],
+    "derived": [
+      "Token keyspace = 64^6 = 68,719,476,736 at TokenLength 6 (inputs: tools.go:47 default 6; shortToken.go:61-69 64-symbol alphabet)",
+      "Expected SETNX attempts per created token = 1 / (1 - p) where p is the fraction of the keyspace currently occupied (inputs: uniform crypto/rand token, shortToken.go:38-50; retry-until-success loop, service.go:506-522)",
+      "Redis round trips per health check in mode 0 = 1 SETNX + 1 GET + 1 EXPIRE, plus 3 loopback HTTP requests served by the same process (inputs: service.go:257, 297, 324 and the handlers they reach)"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Is the service behind a reverse proxy that enforces client read/idle timeouts and a maximum request body size?",
+      "what_it_would_change": "If yes with sane limits, PERF-001 and PERF-002 drop to Medium severity (P2) as defence in depth; if no proxy, both rise to High confidence and stay P1",
+      "decision_dimensions": ["severity", "confidence", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001", "PERF-002"]
+    },
+    {
+      "question": "How many active tokens exist, at what TokenLength, and do clients send exp <= 0 or very large exp?",
+      "what_it_would_change": "A fill fraction approaching the README's 70-80% range, or clients sending non-positive exp, would raise PERF-003 and PERF-004 to High severity (P1); a tiny fill fraction and positive exp only would leave them as P2 scalability risks",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-003", "PERF-004"]
+    },
+    {
+      "question": "What is the peak redirect rate and token-creation rate?",
+      "what_it_would_change": "At high redirect rates the per-request header logging in PERF-005 becomes a material share of a request that otherwise does one Redis GET; at low rates it stays P2 or lower",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-005", "PERF-003"]
+    },
+    {
+      "question": "Is /api/v1/healthcheck polled by an orchestrator or monitor, how often and with what timeout?",
+      "what_it_would_change": "Frequent polling with no caller timeout turns PERF-006 into steady Redis write load and a goroutine pile-up risk when a hop hangs; if it is only hit manually, PERF-006 drops to Low",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-006"]
+    },
+    {
+      "question": "Where do logs go in production, and is their volume a cost or disk concern?",
+      "what_it_would_change": "A blocking or slow log sink makes PERF-005 a latency-coupling risk for every request; a fast local sink leaves it a CPU and cost item",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-005"]
+    },
+    {
+      "question": "Is production Redis dedicated to this service, and what are its persistence, maxmemory and eviction settings?",
+      "what_it_would_change": "A shared Redis widens the blast radius of PERF-003, PERF-004 and PERF-008; noeviction with no maxmemory makes PERF-004's growth end in write failures rather than evictions",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-004", "PERF-008", "PERF-003"]
+    }
+  ],
+  "root_causes": [
+    {"id": "ROOT-001", "description": "The HTTP server admits client connections with no time bounds (no read, header, write or idle timeouts)", "findings": ["PERF-001"]},
+    {"id": "ROOT-002", "description": "Request input size is unbounded: bodies are buffered whole and the URL inside is stored in Redis without a length limit", "findings": ["PERF-002"]},
+    {"id": "ROOT-003", "description": "Token collisions are resolved by blind, unthrottled SETNX retries against a shared single-threaded datastore", "findings": ["PERF-003"]},
+    {"id": "ROOT-004", "description": "Token lifetime is not bounded: non-positive expiry writes keys with no TTL and there is no maximum expiry", "findings": ["PERF-004"]},
+    {"id": "ROOT-005", "description": "Fixed synchronous logging work on every request, including the full request header map", "findings": ["PERF-005"]},
+    {"id": "ROOT-006", "description": "Health check performs a full write-path self-test over loopback HTTP using a client with no timeout", "findings": ["PERF-006"]},
+    {"id": "ROOT-007", "description": "No latency, throughput, error or Redis-call instrumentation exists on any path", "findings": ["PERF-007"]},
+    {"id": "ROOT-008", "description": "Application shutdown forces a Redis background snapshot", "findings": ["PERF-008"]},
+    {"id": "ROOT-009", "description": "Release binary is UPX-packed, trading startup time and shareable memory for image size", "findings": ["PERF-009"]}
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "f988e7e3da2f67bd",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "networking",
+      "location": {"file": "service.go", "line": 611, "symbol": "NewHandler"},
+      "tags": ["quick-win"],
+      "problem": "The http.Server is constructed with only Addr and Handler, so slow or idle clients can hold connections, goroutines, file descriptors and buffered request data for an unbounded time.",
+      "performance_principle": "Every resource a caller can hold must have a time bound; otherwise a slow caller converts directly into resource exhaustion for every other caller.",
+      "evidence": [
+        {"statement": "http.Server{Addr: config.ListenHostPort, Handler: handler} sets no ReadTimeout, ReadHeaderTimeout, WriteTimeout, IdleTimeout or MaxHeaderBytes", "kind": "static", "file": "service.go", "line": 611},
+        {"statement": "Server is started with ListenAndServe and no other server configuration anywhere in the repository", "kind": "static", "file": "service.go", "line": 585},
+        {"statement": "No runtime evidence exists: no metrics on open connections, goroutines or file descriptors", "kind": "static"}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service", "amplification": "unknown"},
+      "conditions": "Matters if clients (or abusive senders) can reach the Go server directly or through a proxy that does not enforce its own client timeouts. Assumption: no such proxy guarantee exists, because none is configured in the repository. Held resources grow linearly with the number of slow connections.",
+      "counter_evidence": [
+        {"statement": "Default listen address is localhost:8080 and the README points at a public demo domain, which suggests a reverse proxy may front the service and bound slow clients. No proxy configuration is in the repository, so this cannot be confirmed.", "effect": "lowers-confidence", "file": "tools.go", "line": 49},
+        {"statement": "Go's goroutine-per-connection model has no fixed worker pool, so exhaustion requires many held connections (file-descriptor limit or memory) rather than a few; this keeps severity at High rather than Critical.", "effect": "bounds-impact"}
+      ],
+      "why_this_might_not_matter": "If a well-configured reverse proxy terminates client connections and enforces its own timeouts, the Go server only ever sees well-behaved proxy connections and this is defence in depth rather than a live risk.",
+      "recommendation": "Set ReadHeaderTimeout, ReadTimeout, WriteTimeout and IdleTimeout (and optionally MaxHeaderBytes) on the http.Server in NewHandler, ideally configurable alongside the existing URLSHORTENER_TIMEOUT. Derive values from measured request latency once PERF-007's instrumentation exists; until then, treat any value as a provisional bound. This removes the unbounded hold rather than adding capacity to absorb it.",
+      "alternatives": [
+        {"option": "Server-side timeouts on http.Server", "preferred": true, "why": "Bounds the resource at the process that owns it, works with or without a proxy, and is a few lines of code"},
+        {"option": "Rely on a fronting reverse proxy's timeouts", "preferred": false, "why": "Valid only if the proxy is guaranteed in every deployment; the repository's own compose file shows none"},
+        {"option": "Raise file-descriptor limits or add replicas", "preferred": false, "why": "Adds capacity for held connections without bounding how long they are held"}
+      ],
+      "trade_offs": "Too-short timeouts cut off legitimate slow clients on poor networks; WriteTimeout also bounds the health-check handler, which itself makes three loopback calls (PERF-006), so it must exceed that handler's worst case.",
+      "validation": {
+        "metric": "Count of open server connections and goroutines while N deliberately slow clients hold connections against a staging instance",
+        "expectation": "Before the change, held connections persist for as long as the clients keep them open; after, each is closed once the configured timeout elapses",
+        "falsifier": "If a proxy in front of production already closes slow clients and connection counts at the Go process never grow with slow clients, the finding's impact was overstated",
+        "safety": "not-safe-on-production",
+        "guard": "A unit test asserting the server in NewHandler has non-zero ReadHeaderTimeout and IdleTimeout",
+        "commands": [
+          {"command": "grep -nE 'ReadHeaderTimeout|ReadTimeout|WriteTimeout|IdleTimeout' *.go", "purpose": "Confirm whether any server timeout is configured (currently returns nothing)", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "1daf8795e429c263",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "memory",
+      "location": {"file": "service.go", "line": 144, "symbol": "readBody"},
+      "tags": ["quick-win"],
+      "problem": "POST /api/v1/token and POST /api/v1/expire read the entire request body into memory with io.ReadAll and no size cap, and the URL from that body is then stored in Redis and echoed into logs and the Location header without a length limit.",
+      "performance_principle": "Work and memory per request must be bounded by the server, not by whatever the caller chooses to send.",
+      "evidence": [
+        {"statement": "readBody calls io.ReadAll(r.Body) with no http.MaxBytesReader or io.LimitReader", "kind": "static", "file": "service.go", "line": 144},
+        {"statement": "readBody is called for POST /api/v1/token and POST /api/v1/expire before any validation", "kind": "static", "file": "service.go", "line": 108},
+        {"statement": "params.URL is only checked for emptiness, then stored in Redis via SETNX as the value", "kind": "static", "file": "service.go", "line": 416},
+        {"statement": "The full body is logged on parse failure and on generation failure", "kind": "static", "file": "service.go", "line": 417},
+        {"statement": "The UI form declares maxLength=1024, but that is a browser hint only and does not bound the API", "kind": "static", "file": "service.go", "line": 55}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "system-wide", "amplification": "unknown"},
+      "conditions": "Matters when any caller can send large bodies to the token endpoint: the endpoint is unauthenticated (TODO at service.go:396) and nothing in the repository caps body size. Process memory grows linearly with concurrent body size; stored URL size grows Redis memory, which is the shared system of record. Assumption: no proxy body-size limit is guaranteed.",
+      "counter_evidence": [
+        {"statement": "A fronting proxy commonly enforces a request-body limit; none is in the repository, so whether one exists is unknown.", "effect": "lowers-confidence"},
+        {"statement": "Searched for MaxBytesReader, LimitReader, ContentLength checks or URL length validation in all .go files: none found.", "effect": "no-effect"}
+      ],
+      "why_this_might_not_matter": "Legitimate clients send URLs of a few hundred bytes, so under normal use the buffered body is tiny; the risk is driven by abusive or buggy callers, and a proxy body limit would remove most of it.",
+      "recommendation": "Wrap r.Body with http.MaxBytesReader in readBody and reject URLs above an explicit maximum length before storing them. This bounds per-request memory at the server and bounds Redis value size, rather than relying on callers to behave.",
+      "alternatives": [
+        {"option": "http.MaxBytesReader in readBody plus a URL length check in generateToken", "preferred": true, "why": "Bounds both process memory and stored value size at the point of entry; small change; returns 413 rather than consuming memory"},
+        {"option": "Stream-decode JSON with json.Decoder instead of ReadAll", "preferred": false, "why": "Avoids one copy but still decodes an unbounded string; does not bound stored value size"},
+        {"option": "Rely on proxy body limits", "preferred": false, "why": "Not guaranteed by anything in the repository and does not protect direct deployments"}
+      ],
+      "trade_offs": "Choosing a maximum URL length rejects some legitimate very long URLs (some tracking or data URLs are long); the limit must be documented in the README API section.",
+      "validation": {
+        "metric": "Process RSS and response status when POSTing an oversized body to /api/v1/token on a local or staging instance",
+        "expectation": "Before: the request is buffered whole and RSS rises with body size; after: a 413 response at the configured limit with flat RSS",
+        "falsifier": "If production traffic never reaches the Go process with a body larger than a proxy-enforced limit, the live impact was overstated",
+        "safety": "not-safe-on-production",
+        "guard": "A handler test that posts a body above the limit and asserts 413 and that nothing was stored",
+        "commands": [
+          {"command": "head -c 104857600 /dev/zero | curl -s -o /dev/null -w '%{http_code}\\n' -X POST --data-binary @- http://localhost:8080/api/v1/token", "purpose": "Send a 100 MiB body to a local instance and observe status and memory", "safety": "not-safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "809494c4a9984892",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": {"file": "service.go", "line": 506, "symbol": "serviceHandler.generateToken"},
+      "tags": ["scalability-risk"],
+      "problem": "Token creation retries SETNX against Redis in a tight loop with no backoff until a free token is found or the timeout (default 500 ms) fires, so the number of Redis round trips per created token rises as the keyspace fills, and the timeout does not bound a single slow SETNX already in flight.",
+      "performance_principle": "Retries against a shared single-threaded resource must be bounded in rate, not only in time, or one caller's contention becomes load on every other caller.",
+      "evidence": [
+        {"statement": "for ok := false; !ok { select { case <-stop: ...; default: sToken = s.shortToken.Get(); ok, err = s.tokenDB.Set(...) } } issues one SETNX per iteration with no sleep or backoff", "kind": "static", "file": "service.go", "line": 506},
+        {"statement": "Timeout comes from config.Timeout, default 500 ms", "kind": "static", "file": "tools.go", "line": 48},
+        {"statement": "stop is only checked between iterations; tokenDB.Set takes no context or deadline, so a slow SETNX is bounded only by the Redis client's own timeouts", "kind": "static", "file": "dataBaseRedis.go", "line": 55},
+        {"statement": "Expected attempts per created token = 1/(1-p), p being the occupied fraction of the keyspace (64^6 = 68,719,476,736 at the default length). Derivation: uniform crypto/rand tokens plus retry-until-success", "kind": "derived", "file": "shortToken.go", "line": 38},
+        {"statement": "README itself describes 30-40 attempts per timeout and filling the token space to 70-80% as an expected operating regime", "kind": "static", "file": "README.md", "line": 53}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "unknown", "blast_radius": "system-wide", "amplification": "Nx"},
+      "conditions": "Matters when the active token count is a material fraction of the keyspace (for example a short configured TokenLength, long expiries, or PERF-004's non-expiring keys accumulating). At a low fill fraction, which is the assumption here because nothing evidences token counts, nearly every creation succeeds on the first SETNX and the cost is one round trip.",
+      "counter_evidence": [
+        {"statement": "The loop is time-bounded by config.Timeout, so worst-case latency per request is bounded and the number of attempts falls if Redis slows down.", "effect": "bounds-impact", "file": "service.go", "line": 500},
+        {"statement": "At the default TokenLength of 6 the keyspace is large, so at modest token counts the expected attempts stay close to 1.", "effect": "bounds-impact"},
+        {"statement": "No data on actual token counts exists in the repository.", "effect": "lowers-confidence"}
+      ],
+      "why_this_might_not_matter": "With default settings and short expiries, the keyspace is so large relative to plausible token counts that the loop almost never iterates more than once; the design is deliberate and documented in the README.",
+      "recommendation": "Keep the time bound but add a small attempt cap and pass a context with the remaining deadline into tokenDB.Set so an in-flight SETNX is also bounded. Monitor the attempts-per-creation number the code already computes (s.attempts) as a metric so rising fill is visible before it becomes contention. If fill grows, increase TokenLength rather than retrying harder.",
+      "alternatives": [
+        {"option": "Attempt cap plus context deadline on Set, and export attempts as a metric", "preferred": true, "why": "Bounds both the number and the duration of Redis calls per request and makes fill pressure observable"},
+        {"option": "Increase TokenLength", "preferred": false, "why": "Removes collisions almost entirely but lengthens every short URL; correct once fill is shown to be high, premature before"},
+        {"option": "Sequence-based tokens from INCR", "preferred": false, "why": "Removes collisions entirely but makes tokens enumerable and changes the security model"}
+      ],
+      "trade_offs": "An attempt cap returns 408 earlier under high fill instead of trying harder; context plumbing requires go-redis WithContext calls and touches the TokenDB interface used by tests and mocks.",
+      "validation": {
+        "metric": "SETNX calls per successful token creation, from Redis INFO commandstats (cmdstat_setnx calls) divided by tokens created",
+        "expectation": "Ratio near 1 at low fill; after the change the per-request ratio never exceeds the cap",
+        "falsifier": "If the measured ratio stays at about 1 over time and token count is a negligible fraction of the keyspace, the risk is not material at current scale",
+        "safety": "safe-on-production",
+        "guard": "Alert when the attempts value (currently only shown on the home page) or the SETNX ratio rises",
+        "commands": [
+          {"command": "redis-cli INFO commandstats | grep -E 'cmdstat_(setnx|get|expire)'", "purpose": "Compare SETNX call count with token-creation count to measure retry amplification", "safety": "safe-on-production"},
+          {"command": "redis-cli INFO keyspace", "purpose": "Read the active key count to compute the keyspace fill fraction", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "2c085bf4140de86b",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": {"file": "dataBaseRedis.go", "line": 51, "symbol": "tokenDBR.Set"},
+      "tags": ["scalability-risk"],
+      "problem": "A token request with a negative exp is coerced to 0 and stored with SETNX and a zero duration, which writes the key with no TTL; there is also no maximum exp. Keys can therefore accumulate in Redis without bound through an unauthenticated endpoint.",
+      "performance_principle": "Every collection written on a user action needs a size bound, such as retention or expiry; otherwise steady traffic slowly degrades the system.",
+      "evidence": [
+        {"statement": "if expiration < 0 { expiration = 0 } then SetNX(sToken, longURL, time.Hour*24*time.Duration(expiration)), so a zero duration means no expiry", "kind": "static", "file": "dataBaseRedis.go", "line": 51},
+        {"statement": "generateToken replaces only exp == 0 with the default, so a negative exp from the request body reaches Set unchanged", "kind": "static", "file": "service.go", "line": 473},
+        {"statement": "exp is an unbounded int from the JSON body; no maximum is enforced", "kind": "static", "file": "service.go", "line": 411},
+        {"statement": "The repository's own Redis benchmark writes keys with expiration 0, i.e. permanently", "kind": "static", "file": "dataBaseRedis_test.go", "line": 185}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "system-wide", "amplification": "unknown"},
+      "conditions": "Matters only if callers send exp <= -1 or very large exp values. With the default (1 day) and positive values, keys expire and the keyspace is bounded by creation rate times expiry. Assumption: some callers may send such values, since nothing rejects them; there is no evidence either way.",
+      "counter_evidence": [
+        {"statement": "With default usage, which omits exp or sends positive days, every key has a TTL, bounding the keyspace.", "effect": "bounds-impact", "file": "tools.go", "line": 50},
+        {"statement": "Searched the handlers for exp validation or a maximum: none found.", "effect": "no-effect"}
+      ],
+      "why_this_might_not_matter": "If all real clients use the UI or send positive exp values, no key is ever written without a TTL and the keyspace stays bounded by traffic times expiry.",
+      "recommendation": "Validate exp in the handler: reject exp < 0 for creation (or map it to the default) and enforce a configured maximum. This bounds Redis memory and also bounds the keyspace fill that drives PERF-003's retry count.",
+      "alternatives": [
+        {"option": "Reject or clamp exp at the handler with a configured maximum", "preferred": true, "why": "Removes the unbounded growth at its source; small change"},
+        {"option": "Configure Redis maxmemory with a volatile or allkeys eviction policy", "preferred": false, "why": "Redis is the system of record here; eviction would silently delete live short URLs"},
+        {"option": "Periodic cleanup job scanning for keys without TTL", "preferred": false, "why": "Adds a keyspace scan on a single-threaded store to repair something that can be prevented at write time"}
+      ],
+      "trade_offs": "Clients that intentionally create permanent links (if any) lose that ability unless an explicit, documented permanent option is added.",
+      "validation": {
+        "metric": "Number of keys without TTL in production Redis (INFO keyspace keys minus expires)",
+        "expectation": "After the fix the gap between keys and expires stops growing",
+        "falsifier": "If keys equals expires in production today and stays so, no client uses the non-expiring path and the risk is latent only",
+        "safety": "safe-on-production",
+        "guard": "Handler test asserting a negative or over-maximum exp is rejected; alert on keys minus expires",
+        "commands": [
+          {"command": "redis-cli INFO keyspace", "purpose": "Compare keys= and expires= for the database in use; the difference is the number of keys with no TTL", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "fc88f6096be8fb12",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "io",
+      "location": {"file": "service.go", "line": 98, "symbol": "serviceHandler.ServeHTTP"},
+      "tags": ["needs-measurement", "quick-win"],
+      "problem": "Every request, including the hot redirect path, formats and synchronously writes the full request header map through the standard logger, then writes a second log line from the handler; all goroutines serialize on the logger's single writer.",
+      "performance_principle": "Fixed per-request work on a hot path should be proportional to its value; synchronous writes through one shared sink couple every request's latency to that sink.",
+      "evidence": [
+        {"statement": "log.Println(\"access from:\", r.RemoteAddr, r.Method, r.RequestURI, r.Header) runs before routing on every request", "kind": "static", "file": "service.go", "line": 98},
+        {"statement": "redirect builds rMess with fmt.Sprintf before any check and logs a second line with the long URL on every redirect", "kind": "static", "file": "service.go", "line": 347},
+        {"statement": "The redirect path otherwise does only token validation and one Redis GET, so logging is a large share of its non-I/O work by construction", "kind": "static", "file": "service.go", "line": 365},
+        {"statement": "Logger is the package-level standard logger writing to stderr with microsecond timestamps and file:line lookup (Lshortfile), which calls runtime.Caller per line", "kind": "static", "file": "urlshortener.go", "line": 30},
+        {"statement": "No profile exists, so the CPU and latency share of logging is unmeasured", "kind": "static"}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "2x"},
+      "conditions": "Matters at redirect rates high enough that header formatting, runtime.Caller and two synchronous writes per request become a measurable share of CPU, or when the log sink (container log driver, pipe) is slow and blocks the shared writer. Assumption: redirects dominate traffic, typical for a shortener; actual rates are unknown.",
+      "counter_evidence": [
+        {"statement": "Cost per request is a bounded constant (header map size is limited by Go's default header limits), so growth is O(1), not data-dependent.", "effect": "bounds-impact"},
+        {"statement": "No profile or log-sink configuration in the repository to show the share of time spent logging.", "effect": "lowers-confidence"}
+      ],
+      "why_this_might_not_matter": "At low or moderate traffic the cost is microseconds per request against a network round trip to Redis, and the access log may be the only operational record the service has.",
+      "recommendation": "Replace the header-map dump with a single structured access line per request (method, route kind, status, duration, token), written once after the handler returns, and drop Lshortfile from the access path. This keeps the access record while removing the heaviest fixed work and supplies the duration field PERF-007 needs.",
+      "alternatives": [
+        {"option": "One structured access line per request with duration, no header dump", "preferred": true, "why": "Removes most of the fixed cost and improves observability at the same time"},
+        {"option": "Asynchronous or buffered log writer", "preferred": false, "why": "Decouples latency from the sink but adds a buffer that can drop or grow, and keeps the formatting cost"},
+        {"option": "Log sampling on the redirect path", "preferred": false, "why": "Cuts volume but loses the per-request audit trail operators currently rely on"}
+      ],
+      "trade_offs": "Dropping header logging removes some forensic detail (user agents, referers); it can be logged selectively. Changing log format affects anyone parsing the current lines.",
+      "validation": {
+        "metric": "CPU profile share of log.(*Logger).output and fmt functions on the redirect path under a fixed-rate load test",
+        "expectation": "Logging share drops; per-redirect allocations drop (measurable with -benchmem on a handler benchmark)",
+        "falsifier": "If a CPU profile under representative load shows logging as a negligible share of request time, the finding is not worth acting on",
+        "safety": "not-safe-on-production",
+        "guard": "A handler benchmark with -benchmem tracking allocations per redirect"
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "9ab6ef0de1045039",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "networking",
+      "location": {"file": "service.go", "line": 227, "symbol": "serviceHandler.healthCheck"},
+      "tags": ["quick-win"],
+      "problem": "Each GET /api/v1/healthcheck makes three nested HTTP requests (create token, follow redirect, expire) using http.Post and http.Get with the default client, which has no timeout, and each probe writes to Redis; a hang in any hop leaves the probe and its nested requests blocked indefinitely.",
+      "performance_principle": "Health checks should be cheap and bounded; a probe that does real write work with no timeout becomes load and a resource leak at exactly the moment the system is degraded.",
+      "evidence": [
+        {"statement": "http.Post(\"http://\"+ListenHostPort+\"/api/v1/token\", ...) uses the default client", "kind": "static", "file": "service.go", "line": 257},
+        {"statement": "http.Get(\"http://\" + repl.URL) follows the short URL via ShortDomain, then the redirect to ShortDomain + /favicon.ico; if ShortDomain is a public domain this leaves the host", "kind": "static", "file": "service.go", "line": 297},
+        {"statement": "http.Post(... /api/v1/expire ...) third loopback call", "kind": "static", "file": "service.go", "line": 324},
+        {"statement": "Each probe in mode 0 issues 1 SETNX, 1 GET and 1 EXPIRE to Redis (derived from the handlers reached)", "kind": "derived", "file": "service.go", "line": 517},
+        {"statement": "In disableExpire mode the self-test tokens are stored with exp 1 day and never removed by the probe, so each probe leaves a key behind for a day", "kind": "static", "file": "service.go", "line": 319}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "async", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "3x"},
+      "conditions": "Matters if an orchestrator or uptime monitor polls /api/v1/healthcheck regularly; probe interval and timeout are not in the repository. Under a Redis or network stall, every probe that arrives while the stall persists adds a blocked handler goroutine plus its nested connections, so blocked work grows with stall duration times polling rate.",
+      "counter_evidence": [
+        {"statement": "No probe configuration exists in the repository; the endpoint may only be hit manually and at startup.", "effect": "lowers-confidence"},
+        {"statement": "Redis calls inside the nested handlers are bounded by the go-redis client's own default timeouts (not read in this review), which would release most hangs that originate in Redis.", "effect": "bounds-impact"}
+      ],
+      "why_this_might_not_matter": "If the endpoint is polled infrequently, or only at startup, three loopback requests and three Redis commands per probe are negligible, and the end-to-end self-test gives a stronger health signal than a ping.",
+      "recommendation": "Use a dedicated http.Client with a total timeout for the self-test (below the prober's timeout) and do not follow the redirect over the public ShortDomain; check the 302 Location instead. Consider splitting a cheap liveness endpoint (process up, Redis PING) from the full self-test.",
+      "alternatives": [
+        {"option": "Dedicated client with a timeout and no redirect following", "preferred": true, "why": "Bounds the probe and removes the external hop while keeping the end-to-end check"},
+        {"option": "Split liveness (cheap) from deep self-test", "preferred": false, "why": "Better long-term but changes the documented health-check contract"},
+        {"option": "Call tokenDB directly instead of over HTTP", "preferred": false, "why": "Cheaper but no longer exercises the HTTP layer, which is the point of the existing design"}
+      ],
+      "trade_offs": "A probe timeout can fail a healthy but momentarily slow instance; not following the redirect stops checking the public path end to end.",
+      "validation": {
+        "metric": "Goroutine count and open connections during a simulated Redis stall while the health check is polled at its production interval",
+        "expectation": "Before: goroutines grow with each probe for the duration of the stall; after: they stay flat and probes fail fast",
+        "falsifier": "If go-redis defaults release every stall quickly and goroutines never accumulate in the test, the hang risk is not material",
+        "safety": "not-safe-on-production",
+        "guard": "A test with a mock TokenDB that blocks, asserting the health check returns within the configured timeout",
+        "commands": [
+          {"command": "curl -s -o /dev/null -w '%{http_code} %{time_total}\\n' http://localhost:8080/api/v1/healthcheck", "purpose": "Time one health-check probe end to end", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "6e23e4c03c451af1",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "observability",
+      "location": {"file": "service.go", "line": 97, "symbol": "serviceHandler.ServeHTTP"},
+      "tags": ["needs-measurement"],
+      "problem": "There is no request-duration, status, rate or Redis-latency instrumentation and no pprof endpoint, so none of the findings in this review can be confirmed, sized or validated after a fix.",
+      "performance_principle": "A system that cannot measure its own critical path cannot tell a real bottleneck from a guessed one, and cannot prove an optimization worked.",
+      "evidence": [
+        {"statement": "ServeHTTP routes and logs but records no duration or status", "kind": "static", "file": "service.go", "line": 97},
+        {"statement": "Only metric-like signal is s.attempts, an extrapolated attempts-per-timeout value rendered on the HTML home page, not exported", "kind": "static", "file": "service.go", "line": 485},
+        {"statement": "No prometheus, expvar, net/http/pprof or OpenTelemetry import in any .go file; go.mod lists only go-redis, godotenv and testify", "kind": "static", "file": "go.mod", "line": 5},
+        {"statement": "Benchmarks exist for token generation and Redis SET but no results are committed", "kind": "static", "file": "dataBaseRedis_test.go", "line": 176}
+      ],
+      "evidence_quality": "Strong",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "unknown"},
+      "conditions": "Applies at any traffic level: without instrumentation, latency, error rate and Redis call cost under any workload are unobservable. Becomes urgent as soon as any finding here is to be fixed, since validation needs a baseline.",
+      "counter_evidence": [
+        {"statement": "Searched for metrics, tracing, pprof and expvar usage across all files: none found. The access log gives request counts but no durations.", "effect": "no-effect"}
+      ],
+      "why_this_might_not_matter": "For a small personal or demo deployment the access log plus external uptime checks may be enough, and adding a metrics stack is operational overhead.",
+      "recommendation": "Before optimizing anything, add per-route duration and status metrics (or at minimum a duration field in one access log line, see PERF-005), a Redis call latency measurement, and the net/http/pprof handlers on a non-public port. Export the existing attempts value as a metric.",
+      "alternatives": [
+        {"option": "Duration and status metrics per route plus pprof on an internal port", "preferred": true, "why": "Directly supports validating every other finding with low runtime cost"},
+        {"option": "Duration field in the access log only", "preferred": false, "why": "Cheapest start but needs log processing to get percentiles"},
+        {"option": "Full distributed tracing", "preferred": false, "why": "Disproportionate for a single service with one datastore"}
+      ],
+      "trade_offs": "A metrics endpoint and pprof add a small per-request cost and an exposure surface that must be kept off the public listener; per-route labels must use route kinds, not raw token paths, to avoid unbounded cardinality.",
+      "validation": {
+        "metric": "Availability of p50/p95/p99 duration per route and Redis call latency",
+        "expectation": "After the change each route has percentile latency and error rate visible",
+        "falsifier": "Not applicable as a performance claim; the check is whether the measurements needed by PERF-001 to PERF-006 can be taken",
+        "safety": "safe-on-production",
+        "guard": "A test asserting the metrics endpoint exposes the per-route duration series"
+      }
+    },
+    {
+      "id": "PERF-008",
+      "stable_id": "92daffb84b7ef847",
+      "root_cause_id": "ROOT-008",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "io",
+      "location": {"file": "dataBaseRedis.go", "line": 92, "symbol": "tokenDBR.Close"},
+      "tags": ["needs-measurement"],
+      "problem": "Every application shutdown issues BGSAVE, forcing Redis to fork and snapshot its whole dataset, a periodic cost on the shared datastore driven by application restarts rather than by Redis's own persistence policy.",
+      "performance_principle": "A client should not trigger whole-dataset maintenance work on a shared datastore as a side effect of its own lifecycle.",
+      "evidence": [
+        {"statement": "Close() calls t.db.BgSave().Result() before closing the client", "kind": "static", "file": "dataBaseRedis.go", "line": 92},
+        {"statement": "Close is deferred in doMain, so it runs on every normal shutdown", "kind": "static", "file": "urlshortener.go", "line": 55}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "offline", "frequency": "rare", "growth": "O(n)", "blast_radius": "system-wide", "amplification": "unknown"},
+      "conditions": "Matters when restarts are frequent (rolling deploys of several instances) or the dataset is large, because fork cost and copy-on-write memory grow with dataset size. Assumption: restarts are infrequent; dataset size is unknown.",
+      "counter_evidence": [
+        {"statement": "Shutdowns are rare events, and Redis rejects a BGSAVE while one is already running (the error is only logged), so concurrent shutdowns do not stack snapshots.", "effect": "bounds-impact"},
+        {"statement": "BGSAVE may be blocked or renamed on managed Redis services, in which case the call simply fails and is logged.", "effect": "lowers-confidence"}
+      ],
+      "recommendation": "Remove the BGSAVE from Close and leave persistence to the Redis server's configured policy.",
+      "trade_offs": "If an operator relied on the shutdown snapshot as their only persistence, they must configure RDB or AOF in Redis instead.",
+      "validation": {
+        "metric": "Redis latest_fork_usec and rdb_last_bgsave_time_sec around an application restart",
+        "expectation": "After removal, application restarts no longer coincide with fork events",
+        "falsifier": "If fork time around restarts is negligible relative to request latency, the change has no measurable effect",
+        "safety": "safe-on-production",
+        "commands": [
+          {"command": "redis-cli INFO persistence", "purpose": "Read rdb_last_bgsave_status and fork timing around an app restart", "safety": "safe-on-production"},
+          {"command": "redis-cli INFO stats | grep latest_fork_usec", "purpose": "Read the duration of the most recent fork", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-009",
+      "stable_id": "59b7ddfc367d86c5",
+      "root_cause_id": "ROOT-009",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "infrastructure",
+      "location": {"file": "build.sh", "line": 4},
+      "problem": "The release binary is compressed with upx --best, so each process start decompresses the whole executable into anonymous memory, adding startup time and making the code pages non-shareable and not backed by the file.",
+      "performance_principle": "Startup and resident memory should not be spent to save image bytes unless image size is the binding constraint.",
+      "evidence": [
+        {"statement": "upx -qq --best URLshortener after go build", "kind": "static", "file": "build.sh", "line": 4},
+        {"statement": "The image is FROM scratch with only the binary, so image size is already minimal", "kind": "static", "file": "dockerfile", "line": 1}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "offline", "frequency": "rare", "growth": "O(1)", "blast_radius": "endpoint", "amplification": "unknown"},
+      "conditions": "Matters for restart-sensitive deployments (frequent rescheduling, fast failover) or many instances per host; irrelevant for a single long-lived container.",
+      "counter_evidence": [
+        {"statement": "Startup also sleeps a fixed 300 ms before the initial health check, so decompression is unlikely to dominate startup time.", "effect": "bounds-impact", "file": "urlshortener.go", "line": 77}
+      ],
+      "recommendation": "Drop the UPX step unless registry or transfer size is a measured constraint; -s -w already strips symbols.",
+      "trade_offs": "A larger image to store and pull.",
+      "validation": {
+        "metric": "Process start-to-listening time and RSS for packed and unpacked binaries",
+        "expectation": "Unpacked binary starts at least as fast with lower private RSS",
+        "falsifier": "No measurable difference in startup time or RSS",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Redis client sets only Addrs and Password, leaving pool size, dial/read/write and pool-acquisition timeouts at go-redis v7 defaults, and no request context reaches Redis calls",
+      "why_discarded": "Library defaults exist and were not read (outside the review's allowed scope); whether pool size fits Redis maxclients depends on instance count and Redis limits, which no file states. Converted to a question rather than a finding.",
+      "location": "dataBaseRedis.go:36",
+      "path": "Redis client pool shared by all routes",
+      "evidence_checked": ["dataBaseRedis.go:33-47", "go.mod:6", "docker-compose.yml:1-9"],
+      "revisit_when": "Instance count and Redis maxclients are known, or pool wait time is measured"
+    },
+    {
+      "observation": "Redirect responses are 302 with no Cache-Control, so every click reaches the service and Redis",
+      "why_discarded": "Intentional: tokens can be expired or changed via /api/v1/expire, so caching redirects would serve stale targets; no evidence of redirect volume justifies trading that correctness",
+      "location": "service.go:377",
+      "path": "GET /<token> redirect",
+      "evidence_checked": ["service.go:344-378", "README.md:60-83"],
+      "revisit_when": "Redirect rate is measured high and stale redirects after expiry become acceptable"
+    },
+    {
+      "observation": "GOMAXPROCS could exceed a container CPU quota",
+      "why_discarded": "docker-compose.yml declares no CPU limit, so there is no quota to mismatch in the repository's deployment",
+      "location": "docker-compose.yml:5",
+      "path": "Go scheduler and process CPU",
+      "evidence_checked": ["docker-compose.yml:1-9", "dockerfile:1-4", "go.mod:3"],
+      "revisit_when": "The service is deployed with a CPU limit"
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "Token creation and token expiry endpoints are unauthenticated and unrate-limited, so anyone can create unlimited links (including non-expiring ones, see PERF-004) and expire or delete any existing short URL whose token they know or guess.",
+      "evidence": [
+        {"statement": "// TODO: check some authorization ??? in new()", "kind": "static", "file": "service.go", "line": 396},
+        {"statement": "// TODO: check some authorization ??? in expire(); exp 0 or negative maps to EXPIRE 0, which deletes the key", "kind": "static", "file": "service.go", "line": 533},
+        {"statement": "Tokens are 6 characters by default, so a known short URL reveals the token needed to expire it", "kind": "static", "file": "tools.go", "line": 47}
+      ],
+      "recommendation": "Require authentication or an ownership secret for /api/v1/expire, and add authentication or rate limiting for /api/v1/token and /ui/generate.",
+      "location": "service.go:533",
+      "assessed_properly_by": "A security review of the API's threat model (who may create and revoke links) and an abuse/rate-limit design review"
+    },
+    {
+      "id": "SEC-002",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Low",
+      "problem": "Every request's full header map, including any Cookie or Authorization headers, is written to the log in plain text, as are stored long URLs, which may carry tokens in query strings.",
+      "evidence": [
+        {"statement": "log.Println(..., r.Header) on every request", "kind": "static", "file": "service.go", "line": 98},
+        {"statement": "Redirect target long URL logged on every redirect", "kind": "static", "file": "service.go", "line": 374}
+      ],
+      "recommendation": "Log an allow-list of headers only, and consider redacting query strings of long URLs.",
+      "location": "service.go:98",
+      "assessed_properly_by": "A security/privacy review of logging and log retention"
+    }
+  ]
+}
