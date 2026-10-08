@@ -166,8 +166,11 @@ Accumulate observations in the private candidate ledger defined by
 during discovery.
 
 ### Phase 6 — Synthesis
-Complete the critical-path and shared-resource coverage sweep. Give every candidate a
-disposition, then merge promoted candidates that share a root cause. Score Severity and
+Complete the coverage sweep: critical paths, shared resources, write paths, data growth, and
+fixed per-request work. Give every candidate a disposition — a real, reachable mechanism is
+promoted even when minor; only refuted, unreachable, duplicate, or impact-free candidates are
+discarded —
+then merge promoted candidates that share a root cause. Score Severity and
 Confidence and derive Priority from the matrix — never guess it. Apply the output budget
 only after discovery, disposition, and root-cause merging are complete.
 

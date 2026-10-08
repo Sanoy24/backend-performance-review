@@ -38,6 +38,20 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breadth recovery, aimed at the two causes the second A/B comparison found.** On one pinned
+  model, guided reviews reported 69% as many distinct real issues as plain ones, through two
+  separate failures. *Over-filtering:* real, minor issues were seen and then discarded. The
+  candidate ledger now states that `discard` is for candidates that are not real — refuted,
+  unreachable, merged, or impact-free — and that a real, reachable mechanism is promoted even
+  when small, with bounded impact lowering its severity instead of deleting it. *Missed
+  discovery:* write paths and data growth were never examined. The final coverage sweep now
+  covers write paths (per-item statements, cascaded saves, row-by-row deletes, lock duration),
+  growth over time (soft-deleted and append-only data with no bound), and fixed work repeated
+  on every request. Contract tests pin both. **Not yet shown to work:** it was written against
+  the gin misses, so it needs evaluation on repositories it was not tuned on.
+
 ### Added
 
 - **The second A/B comparison, on one pinned model.** Pre-registered before any run (#100),
