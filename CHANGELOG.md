@@ -76,6 +76,18 @@ value and `[Unreleased]` accumulates.
 
 ### Changed
 
+- **The low tier is swept deliberately, and small is no longer a discard reason.** In the
+  fourth comparison guided breadth fell to 65% of plain, almost entirely in small items, in two
+  ways. Real mechanisms were discarded as "bounded" or "startup-only", which #102's rule
+  already forbade, and §4 of the methodology still said "Discard aggressively" and called a small
+  cost "not a finding". §2 now names small, bounded, rare, and startup-only as costs that set
+  Severity rather than reasons to discard. §4 is renamed "Test every candidate", and its tests now
+  grade a real candidate instead of deleting it. Other misses were never reached at all, so the
+  final sweep gains *Encoding the response* and *Startup, shutdown, and build*, and *Fixed work on
+  every request* now covers objects rebuilt per call and tasks spawned per request. These were
+  written against the fourth comparison's misses, so the next comparison must use repositories
+  outside it.
+
 - **Deployment-dependent mechanisms become questions, not findings.** The third comparison
   showed #102's promote-if-real rule leading reviews to report "runs as a single process" — real,
   but costly only if a container has more than one core, which nothing in the repository says.

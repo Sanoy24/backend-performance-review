@@ -166,9 +166,10 @@ Accumulate observations in the private candidate ledger defined by
 during discovery.
 
 ### Phase 6 — Synthesis
-Complete the coverage sweep: critical paths, shared resources, write paths, data growth, and
-fixed per-request work. Give every candidate a disposition — a real, reachable mechanism is
-promoted even when minor; only refuted, unreachable, duplicate, or impact-free candidates are
+Complete the coverage sweep: critical paths, shared resources, write paths, data growth,
+fixed per-request work, response encoding, and startup and shutdown. Give every candidate a
+disposition — a real, reachable mechanism is promoted even when minor, bounded, or
+startup-only; only refuted, unreachable, duplicate, or impact-free candidates are
 discarded; a deployment-dependent one, whose cost turns on a fact no file states, becomes a
 workload question —
 then merge promoted candidates that share a root cause. Score Severity and

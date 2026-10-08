@@ -84,7 +84,10 @@ into another, or it has no current or projected cost under any workload the code
 small: counter-evidence that bounds it lowers Severity (§6), down to `Low`, and the output budget
 moves it into the ranked table rather than out of the report. Discarding real, minor
 mechanisms to keep a report short is how a careful review ends up telling the reader less than
-a careless one.
+a careless one. Small, bounded, rare, and startup-only are not discard reasons: they describe
+the cost, and the cost sets Severity and Frequency. A goroutine spawned per request that always
+terminates, or a binary that must be decompressed on every start, is a `Low` finding, not a
+discard.
 
 **When the cost depends entirely on a fact the repository does not contain, the disposition is
 `question` — never a finding.** Some mechanisms are real but cost something only under a
@@ -149,12 +152,16 @@ database."
 
 ---
 
-## 4. Discard aggressively
+## 4. Test every candidate
 
-Most candidate observations should not become findings. Apply these tests:
+Many candidate observations do not survive these tests. A candidate that fails because it is
+not real — refuted, unreachable, or a duplicate — is discarded under the rule in §2. A real
+candidate that is merely small is not discarded: what a test finds lowers Severity or
+Confidence instead.
 
 **The workload test.** Under the workload model, does this cost enough to notice? A 50 μs
-inefficiency on a path called twice a day is not a finding.
+inefficiency on a path called twice a day has no cost worth naming — `Informational`, and
+discarded. One that runs on every request is `Low` at least.
 
 **The critical-path test.** Is it on a path someone waits for, or does it contend with one?
 If neither, it is `Informational` at best.
@@ -264,7 +271,19 @@ coverage check, not a demand to manufacture a candidate:
   fast today slower every week, with no code change at all.
 - **Fixed work on every request.** Find work a request repeats regardless of its result:
   recomputed totals and counts, aggregates over whole tables, related records loaded in full
-  only to read an identifier, and middleware or authentication that runs more than once.
+  only to read an identifier, and middleware or authentication that runs more than once. Also
+  objects that could be built once but are rebuilt or recompiled per call — templates,
+  parsers, regular expressions, clients — and threads, tasks, or goroutines spawned per request
+  only for bookkeeping.
+- **Encoding the response.** Follow a response from the data layer to the socket: the same
+  payload validated or serialized twice, fields loaded only to be dropped, no compression on
+  large text responses, and static assets served without a content type or cache headers, so
+  every client fetches them again.
+- **Startup, shutdown, and build.** Read the entry point and the build and image files, not
+  only the request handlers: fixed sleeps and eager work before the service accepts traffic,
+  build steps that slow every start, and shutdown hooks that trigger expensive work on a shared
+  system, such as forcing a datastore snapshot. These cost on every deploy, restart, and
+  scale-out, which is when capacity is already short.
 - Reconcile symptoms that name the same constraint before scoring. A path-local candidate and
   a shared-resource candidate may be one root cause with a wider blast radius.
 - If a path or shared resource could not be examined, record a `not-examined` completeness
