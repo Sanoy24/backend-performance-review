@@ -86,10 +86,43 @@ class CandidateFlowContractTests(unittest.TestCase):
             with self.subTest(area=area):
                 self.assertIn(area, sweep)
 
+    def test_small_bounded_or_startup_only_is_not_a_reason_to_discard(self):
+        # Fourth comparison (benchmark/ab-results/fourth-comparison.md): guided breadth fell to
+        # 65% of plain, almost entirely in small items. Guided runs discarded a per-request
+        # goroutine as "bounded" and a compressed binary as "startup-only" -- real mechanisms
+        # the promote-if-real rule says to keep, at Low severity.
+        section = " ".join(self.method.split("## 2. Keep a private candidate ledger", 1)[1]
+                           .split("## 3.", 1)[0].split())
+        self.assertIn("Small, bounded, rare, and startup-only are not discard reasons", section)
+
+    def test_section_4_tests_set_severity_rather_than_licensing_discards(self):
+        # §4 was titled "Discard aggressively" and its workload test called a small cost "not a
+        # finding", contradicting §2's discard rule. Its tests now grade a real candidate.
+        self.assertNotIn("Discard aggressively", self.method)
+        section = " ".join(self.method.split("## 4.", 1)[1].split("## 5.", 1)[0].split())
+        self.assertIn("lowers Severity", section)
+        self.assertIn("§2", section)
+
+    def test_final_sweep_covers_lifecycle_and_response_encoding(self):
+        # Fourth comparison: the remaining misses were never reached at all -- a snapshot forced
+        # on shutdown, a fixed startup sleep, double validation of responses, templates compiled
+        # per call, no compression, static assets without content type or cache headers.
+        sweep = " ".join(self.method.split("## 7. Final coverage sweep", 1)[1]
+                         .split("## 8.", 1)[0].split())
+        for area in ("**Startup, shutdown, and build.**", "**Encoding the response.**"):
+            with self.subTest(area=area):
+                self.assertIn(area, sweep)
+        for cue in ("rebuilt or recompiled per call", "spawned per request"):
+            with self.subTest(cue=cue):
+                self.assertIn(cue, sweep)
+
     def test_skill_names_the_widened_sweep_and_the_discard_rule(self):
         phase = " ".join(self.skill.split("### Phase 6", 1)[1].split("Load:", 1)[0].split())
         self.assertIn("write paths", phase)
         self.assertIn("data growth", phase)
+        self.assertIn("startup and shutdown", phase)
+        self.assertIn("response encoding", phase)
+        self.assertIn("even when minor, bounded, or startup-only", phase)
         self.assertIn("only refuted, unreachable, duplicate, or impact-free candidates are discarded", phase)
         self.assertIn("deployment-dependent", phase)
 
