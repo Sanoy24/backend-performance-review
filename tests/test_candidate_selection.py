@@ -65,6 +65,18 @@ class CandidateFlowContractTests(unittest.TestCase):
             with self.subTest(allowed=allowed):
                 self.assertIn(allowed, section)
 
+    def test_deployment_dependent_mechanisms_become_questions_not_findings(self):
+        # Third comparison (benchmark/ab-results/third-comparison.md): the promote-if-real rule
+        # led both guided Node runs to report "single process" -- real, but costly only if a
+        # container gets more than one core, which no file in the repository says. That is the
+        # finding the repository's forbidden trap exists to decline. Decided, before the next
+        # comparison, that such a mechanism becomes a decision-changing question.
+        section = " ".join(self.method.split("## 2. Keep a private candidate ledger", 1)[1]
+                           .split("## 3.", 1)[0].split())
+        self.assertIn("depends entirely on a fact the repository does not contain", section)
+        self.assertIn("disposition is `question`", section)
+        self.assertIn("never a finding", section)
+
     def test_final_sweep_covers_write_paths_growth_and_fixed_per_request_work(self):
         # The same comparison: every issue the guided runs never surfaced sat on a write path,
         # in data that grows without bound, or in work repeated on every request.
@@ -79,6 +91,7 @@ class CandidateFlowContractTests(unittest.TestCase):
         self.assertIn("write paths", phase)
         self.assertIn("data growth", phase)
         self.assertIn("only refuted, unreachable, duplicate, or impact-free candidates are discarded", phase)
+        self.assertIn("deployment-dependent", phase)
 
     def test_final_sweep_covers_every_path_and_shared_resource(self):
         sweep = self.method.split("## 7. Final coverage sweep", 1)[1].split(

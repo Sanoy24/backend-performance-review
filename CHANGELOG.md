@@ -54,6 +54,15 @@ value and `[Unreleased]` accumulates.
 
 ### Changed
 
+- **Deployment-dependent mechanisms become questions, not findings.** The third comparison
+  showed #102's promote-if-real rule leading reviews to report "runs as a single process" — real,
+  but costly only if a container has more than one core, which nothing in the repository says.
+  The candidate ledger now gives such mechanisms the `question` disposition: they are asked as
+  decision-changing workload questions, never reported as findings. The breadth rule stands for
+  everything the code itself shows, and a mechanism whose deciding fact *is* stated in a
+  manifest, deployment file, or measurement is judged on that evidence. Decided after the third
+  comparison and before the next, with the reasoning appended to its results page.
+
 - **Breadth recovery, aimed at the two causes the second A/B comparison found.** On one pinned
   model, guided reviews reported 69% as many distinct real issues as plain ones, through two
   separate failures. *Over-filtering:* real, minor issues were seen and then discarded. The
