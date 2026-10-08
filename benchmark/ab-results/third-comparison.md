@@ -153,3 +153,24 @@ be decided, with a reason written down, before the next comparison.
 - **Anything general.** n = 3 per arm, two repositories, one model.
 
 Raw output for every run is in [`raw-third/`](raw-third/).
+
+---
+
+## Decision recorded after this run (2026-10-08)
+
+*Appended after the results; nothing above was changed.*
+
+The trap/rule conflict is decided in favour of the trap's intent: **a mechanism whose cost
+depends entirely on a fact the repository does not contain becomes a decision-changing workload
+question, never a finding.** One process per container is the defining example: it costs
+something only if the container has more than one core, and no file says whether it does.
+
+The reason: the project's first rule is that nothing in a review rests on a fact the reviewer
+does not have. A carefully conditioned finding still presents a problem as present in the code,
+when what the code actually supports is a question. The breadth rule from #102 stands for
+everything the code itself shows; this carves out only the case where the deciding fact is absent.
+If a manifest, deployment file, or supplied measurement states the fact, the mechanism is judged
+on that evidence like any other.
+
+This does not change this comparison's verdict, which stands as recorded. It is the rule the
+next comparison will be held to.

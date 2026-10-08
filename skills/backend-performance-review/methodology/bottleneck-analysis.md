@@ -86,6 +86,16 @@ moves it into the ranked table rather than out of the report. Discarding real, m
 mechanisms to keep a report short is how a careful review ends up telling the reader less than
 a careless one.
 
+**When the cost depends entirely on a fact the repository does not contain, the disposition is
+`question` — never a finding.** Some mechanisms are real but cost something only under a
+deployment fact no file states: one process per container matters only if the container has
+more than one core; a fixed pool size matters only against an instance count nobody wrote down.
+Reporting it as a finding, however carefully conditioned, asserts a problem the code cannot
+show. Ask the fact instead, as a decision-changing workload question naming what the answer
+would change. This applies only when the deciding fact is absent: if a manifest, deployment
+file, or supplied measurement states it, the mechanism is judged on that evidence like any
+other.
+
 A candidate becomes a finding only after it survives the workload, critical-path, evidence,
 alternative-explanation, counterfactual, and intent tests below. A discarded candidate enters
 `considered_not_reported` only when it was plausible and material enough that a future

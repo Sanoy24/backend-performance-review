@@ -169,7 +169,8 @@ during discovery.
 Complete the coverage sweep: critical paths, shared resources, write paths, data growth, and
 fixed per-request work. Give every candidate a disposition — a real, reachable mechanism is
 promoted even when minor; only refuted, unreachable, duplicate, or impact-free candidates are
-discarded —
+discarded; a deployment-dependent one, whose cost turns on a fact no file states, becomes a
+workload question —
 then merge promoted candidates that share a root cause. Score Severity and
 Confidence and derive Priority from the matrix — never guess it. Apply the output budget
 only after discovery, disposition, and root-cause merging are complete.
