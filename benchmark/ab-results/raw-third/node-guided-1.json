@@ -1,0 +1,654 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-08T12:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "detect_stack.py (bundled with skill 2.0.0)",
+    "model": "Claude Code / claude-opus-5-5",
+    "repository": {
+      "name": "node-express-realworld",
+      "commit": "30b68e1e881462b2f4164ea09ab4c4f5699c7b0b"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "Maximum page size for article list endpoints",
+        "answer": "Default 10, no server maximum; offset unbounded",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["src/app/routes/article/article.service.ts:82-83", "src/app/routes/article/article.service.ts:131-132", "src/main.ts:13-16"]
+      },
+      {
+        "question": "Do Article/Comment/favorite/follow tables have retention?",
+        "answer": "No; append-only from the application, no retention or archival code",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["src/app/routes/article/article.service.ts", "src/app/routes/profile/profile.service.ts", "src/prisma/migrations"]
+      },
+      {
+        "question": "Process/instance model",
+        "answer": "Single node process per container; no replica or orchestration config in repo",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["Dockerfile:24", "project.json"]
+      },
+      {
+        "question": "Data volume stated in repository",
+        "answer": "Seed only: 12 users, 144 articles, 1,728 comments (derived from seed.ts:41,46,50)",
+        "source": "derived",
+        "asked": false,
+        "evidence_checked": ["src/prisma/seed.ts:41", "src/prisma/seed.ts:46", "src/prisma/seed.ts:50"]
+      },
+      {
+        "question": "Is there a specific symptom (slow endpoint, incident, cost) that prompted this review?",
+        "answer": "Unanswered (no one available)",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["README.md", "repository-wide search for incident/SLO docs"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Largest per-article favorite count and per-author follower count?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/prisma/seed.ts", "src/prisma/migrations"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Approximate row counts and growth of Article and Comment?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/prisma/seed.ts", "src/prisma/migrations"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Is the API exposed to untrusted clients; does a gateway cap query parameters?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["Dockerfile", "src/main.ts", "project.json"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Peak request rate on GET /api/articles and GET /api/tags?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["repository-wide search for load tests, metrics, dashboards"],
+        "decision_dimensions": ["severity"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Production instance/process count, CPU allotment, and connection_limit in DATABASE_URL?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["Dockerfile", "src/prisma/prisma-client.ts", "README.md"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Peak login/registration rate?",
+        "answer": "Unanswered",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/app/routes/auth/auth.service.ts"],
+        "decision_dimensions": ["severity"],
+        "expected_decision_value": "medium"
+      }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "All application source under src/, schema and all migrations, manifests, Dockerfile read in full",
+    "critical_paths_identified": 19,
+    "critical_paths_analyzed": 19,
+    "shared_resources_identified": 3,
+    "shared_resources_analyzed": 3,
+    "technology_support": [
+      { "technology": "postgres", "tier": "deep", "detection_confidence": 0.95 },
+      { "technology": "node", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "rest", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "docker", "tier": "deep", "detection_confidence": 0.8 },
+      { "technology": "prisma", "tier": "generic" }
+    ],
+    "unknowns": [
+      { "subject": "Table sizes and per-article/per-user relation fan-out", "reason": "no-evidence-exists", "what_would_resolve_it": "Row counts and GROUP BY distribution queries on a replica" },
+      { "subject": "Production request rate per route", "reason": "no-evidence-exists", "what_would_resolve_it": "Access logs or request-duration metric (PERF-008)" },
+      { "subject": "Effective Prisma connection pool size", "reason": "no-evidence-exists", "what_would_resolve_it": "connection_limit parameter of deployed DATABASE_URL" },
+      { "subject": "Production process/instance count and CPU", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployment configuration" },
+      { "subject": "Exact SQL emitted by Prisma 4.16 for relation filters and includes", "reason": "technology-unsupported", "what_would_resolve_it": "Prisma query logging in staging or pg_stat_statements" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "19 HTTP routes (9 GET, 10 writes) under /api — controllers in src/app/routes",
+      "List limit default 10, no maximum; offset unbounded — article.service.ts:82-83,131-132",
+      "Comments endpoint unpaginated — article.service.ts:433-458",
+      "No indexes on Article.authorId, Article.createdAt, Comment.articleId, Comment.authorId, User.demo — migrations/20210924225358_initial/migration.sql",
+      "Single node process per container — Dockerfile:24",
+      "Prisma 4.16.2, Express 4.18.2, bcryptjs 2.4.3 — package-lock.json",
+      "Seed: 12 demo users, 12 articles each, 1 comment per user per article — seed.ts:41,46,50"
+    ],
+    "unknown": [
+      "Request rate per route and peak concurrency",
+      "Row counts and favorite/follower distributions",
+      "Production instance count, CPU limit, Prisma pool size",
+      "Any latency target"
+    ],
+    "assumed": [
+      "Article, Comment and favorite/follow join tables grow without bound — affects PERF-001, PERF-003, PERF-004, PERF-005, PERF-006",
+      "GET /api/articles and GET /api/tags are highest-frequency (RealWorld home page) — affects PERF-001, PERF-004, PERF-005, PERF-006",
+      "API may be reachable by untrusted clients — affects PERF-002"
+    ],
+    "derived": [
+      "Seed volume: 144 articles (12 users x 12) and 1,728 comments (144 x 12) — from seed.ts:41,46,50",
+      "Rows per list request ~ page + sum(favorites per article) + sum(followers per author) + tags — from include shape at article.service.ts:84-104; page size is client-controlled"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    { "question": "Is there a specific symptom that prompted the review?", "what_it_would_change": "Would reorganize the review around confirming/refuting it", "decision_dimensions": ["severity", "recommendation"], "expected_decision_value": "highest" },
+    { "question": "Largest favorites per article / followers per author?", "what_it_would_change": "Tens: PERF-001 to Medium/P2; thousands: toward Critical", "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "highest", "affects": ["PERF-001"] },
+    { "question": "Row counts and growth of Article and Comment?", "what_it_would_change": "Small tables demote PERF-004/PERF-005 to P3", "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "high", "affects": ["PERF-004", "PERF-005", "PERF-003"] },
+    { "question": "Is the API public; does a gateway cap query parameters?", "what_it_would_change": "A gateway cap bounds PERF-002 to Medium", "decision_dimensions": ["severity", "recommendation"], "expected_decision_value": "high", "affects": ["PERF-002"] },
+    { "question": "Peak rate on GET /api/articles and /api/tags?", "what_it_would_change": "Very low rates demote PERF-005/PERF-006 to P3", "decision_dimensions": ["severity"], "expected_decision_value": "high", "affects": ["PERF-005", "PERF-006"] },
+    { "question": "Instance/process count, CPU, connection_limit?", "what_it_would_change": "Decides PERF-009 and whether pool sizing becomes a finding", "decision_dimensions": ["severity", "recommendation"], "expected_decision_value": "medium", "affects": ["PERF-009"] },
+    { "question": "Peak login/registration rate?", "what_it_would_change": "Bursts raise PERF-007; rare logins make it Low", "decision_dimensions": ["severity"], "expected_decision_value": "medium", "affects": ["PERF-007"] }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Responses load entire relation collections (favoritedBy, followedBy) to compute a membership boolean and a count", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "List endpoints have no server-enforced bound on result size", "findings": ["PERF-002", "PERF-003"] },
+    { "id": "ROOT-003", "description": "Schema lacks indexes on foreign-key and sort columns used by hot reads", "findings": ["PERF-004"] },
+    { "id": "ROOT-004", "description": "Exact whole-set count recomputed per list request, serially", "findings": ["PERF-005"] },
+    { "id": "ROOT-005", "description": "Tag popularity aggregate recomputed per request", "findings": ["PERF-006"] },
+    { "id": "ROOT-006", "description": "CPU-bound password hashing on the single event loop", "findings": ["PERF-007"] },
+    { "id": "ROOT-007", "description": "No instrumentation of requests, queries, or event loop", "findings": ["PERF-008"] },
+    { "id": "ROOT-008", "description": "Capacity configuration (process count, heap, pool) implicit", "findings": ["PERF-009"] },
+    { "id": "ROOT-009", "description": "Write path split into sequential non-transactional round trips with uncapped per-tag work", "findings": ["PERF-010"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "5e09124e610c5786",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/article/article.service.ts", "line": 84, "symbol": "getArticles" },
+      "tags": ["scalability-risk"],
+      "problem": "Article and profile queries include favoritedBy: true and author.followedBy: true (full User rows) only to compute favorited/following booleans and favoritesCount; data loaded grows with popularity, not response size.",
+      "performance_principle": "Fetch only what the response needs; answer membership tests and counts in the datastore rather than transferring whole collections.",
+      "evidence": [
+        { "statement": "Full relation include in getArticles", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 90 },
+        { "statement": "Same include in getFeed, createArticle, getArticle, updateArticle, favorite/unfavorite (lines 139, 221, 252, 365, 580, 626) and comment authors (447, 503)", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 139 },
+        { "statement": "Mapper uses only .some() membership and .length; requested _count is ignored", "kind": "static", "file": "src/app/routes/article/article.mapper.ts", "line": 11 },
+        { "statement": "Profile paths load full followedBy for a membership test", "kind": "static", "file": "src/app/routes/profile/profile.service.ts", "line": 10 },
+        { "statement": "Rows per list request ~ page x (1 + favorites/article + followers/author); derived from include shape. No runtime evidence exists.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service", "amplification": "Nx" },
+      "conditions": "Matters once popular articles/authors have favorites/followers in the hundreds or more relative to page size. No row-count evidence; join tables are append-only with no cap. Workload unknown, so confidence capped at Medium.",
+      "counter_evidence": [
+        { "statement": "Prisma 4 batches each relation level into one query, so query count is constant per request (no N+1); cost is row volume", "effect": "bounds-impact" },
+        { "statement": "Searched for any cap on favorites/followers: none", "effect": "no-effect" },
+        { "statement": "Join tables indexed on both columns, so relation queries are index lookups", "effect": "no-effect", "file": "src/prisma/migrations/20210924225358_initial/migration.sql", "line": 78 }
+      ],
+      "why_this_might_not_matter": "At demo/seed scale (at most 12 favoriters/followers per item) the extra rows are trivial.",
+      "recommendation": "Use _count for favoritesCount and include favoritedBy/followedBy filtered to the current user id with select {id:true} (skip for anonymous requests); apply to profile queries too.",
+      "alternatives": [
+        { "option": "Filtered relation include plus _count", "preferred": true, "why": "Bounded to at most one row per relation per item, no schema change, removes the work" },
+        { "option": "Denormalized favoritesCount column", "preferred": false },
+        { "option": "Cache article payloads", "preferred": false }
+      ],
+      "trade_offs": "Mapper signatures change; anonymous and authenticated requests use different query shapes.",
+      "validation": {
+        "metric": "Relation rows returned per GET /api/articles page and response bytes (Prisma query log in staging)",
+        "expectation": "Relation rows fall from sum(favorites+followers) on the page to at most one per relation per article; response size independent of popularity. Latency change unquantified until measured.",
+        "falsifier": "If relation rows are already at or below page size, impact was overstated; re-rank to P3.",
+        "safety": "not-safe-on-production",
+        "guard": "Unit test asserting findMany include uses filtered favoritedBy/followedBy",
+        "commands": [
+          { "command": "psql \"$DATABASE_URL\" -c 'SELECT \"A\" AS article_id, count(*) FROM \"_UserFavorites\" GROUP BY 1 ORDER BY 2 DESC LIMIT 5;'", "purpose": "Size the largest favorite lists", "safety": "safe-on-production" },
+          { "command": "psql \"$DATABASE_URL\" -c 'SELECT \"B\" AS followed_user, count(*) FROM \"_UserFollows\" GROUP BY 1 ORDER BY 2 DESC LIMIT 5;'", "purpose": "Size the largest follower lists (also run with \"A\")", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "a790787e9eba1728",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/article/article.controller.ts", "line": 30, "symbol": "GET /articles" },
+      "tags": ["quick-win"],
+      "problem": "take: Number(query.limit) || 10 and skip: Number(query.offset) || 0 pass client input to the query with no maximum, on /articles and /articles/feed.",
+      "performance_principle": "Bound all work set by input you do not control; the server owns the maximum cost of a request.",
+      "evidence": [
+        { "statement": "Uncapped take/skip in getArticles", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 82 },
+        { "statement": "Uncapped take/skip in getFeed", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 131 },
+        { "statement": "Controller passes req.query directly; no validation middleware or rate limiter", "kind": "static", "file": "src/app/routes/article/article.controller.ts", "line": 32 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service", "amplification": "Nx" },
+      "conditions": "One caller sending a large limit or offset, independent of traffic volume; severity grows with total article count (assumed growing). A gateway capping parameters would bound it.",
+      "counter_evidence": [
+        { "statement": "Looked for Prisma/Express default maximum: none exists", "effect": "no-effect" },
+        { "statement": "Looked for gateway/proxy config in repo: none present", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "If the deployment is private or behind a parameter-capping gateway and the table is small, the worst case is a slow but harmless response.",
+      "recommendation": "Clamp limit to a server maximum and reject negative/non-numeric offset in getArticles and getFeed; consider keyset pagination on (createdAt, id) if deep paging is observed.",
+      "alternatives": [
+        { "option": "Server-side clamp in the service", "preferred": true, "why": "Removes the unbounded case at the source; trivial; no change for well-behaved clients" },
+        { "option": "Gateway parameter cap", "preferred": false },
+        { "option": "Keyset pagination", "preferred": false }
+      ],
+      "trade_offs": "Clients relying on very large pages are truncated; choosing MAX is a product decision.",
+      "validation": {
+        "metric": "articles.length and response bytes for an oversized limit",
+        "expectation": "articles.length <= MAX regardless of requested limit",
+        "falsifier": "If an oversized request already returns <= MAX, the finding is refuted.",
+        "safety": "not-safe-on-production",
+        "guard": "Unit test calling getArticles({limit:'1000000'}) asserting take <= MAX",
+        "commands": [
+          { "command": "curl -s -o /dev/null -w \"%{size_download} bytes %{time_total}s\\n\" \"http://localhost:3000/api/articles?limit=100000\"", "purpose": "Show response scales with table size, not page size (local seeded DB)", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "82d672fbb943bc7f",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/article/article.service.ts", "line": 433, "symbol": "getCommentsByArticle" },
+      "problem": "GET /articles/:slug/comments returns every visible comment, each with its author's full follower list; no take.",
+      "performance_principle": "Bound list responses on the server.",
+      "evidence": [
+        { "statement": "No take/skip on comments include", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 433 },
+        { "statement": "Controller accepts no paging parameters", "kind": "static", "file": "src/app/routes/article/article.controller.ts", "line": 149 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Articles with hundreds or more comments; comment distribution unknown. RealWorld spec defines this endpoint unpaginated.",
+      "counter_evidence": [
+        { "statement": "Visibility filter (author.demo OR author.id = me) partially bounds rows returned", "effect": "bounds-impact", "file": "src/app/routes/article/article.service.ts", "line": 417 },
+        { "statement": "Spec-defined unpaginated shape explains the design", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Articles may rarely exceed a few dozen comments, and the visibility filter further limits rows.",
+      "recommendation": "Add an optional server-capped limit ordered by createdAt; fix per-comment follower load via PERF-001.",
+      "alternatives": [
+        { "option": "Server cap with optional limit/offset", "preferred": true, "why": "Bounds worst case while compatible for typical articles" },
+        { "option": "Rely on PERF-001 fix only", "preferred": false }
+      ],
+      "trade_offs": "Possible truncation for spec clients expecting all comments.",
+      "validation": {
+        "metric": "Rows returned for the most-commented article",
+        "expectation": "Response row count never exceeds the cap",
+        "falsifier": "If no article exceeds the cap, the fix has no current effect.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "psql \"$DATABASE_URL\" -c 'SELECT \"articleId\", count(*) FROM \"Comment\" GROUP BY 1 ORDER BY 2 DESC LIMIT 5;'", "purpose": "Find largest comment lists", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "f71a1148ea8f97ba",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/prisma/schema.prisma", "line": 11, "symbol": "model Article" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "No index on Comment.articleId, Article.authorId, or Article.createdAt; comments list filters by articleId, feed filters by authorId, all lists ORDER BY createdAt DESC LIMIT.",
+      "performance_principle": "A predicate or sort over a growing table needs an access path proportional to the result, not the table.",
+      "evidence": [
+        { "statement": "Initial migration creates only PKs, unique slug/email/username, and join-table indexes; later migrations add none", "kind": "static", "file": "src/prisma/migrations/20210924225358_initial/migration.sql", "line": 68 },
+        { "statement": "Comments filtered by article", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 433 },
+        { "statement": "orderBy createdAt desc on lists", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 79 },
+        { "statement": "Feed filters articles by author's followers", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 122 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "system-wide" },
+      "conditions": "Matters once Comment/Article exceed cheap-scan size (roughly tens of thousands of rows). Both are append-only with no retention; current size unknown, so confidence capped at Medium.",
+      "counter_evidence": [
+        { "statement": "Searched all four migrations for CREATE INDEX on these columns: none", "effect": "no-effect" },
+        { "statement": "At seed scale (144 articles, 1,728 comments) a sequential scan is optimal", "effect": "lowers-confidence" }
+      ],
+      "why_this_might_not_matter": "On small tables sequential scans are optimal and indexes add write cost for nothing.",
+      "recommendation": "Add @@index([articleId]) on Comment and @@index([authorId]) / @@index([createdAt]) (or composite [authorId, createdAt]) on Article, chosen from EXPLAIN; build CONCURRENTLY on large tables.",
+      "alternatives": [
+        { "option": "Targeted indexes chosen from EXPLAIN", "preferred": true, "why": "Directly provides access paths at small, understood cost" },
+        { "option": "Index every foreign key blindly", "preferred": false },
+        { "option": "Cache list/comment responses", "preferred": false }
+      ],
+      "trade_offs": "Extra insert cost and storage; non-concurrent build blocks writes.",
+      "validation": {
+        "metric": "Plan node type and buffers; seq_scan vs idx_scan deltas in pg_stat_user_tables",
+        "expectation": "Seq Scan on Comment becomes index scan on articleId; list sort becomes index-ordered with early LIMIT",
+        "falsifier": "Planner still chooses seq scans after ANALYZE (tables too small): drop indexes, demote to P3.",
+        "safety": "safe-on-production",
+        "guard": "Migration test/CI check that indexes exist; monitor idx_scan",
+        "commands": [
+          { "command": "psql \"$DATABASE_URL\" -c 'SELECT relname, seq_scan, seq_tup_read, idx_scan, n_live_tup FROM pg_stat_user_tables ORDER BY seq_tup_read DESC;'", "purpose": "See scan pattern and table sizes", "safety": "safe-on-production" },
+          { "command": "psql \"$DATABASE_URL\" -c 'EXPLAIN SELECT * FROM \"Comment\" WHERE \"articleId\" = 1;'", "purpose": "Plan without executing", "safety": "safe-on-production" },
+          { "command": "psql \"$DATABASE_URL\" -c 'EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM \"Article\" ORDER BY \"createdAt\" DESC LIMIT 10;'", "purpose": "Actual rows examined for the sort (run on a replica)", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "bb559baccc190795",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/article/article.service.ts", "line": 114, "symbol": "getFeed" },
+      "tags": ["needs-measurement"],
+      "problem": "Every list and feed request runs an exact prisma.article.count over the full filtered set, awaited serially before the independent findMany (also getArticles:71).",
+      "performance_principle": "Avoid whole-set aggregation for per-request metadata and do not serialize independent I/O.",
+      "evidence": [
+        { "statement": "count then findMany in getFeed", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 114 },
+        { "statement": "count then findMany in getArticles", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 71 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service" },
+      "conditions": "Matching articles in the many thousands with frequent list traffic; both unknown.",
+      "counter_evidence": [
+        { "statement": "RealWorld spec requires articlesCount; limits recommendation, not mechanism", "effect": "no-effect" },
+        { "statement": "Count is trivial at seed scale", "effect": "lowers-confidence" }
+      ],
+      "why_this_might_not_matter": "Counts over a few thousand rows are cheap; the serial round trip is a small constant locally.",
+      "recommendation": "Issue count and page query concurrently (Promise.all or $transaction); consider has-more or approximate count only if measured expensive.",
+      "alternatives": [
+        { "option": "Run count and page concurrently", "preferred": true, "why": "Removes a serial round trip without contract change" },
+        { "option": "Approximate or capped count", "preferred": false },
+        { "option": "Cache counts", "preferred": false }
+      ],
+      "trade_offs": "Two pool connections per request concurrently; $transaction holds a transaction.",
+      "validation": {
+        "metric": "pg_stat_statements mean_exec_time of the count query; query-log overlap in staging",
+        "expectation": "Queries overlap after change; count cost known",
+        "falsifier": "Count mean time negligible relative to list query: no count redesign needed.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "ac815e3596648be2",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/tag/tag.service.ts", "line": 16, "symbol": "getTags" },
+      "tags": ["needs-measurement"],
+      "problem": "GET /tags orders all tags by article _count (filtered by author demo/self) on every request; take:10 bounds output, not work.",
+      "performance_principle": "Do not recompute a whole-table aggregate per request when the result changes slowly.",
+      "evidence": [
+        { "statement": "findMany with orderBy articles._count and relation filter", "kind": "static", "file": "src/app/routes/tag/tag.service.ts", "line": 16 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service" },
+      "conditions": "_ArticleToTag large and /tags called on every page view (assumed); both unknown.",
+      "counter_evidence": [
+        { "statement": "Join table indexed on (A,B) and B; only the grouping is whole-set", "effect": "bounds-impact", "file": "src/prisma/migrations/20211001143221_implicit_tags/migration.sql", "line": 24 }
+      ],
+      "why_this_might_not_matter": "At modest counts this is a fast aggregate.",
+      "recommendation": "Measure via pg_stat_statements; if significant, precompute demo-author tag popularity periodically and merge the caller's own tags per request.",
+      "alternatives": [
+        { "option": "Measure, then periodic precompute", "preferred": true, "why": "Removes repeated whole-set work with explicit staleness budget" },
+        { "option": "Short-TTL in-process cache", "preferred": false },
+        { "option": "No change", "preferred": false }
+      ],
+      "trade_offs": "Refresh job and staleness; per-user term needs separate handling.",
+      "validation": {
+        "metric": "pg_stat_statements calls and mean_exec_time for the tag query",
+        "expectation": "Per-request query becomes a point read after change",
+        "falsifier": "Mean time already negligible: no action.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "3ac63d39e0e1e0d6",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "concurrency",
+      "location": { "file": "src/app/routes/auth/auth.service.ts", "line": 111, "symbol": "login" },
+      "tags": ["needs-measurement"],
+      "problem": "bcryptjs (pure JS, cost 10) runs hashing on the main thread of the single Node process in login, createUser, updateUser.",
+      "performance_principle": "CPU-bound work must not share the thread that services all I/O.",
+      "evidence": [
+        { "statement": "bcrypt.compare in login", "kind": "static", "file": "src/app/routes/auth/auth.service.ts", "line": 111 },
+        { "statement": "bcrypt.hash cost 10 in createUser/updateUser (lines 58, 156)", "kind": "static", "file": "src/app/routes/auth/auth.service.ts", "line": 58 },
+        { "statement": "Single process", "kind": "static", "file": "Dockerfile", "line": 24 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service" },
+      "conditions": "Login/registration bursts coinciding with read traffic on the same process; login rate unknown.",
+      "counter_evidence": [
+        { "statement": "Async API yields between chunks; loop is saturated, not fully blocked", "effect": "bounds-impact" },
+        { "statement": "Hashing is necessary work; only its placement is at issue", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "If logins are infrequent relative to reads, main-thread CPU share is negligible.",
+      "recommendation": "Measure event-loop delay during a login burst; if material, switch to native bcrypt/argon2 on the libuv pool.",
+      "alternatives": [
+        { "option": "Measure, then native bcrypt/argon2", "preferred": true, "why": "Moves CPU off the loop; bcrypt keeps hash format" },
+        { "option": "worker_threads pool running bcryptjs", "preferred": false },
+        { "option": "Lower cost factor", "preferred": false }
+      ],
+      "trade_offs": "Native build tooling in Alpine; libuv pool contention (default 4).",
+      "validation": {
+        "metric": "perf_hooks.monitorEventLoopDelay p99 during scripted login loop in staging",
+        "expectation": "Lag during logins falls after change",
+        "falsifier": "Lag negligible before change.",
+        "safety": "not-safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-008",
+      "stable_id": "e3ab4e870c876940",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "observability",
+      "location": { "file": "src/main.ts", "line": 13, "symbol": "app" },
+      "tags": ["quick-win"],
+      "problem": "No request duration, per-route rate, query timing, pool wait, or event-loop lag measurement; PrismaClient has no log options.",
+      "performance_principle": "An unmeasured system cannot have bottlenecks confirmed or fixes validated.",
+      "evidence": [
+        { "statement": "Only cors and body-parser middleware", "kind": "static", "file": "src/main.ts", "line": 13 },
+        { "statement": "No logging/metrics dependencies", "kind": "static", "file": "package.json", "line": 15 },
+        { "statement": "PrismaClient constructed without log", "kind": "static", "file": "src/prisma/prisma-client.ts", "line": 17 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service" },
+      "conditions": "Any traffic level; matters as soon as PERF-001..007 need prioritizing or validating.",
+      "counter_evidence": [
+        { "statement": "Searched for logging/metrics libraries, /metrics routes, Prisma $on('query'): none; platform-level logs unknown", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "A hosting platform may provide edge request latency, though not query or event-loop data.",
+      "recommendation": "Add per-route request duration, monitorEventLoopDelay export, Prisma query logging/metrics in staging, and pg_stat_statements.",
+      "alternatives": [
+        { "option": "Minimal timing + event-loop delay + pg_stat_statements", "preferred": true, "why": "Cheap and answers the open workload questions" },
+        { "option": "Full OpenTelemetry tracing", "preferred": false }
+      ],
+      "trade_offs": "Small per-request overhead; log volume and cost.",
+      "validation": {
+        "metric": "Presence and population of route-latency and event-loop-delay series",
+        "expectation": "Series populate under normal traffic",
+        "falsifier": "Not applicable beyond presence check; series absent means not done.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-009",
+      "stable_id": "1b9988cb99a7a85e",
+      "root_cause_id": "ROOT-008",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "infrastructure",
+      "location": { "file": "Dockerfile", "line": 24, "symbol": "CMD" },
+      "tags": ["needs-measurement"],
+      "problem": "One node process, no cluster/worker count, --max-old-space-size, UV_THREADPOOL_SIZE, or Prisma connection_limit; floating node:lts-alpine tag.",
+      "performance_principle": "Capacity configuration should be explicit and match provisioned resources.",
+      "evidence": [
+        { "statement": "CMD node api; FROM node:lts-alpine", "kind": "static", "file": "Dockerfile", "line": 24 },
+        { "statement": "new PrismaClient() with no pool configuration", "kind": "static", "file": "src/prisma/prisma-client.ts", "line": 17 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service" },
+      "conditions": "Only if production gives one container multiple cores and runs a single container; unknown.",
+      "counter_evidence": [
+        { "statement": "Horizontal scaling with many single-process containers is valid and not visible here", "effect": "lowers-confidence" }
+      ],
+      "recommendation": "Document intended process/instance count, pin Node major, and set connection_limit so instances x pool stays within max_connections.",
+      "trade_offs": "More processes multiply DB connections and memory.",
+      "validation": {
+        "metric": "Container CPU allotment vs process count in deployment config",
+        "expectation": "Process count matches cores available",
+        "falsifier": "Deployment already runs N one-core containers.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-010",
+      "stable_id": "3c631d017d81b1ff",
+      "root_cause_id": "ROOT-009",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/app/routes/article/article.service.ts", "line": 289, "symbol": "updateArticle" },
+      "problem": "updateArticle issues four sequential statements (findFirst, optional findFirst, tag reset update, final update with per-tag connectOrCreate) plus relation reloads; tag list uncapped.",
+      "performance_principle": "Collapse dependent writes into one round trip or transaction and bound per-item write work.",
+      "evidence": [
+        { "statement": "Sequential findFirst / disconnectArticlesTags / update", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 292 },
+        { "statement": "Per-tag connectOrCreate with uncapped tagList", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 335 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Writes assumed far less frequent than reads; material only with large tag lists.",
+      "counter_evidence": [
+        { "statement": "Slug lookups hit the unique index; each step is cheap", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Use tagList {set: [], connectOrCreate: [...]} in one update or wrap in $transaction; cap tag count; rely on unique constraint (P2002) instead of slug pre-check.",
+      "trade_offs": "Error handling moves to constraint-violation mapping.",
+      "validation": {
+        "metric": "Statements per article update in staging query log",
+        "expectation": "Falls from four plus one per tag to one transaction",
+        "falsifier": "Query log shows Prisma already merges the statements.",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "PrismaClient instantiated per request/module",
+      "why_discarded": "Refuted: one module-cached instance in production; seed's own client is offline",
+      "location": "src/prisma/prisma-client.ts:17",
+      "path": "Prisma connection pool",
+      "evidence_checked": ["src/prisma/prisma-client.ts:17-21", "all imports of prisma-client", "src/prisma/seed.ts:14"],
+      "revisit_when": "New code calls new PrismaClient() inside handlers"
+    },
+    {
+      "observation": "Classic N+1 via include",
+      "why_discarded": "Prisma 4 batches each relation level into one query; real cost is row volume (PERF-001)",
+      "location": "src/app/routes/article/article.service.ts:84",
+      "path": "GET /api/articles",
+      "evidence_checked": ["All include blocks in article.service.ts and profile.service.ts", "package-lock.json @prisma/client 4.16.2"],
+      "revisit_when": "Query logging shows per-row queries"
+    },
+    {
+      "observation": "Large JSON request bodies blocking the event loop",
+      "why_discarded": "Bounded by body-parser default limit; no override",
+      "location": "src/main.ts:14",
+      "path": "Node event loop",
+      "evidence_checked": ["src/main.ts:14-15"],
+      "revisit_when": "Body size limit is raised"
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "favoriteArticle/unfavoriteArticle spread ...article, which still contains favoritedBy (full User rows including password hash and email), into the JSON response.",
+      "evidence": [
+        { "statement": "Only _count destructured; favoritedBy remains in spread result", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 597 },
+        { "statement": "favoritedBy: true selects all User columns", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 588 },
+        { "statement": "User has email and password columns", "kind": "static", "file": "src/prisma/schema.prisma", "line": 43 }
+      ],
+      "recommendation": "Return articleMapper(...) from both functions and never select full User rows (PERF-001 change).",
+      "location": "src/app/routes/article/article.service.ts:597-605, 643-651",
+      "assessed_properly_by": "Dedicated security review of response serialization paths"
+    },
+    {
+      "id": "SEC-002",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "JWT signing/verification secret falls back to a hard-coded literal when JWT_SECRET is unset.",
+      "evidence": [
+        { "statement": "process.env.JWT_SECRET || literal in verify config", "kind": "static", "file": "src/app/routes/auth/auth.ts", "line": 16 },
+        { "statement": "Same fallback when signing", "kind": "static", "file": "src/app/routes/auth/token.utils.ts", "line": 4 }
+      ],
+      "recommendation": "Fail at startup when JWT_SECRET is missing.",
+      "location": "src/app/routes/auth/auth.ts:16,21; src/app/routes/auth/token.utils.ts:4",
+      "assessed_properly_by": "Security review of authentication configuration"
+    },
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Low",
+      "problem": "updateArticle commits a tag reset before the main update outside a transaction (failed update leaves article untagged); addComment with unknown slug connects id undefined and returns 500 instead of 404.",
+      "evidence": [
+        { "statement": "disconnectArticlesTags then separate update", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 343 },
+        { "statement": "connect id: article?.id with no not-found check", "kind": "static", "file": "src/app/routes/article/article.service.ts", "line": 487 }
+      ],
+      "recommendation": "Fold tag reset into the single update or a transaction; return 404 when article missing.",
+      "location": "src/app/routes/article/article.service.ts:343-380, 487-493",
+      "assessed_properly_by": "Correctness-focused test pass on write paths"
+    }
+  ]
+}

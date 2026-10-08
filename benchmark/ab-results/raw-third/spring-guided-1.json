@@ -1,0 +1,857 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-08T12:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "detect_stack.py (bundled with skill 2.0.0)",
+    "model": "Claude Code agent, claude-opus-5-5",
+    "repository": {
+      "name": "spring-boot-realworld",
+      "commit": "ee17e31aafe733d98c4853c8b9a74d7f2f6c924a"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "Which datastore and connection settings does the application use?",
+        "answer": "SQLite file database via org.xerial:sqlite-jdbc 3.36.0.3 (jdbc:sqlite:dev.db, relative path). No pool size, journal_mode, or busy_timeout configured; pool is the framework default.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["build.gradle", "src/main/resources/application.properties"]
+      },
+      {
+        "question": "What bounds page size on list endpoints?",
+        "answer": "REST Page clamps limit to 100 with an unbounded offset; GraphQL CursorPageParameter clamps first/last to 1000. REST comments and GraphQL comments queries have no SQL LIMIT at all.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["src/main/java/io/spring/application/Page.java", "src/main/java/io/spring/application/CursorPageParameter.java", "src/main/resources/mapper/CommentReadService.xml"]
+      },
+      {
+        "question": "Which tables grow without retention?",
+        "answer": "All tables are append-only; no retention, archival, or cleanup job exists. Article deletion does not delete dependent article_tags, comments, or article_favorites rows.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["src/main/resources/db/migration/V1__create_tables.sql", "src/main/resources/mapper/ArticleMapper.xml"]
+      },
+      {
+        "question": "What is the read/write shape of the API surface?",
+        "answer": "Read-heavy surface: 6 REST GET routes and 6 GraphQL query fields versus mutating routes that each issue 1-4 writes. Read paths dominate statement count.",
+        "source": "derived",
+        "asked": false,
+        "evidence_checked": ["src/main/java/io/spring/api", "src/main/resources/schema/schema.graphqls"]
+      },
+      {
+        "question": "Is SQLite the production datastore, and how many application processes/instances open the same database file?",
+        "answer": "Unanswered; reviewer was told no one is available. Assumed: single process, SQLite as configured.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/main/resources/application.properties", "README.md", ".github/workflows/gradle.yml", "build.gradle"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Approximate row counts for articles, article_tags, article_favorites, follows, comments; maximum tags and favorites on a single article.",
+        "answer": "Unanswered. Assumed: tables grow monotonically; no row-count evidence exists in the repository.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/main/resources/db/migration/V1__create_tables.sql", "src/test/java/io/spring/infrastructure/DbTestBase.java"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Is /graphql used by production clients, and is it reachable by anonymous callers in production?",
+        "answer": "Unanswered. Repository permits anonymous access to /graphql (WebSecurityConfig.java:53).",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/main/java/io/spring/api/security/WebSecurityConfig.java", "README.md"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Roughly what peak request rate do GET /articles and GET /articles/feed see, and what is the write rate?",
+        "answer": "Unanswered. No load tests, rate limits, or replica counts exist in the repository.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["build.gradle", ".github/workflows/gradle.yml", "src/main/resources/application.properties"],
+        "decision_dimensions": ["severity"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "What is the largest number of comments on a single article, and the largest number of users one user follows?",
+        "answer": "Unanswered.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["src/main/resources/mapper/CommentReadService.xml", "src/main/resources/mapper/UserRelationshipQueryService.xml"],
+        "decision_dimensions": ["severity"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Is there a specific performance complaint (slow endpoint, SQLITE_BUSY errors, incident) that prompted this review?",
+        "answer": "Unanswered. Review proceeds as a general audit.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["README.md"],
+        "decision_dimensions": ["recommendation"],
+        "expected_decision_value": "high"
+      }
+    ],
+    "scenarios": ["normal", "large-dataset", "high-concurrency"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "All of src/main (Java sources, MyBatis mapper XML, GraphQL schema, Flyway migration, application properties), build.gradle and CI workflow were read. Test sources were listed and checked for query-count assertions but not reviewed line by line.",
+    "critical_paths_identified": 12,
+    "critical_paths_analyzed": 12,
+    "shared_resources_identified": 5,
+    "shared_resources_analyzed": 5,
+    "technology_support": [
+      { "technology": "sqlite", "tier": "deep", "detection_confidence": 0.8 },
+      { "technology": "jvm", "tier": "deep", "detection_confidence": 0.99 },
+      { "technology": "graphql", "tier": "deep", "detection_confidence": 0.99 },
+      { "technology": "rest", "tier": "deep", "detection_confidence": 0.8 },
+      { "technology": "mybatis", "tier": "generic" }
+    ],
+    "unknowns": [
+      { "subject": "Production datastore and process count sharing the SQLite file", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployment manifest or operator answer; PRAGMA journal_mode on the production file" },
+      { "subject": "Row counts and per-article fan-out (tags, favorites, comments)", "reason": "no-evidence-exists", "what_would_resolve_it": "SELECT count(*) per table on a copy of the production database" },
+      { "subject": "Query plans for the list, feed, and comment queries", "reason": "no-evidence-exists", "what_would_resolve_it": "EXPLAIN QUERY PLAN for each mapper statement (safe-on-production)" },
+      { "subject": "Request rates, latency percentiles, pool wait time", "reason": "no-evidence-exists", "what_would_resolve_it": "Add Spring Boot Actuator + Micrometer; Hikari pool metrics" },
+      { "subject": "Effective connection pool size and whether sqlite-jdbc honors Statement.setQueryTimeout", "reason": "not-examined", "what_would_resolve_it": "./gradlew dependencies --configuration runtimeClasspath and a staging test of a long query" },
+      { "subject": "MyBatis-specific execution behavior", "reason": "technology-unsupported", "what_would_resolve_it": "No MyBatis reference in this skill; analysis used generic data-access principles plus reading the generated SQL directly from mapper XML" },
+      { "subject": "Deployment model (containers, replicas, JVM flags, heap limits)", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployment configuration; none exists in the repository beyond the README's bootBuildImage hint" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Datastore is SQLite via org.xerial:sqlite-jdbc 3.36.0.3; URL jdbc:sqlite:dev.db (build.gradle:43, application.properties:1)",
+      "No pool size, journal_mode, or busy_timeout configured (application.properties)",
+      "MyBatis default-statement-timeout=3000 (application.properties:13); MyBatis interprets this setting in seconds",
+      "Only primary keys and UNIQUE(username), UNIQUE(email), UNIQUE(slug) exist; follows, article_tags, comments.article_id, articles.user_id, articles.created_at, tags.name are unindexed (V1__create_tables.sql)",
+      "REST Page caps limit at 100 with unbounded offset (Page.java:9); GraphQL cursor pages cap at 1000 (CursorPageParameter.java:10)",
+      "Comment queries have no SQL LIMIT (CommentReadService.xml:20-41)",
+      "/graphql is permitAll (WebSecurityConfig.java:53); no depth/complexity instrumentation or DataLoader exists anywhere in src/main",
+      "No metrics, tracing, actuator, benchmarks, or load tests exist in the repository",
+      "MyBatis statement logging at DEBUG for the mapper package and ArticleReadService (application.properties:19-20)",
+      "Thread-per-request servlet model (spring-boot-starter-web); no @Async or reactive code"
+    ],
+    "unknown": [
+      "Whether SQLite is the production datastore and how many processes open the file",
+      "Row counts and per-article fan-out of tags, favorites, comments",
+      "Request rates and read/write ratio in production",
+      "Whether GraphQL is used in production",
+      "Current latency percentiles and pool wait time"
+    ],
+    "assumed": [
+      "Tables grow monotonically because no retention exists — affects PERF-001, PERF-003, PERF-004, PERF-012",
+      "SQLite as configured is what runs in production, single process — affects PERF-005, PERF-006",
+      "GraphQL endpoint is reachable by clients as configured — affects PERF-002",
+      "Some articles accumulate many favorites and several tags — affects PERF-001"
+    ],
+    "derived": [
+      "Unfiltered GET /articles materializes, per article, (tags on that article, min 1) x (favorites on that article, min 1) joined rows before DISTINCT and ORDER BY — from ArticleReadService.xml:27-37 (two independent LEFT JOINs on A.id)",
+      "That join executes twice per REST list request (queryArticles + countArticle) — from ArticleQueryService.java:102-103",
+      "GraphQL articles(first:N){edges{node{author}}} issues 2 queries per edge for author (findByUsername + isUserFollowing when authenticated, else 1) on top of the list queries, with N up to 1000 — from ProfileDatafetcher.java:37-42,58-70 and ProfileQueryService.java:19-31 and CursorPageParameter.java:10",
+      "GraphQL Comment.article issues 1 query (+3 when authenticated) per comment edge — from ArticleDatafetcher.java:321-340 and ArticleQueryService.java:30-40,175-183",
+      "A deep REST offset page scans offset+limit distinct rows — from ArticleReadService.xml:61 (limit offset,limit) with Page.java offset unclamped"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Is SQLite the production datastore, and how many processes/instances open the same database file?",
+      "what_it_would_change": "If yes with concurrent writers, PERF-005 rises to High/P1 and PERF-003 gains system-wide blast radius; if production uses a client-server engine, PERF-005 is withdrawn and PERF-003's recommendations are re-expressed for that engine.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-005", "PERF-003", "PERF-006"]
+    },
+    {
+      "question": "Row counts per table and the maximum tags/favorites/comments on a single article.",
+      "what_it_would_change": "Small tables (low thousands) would bound PERF-001, PERF-003 and PERF-004 and drop them to Medium/P2; large or fast-growing tables confirm them and permit High confidence once query plans are captured.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001", "PERF-003", "PERF-004", "PERF-007"]
+    },
+    {
+      "question": "Is /graphql used in production and reachable by anonymous callers?",
+      "what_it_would_change": "If GraphQL is disabled or internal-only, PERF-002 drops to Medium/P2; if public, its abuse potential is workload-independent and it is the first fix.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-002"]
+    },
+    {
+      "question": "Peak request rate for GET /articles and GET /articles/feed, and the write rate.",
+      "what_it_would_change": "Low rates keep PERF-001 a growth risk (scalability-risk) rather than a current bottleneck; high rates make it the current constraint.",
+      "decision_dimensions": ["severity"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-001", "PERF-005", "PERF-007"]
+    },
+    {
+      "question": "Is there a specific complaint (slow page, SQLITE_BUSY errors, incident) behind this review?",
+      "what_it_would_change": "Would re-center the review on confirming or refuting that symptom and reorder the action plan.",
+      "decision_dimensions": ["recommendation"],
+      "expected_decision_value": "high"
+    },
+    {
+      "question": "Maximum comments on one article and maximum follows for one user.",
+      "what_it_would_change": "Low tens would bound PERF-004 and PERF-007 to Low/Medium severity.",
+      "decision_dimensions": ["severity"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-004", "PERF-007"]
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Article id/count queries LEFT JOIN two independent one-to-many relations (article_tags, article_favorites) unconditionally, multiplying rows before DISTINCT and a full sort; repeated for the count.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "GraphQL field resolvers fetch per parent item with no request-scoped batching, and nothing bounds query depth or breadth.", "findings": ["PERF-002"] },
+    { "id": "ROOT-003", "description": "Schema defines no secondary indexes on any foreign-key, filter, or sort column.", "findings": ["PERF-003"] },
+    { "id": "ROOT-004", "description": "Comment reads issue no SQL LIMIT on either REST or GraphQL path.", "findings": ["PERF-004"] },
+    { "id": "ROOT-005", "description": "SQLite single-writer file used behind a default-sized multi-connection pool with no journal_mode or busy_timeout configuration.", "findings": ["PERF-005"] },
+    { "id": "ROOT-006", "description": "Statement timeout configured as 3000 in a setting MyBatis reads as seconds.", "findings": ["PERF-006"] },
+    { "id": "ROOT-007", "description": "Feed path loads the full followed-user list into an IN predicate and re-counts the feed per request.", "findings": ["PERF-007"] },
+    { "id": "ROOT-008", "description": "No runtime instrumentation exists.", "findings": ["PERF-008"] },
+    { "id": "ROOT-009", "description": "Per-statement DEBUG logging enabled in the main application.properties.", "findings": ["PERF-009"] },
+    { "id": "ROOT-010", "description": "Single-entity read path decorates with three separate scalar queries rather than one.", "findings": ["PERF-010"] },
+    { "id": "ROOT-011", "description": "Article create issues per-tag statements in a loop over an unbounded tag list.", "findings": ["PERF-011"] },
+    { "id": "ROOT-012", "description": "Article delete leaves dependent rows behind in tables that every read scans.", "findings": ["PERF-012"] },
+    { "id": "ROOT-013", "description": "Tag listing returns the whole tags table with no bound.", "findings": ["PERF-013"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "6dacb47df04ea0cc",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Critical",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 47, "symbol": "ArticleReadService.queryArticles" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "The article-id query behind GET /articles (and GraphQL articles/favorites/userArticles) always LEFT JOINs article_tags and article_favorites (plus tags and two users joins) on the article id, so each article contributes tags x favorites rows that must be produced, de-duplicated with DISTINCT, and fully sorted by created_at before LIMIT applies. The REST path runs the same join a second time for the total count.",
+      "performance_principle": "Do not multiply rows you will immediately collapse; join a one-to-many relation only when a predicate needs it, and avoid computing an exact total over the same expanded set on every request.",
+      "evidence": [
+        { "statement": "selectArticleIds joins article_tags, tags, article_favorites, users AU and users AFU unconditionally; filters are optional <if> blocks.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 27 },
+        { "statement": "queryArticles applies DISTINCT, ORDER BY A.created_at desc, then limit offset,limit.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 47 },
+        { "statement": "countArticle repeats the same six-table join with count(DISTINCT A.id).", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 63 },
+        { "statement": "findRecentArticles calls queryArticles then countArticle on every REST list request.", "kind": "static", "file": "src/main/java/io/spring/application/ArticleQueryService.java", "line": 102 },
+        { "statement": "findArticlesWithCursor reuses selectArticleIds for the GraphQL list fields.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 107 },
+        { "statement": "Page clamps limit to 100 but never clamps offset, so deep pages scan offset+limit distinct rows.", "kind": "static", "file": "src/main/java/io/spring/application/Page.java", "line": 18 },
+        { "statement": "Derivation: rows materialized for an unfiltered list = sum over all articles of max(1,tags) x max(1,favorites); inputs are the two independent LEFT JOINs on A.id at ArticleReadService.xml:32-34. No runtime evidence exists.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n^2)+", "blast_radius": "system-wide", "amplification": "2x" },
+      "conditions": "Matters once articles carry several tags and accumulate favorites: row count grows with articles x tags-per-article x favorites-per-article. Assumed (unverified): tables grow without bound — no retention exists (V1__create_tables.sql). Blast radius is system-wide on the assumption that SQLite is the production store, because long reads hold a shared lock that delays every writer in the default journal mode. Workload unknown, so confidence is capped at Medium.",
+      "counter_evidence": [
+        { "statement": "Looked for a LIMIT before the join or a subquery restricting articles first: none; LIMIT applies after DISTINCT/ORDER BY.", "effect": "no-effect", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 61 },
+        { "statement": "SQLite may build a transient automatic index for the unindexed join columns, which avoids a nested-loop quadratic scan but still costs a full pass over article_tags/article_favorites per statement; it does not remove the row multiplication.", "effect": "no-effect" },
+        { "statement": "No row-count, seed, or fixture data indicates production scale; if tables are small the cost is bounded.", "effect": "lowers-confidence", "file": "src/main/resources/db/migration/V1__create_tables.sql" },
+        { "statement": "Filtered queries (tag, author, favorited) narrow the result but still require the joins and, lacking indexes (PERF-003), still scan.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "If the deployment is a demo or small community with a few thousand articles and favorites, SQLite completes this in-process join quickly and the cost never becomes visible; the cliff only appears at scale.",
+      "recommendation": "Restructure the id query so it touches only the tables a supplied filter needs: select from articles alone when no filter is given; express tag, author and favoritedBy filters as EXISTS/IN subqueries rather than LEFT JOINs that fan out; drop DISTINCT once no fan-out exists. Order by created_at with a supporting index (see PERF-003) so ORDER BY ... LIMIT reads only the page. Compute the total with the same EXISTS form against articles only, or replace the exact total with a has-more flag if the client contract allows.",
+      "alternatives": [
+        { "option": "A — Rewrite id/count queries as filter-only EXISTS subqueries over articles, plus a created_at index", "preferred": true, "why": "Removes the multiplied rows and the sort entirely; work becomes proportional to the page, not to tags x favorites." },
+        { "option": "B — Keep the query, add indexes only", "preferred": false, "why": "Makes each join probe cheaper but leaves the multiplication, DISTINCT and full sort in place." },
+        { "option": "C — Cache the list response or the count", "preferred": false, "why": "Hides the work; invalidates on every favorite, comment-free write and new article; does not help filtered or deep pages." }
+      ],
+      "trade_offs": "Query rewrite touches two mapper statements and their cursor variant; behavior must stay identical for combined filters. A created_at index adds write cost to every article insert. Dropping the exact total changes the REST response contract (articlesCount) and may not be acceptable for the RealWorld spec.",
+      "validation": {
+        "metric": "EXPLAIN QUERY PLAN for queryArticles/countArticle (temp B-tree for DISTINCT and ORDER BY present or absent) and wall-clock time of GET /articles?limit=20 on a production-shaped copy",
+        "expectation": "After the rewrite the plan should show no USE TEMP B-TREE FOR DISTINCT/ORDER BY and should scan articles via the created_at index for an unfiltered page; rows examined should become proportional to offset+limit instead of to the joined row count. Latency improvement is unquantified until measured.",
+        "falsifier": "If on production-shaped data the current plan already reads few rows and the endpoint is fast, the fan-out is immaterial at present scale; downgrade to a scalability-risk note.",
+        "safety": "safe-on-production",
+        "guard": "A repository test that seeds articles with multiple tags and favorites and asserts the generated SQL for queryArticles does not join article_favorites when favoritedBy is null.",
+        "commands": [
+          { "command": "sqlite3 dev.db \"EXPLAIN QUERY PLAN SELECT DISTINCT(A.id) articleId, A.created_at FROM articles A LEFT JOIN article_tags AT ON A.id = AT.article_id LEFT JOIN tags T ON T.id = AT.tag_id LEFT JOIN article_favorites AF ON AF.article_id = A.id LEFT JOIN users AU ON AU.id = A.user_id LEFT JOIN users AFU ON AFU.id = AF.user_id ORDER BY A.created_at DESC LIMIT 0, 20;\"", "purpose": "Show whether the list query uses temp B-trees and full scans (plan only, no execution)", "safety": "safe-on-production" },
+          { "command": "sqlite3 copy-of-prod.db \"SELECT count(*) FROM articles A LEFT JOIN article_tags AT ON A.id = AT.article_id LEFT JOIN article_favorites AF ON AF.article_id = A.id;\"", "purpose": "Measure the joined row count the list query materializes, on a copy of the database", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "c02a26e350b6fb00",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Critical",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/main/java/io/spring/graphql/ProfileDatafetcher.java", "line": 38, "symbol": "ProfileDatafetcher.getAuthor" },
+      "tags": ["needs-measurement"],
+      "problem": "GraphQL child resolvers query the database once per parent item: Article.author and Comment.author each run findByUsername plus isUserFollowing per edge, Comment.article runs findById plus up to three scalar queries per comment, and Article.comments runs an unbounded comment query per article. There is no DataLoader, and no depth or complexity limit, while connection sizes go up to 1000 per level and /graphql is open to anonymous callers.",
+      "performance_principle": "Work per response must not scale with the product of nested list sizes; per-item lookups that share a key space should be collected and fetched in one round trip, and caller-composed queries need a cost bound.",
+      "evidence": [
+        { "statement": "getAuthor calls queryProfile per Article; queryProfile calls profileQueryService.findByUsername.", "kind": "static", "file": "src/main/java/io/spring/graphql/ProfileDatafetcher.java", "line": 38 },
+        { "statement": "getCommentAuthor does the same per Comment.", "kind": "static", "file": "src/main/java/io/spring/graphql/ProfileDatafetcher.java", "line": 45 },
+        { "statement": "ProfileQueryService.findByUsername issues userReadService.findByUsername and, when authenticated, isUserFollowing — 2 queries per call.", "kind": "static", "file": "src/main/java/io/spring/application/ProfileQueryService.java", "line": 19 },
+        { "statement": "getCommentArticle calls articleQueryService.findById per comment, which runs findById (4-table join) plus isUserFavorite, articleFavoriteCount, isUserFollowing when authenticated.", "kind": "static", "file": "src/main/java/io/spring/graphql/ArticleDatafetcher.java", "line": 322 },
+        { "statement": "articleComments runs a comment query per Article in a connection.", "kind": "static", "file": "src/main/java/io/spring/graphql/CommentDatafetcher.java", "line": 51 },
+        { "statement": "CursorPageParameter.MAX_LIMIT = 1000 bounds each connection level at 1000 items.", "kind": "static", "file": "src/main/java/io/spring/application/CursorPageParameter.java", "line": 10 },
+        { "statement": "/graphql is permitAll.", "kind": "static", "file": "src/main/java/io/spring/api/security/WebSecurityConfig.java", "line": 53 },
+        { "statement": "Searched src/main for DataLoader, Instrumentation, MaxQueryDepth, complexity: no matches.", "kind": "static" },
+        { "statement": "Derivation: articles(first:1000){edges{node{author{username}}}} as an authenticated caller = list queries + 1000 x 2 author queries; nesting comments(first:1000){edges{node{author article{author}}}} multiplies by comment count per article. No runtime evidence exists.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-item", "growth": "O(n^2)+", "blast_radius": "system-wide", "amplification": "Nx" },
+      "conditions": "Matters if production clients (or anyone, since the endpoint is anonymous) use GraphQL list fields with author/comments/article selections. Unknown whether GraphQL carries production traffic; assumed reachable as configured. A single nested query can consume a pooled connection and the SQLite file for a long time, delaying every other request.",
+      "counter_evidence": [
+        { "statement": "Looked for request-scoped batching or caching (DataLoader, DgsDataLoader, memoization): none found.", "effect": "no-effect" },
+        { "statement": "Per-level size is capped at 1000 by CursorPageParameter, which bounds a single level but not the product across nesting levels.", "effect": "bounds-impact", "file": "src/main/java/io/spring/application/CursorPageParameter.java", "line": 10 },
+        { "statement": "Article.author lookups are by username (UNIQUE index) so each is a cheap point lookup; isUserFollowing is a scan of follows (PERF-003). The per-item count, not per-query cost, drives the finding.", "effect": "no-effect" },
+        { "statement": "Whether GraphQL is used in production is not evidenced in the repository.", "effect": "lowers-confidence" }
+      ],
+      "why_this_might_not_matter": "If the deployed frontend uses only the REST API and /graphql is blocked at the edge, this path never runs; with default page sizes of 20 and shallow queries the overhead is tens of in-process SQLite lookups.",
+      "recommendation": "Batch the per-item lookups with DGS data loaders: one loader keyed by author user id returning profile data plus following flags (reusing the existing followingAuthors IN query), one keyed by article id for Comment.article. Pass author data already present in ArticleData/CommentData (the list query already selects user id, username, bio, image) instead of re-querying by username. Add a max query depth and complexity instrumentation, and lower the per-connection cap toward the REST cap.",
+      "alternatives": [
+        { "option": "A — Use data already in the parent's localContext for author fields and DataLoaders for the remaining lookups, plus depth/complexity limits", "preferred": true, "why": "Removes most per-item queries outright and collapses the rest into one per field per request; the limits bound caller-controlled fan-out." },
+        { "option": "B — Only add depth/complexity limits", "preferred": false, "why": "Bounds abuse but leaves 2 queries per edge on normal queries." },
+        { "option": "C — Cache profiles in-process", "preferred": false, "why": "following is per-viewer, so the hit rate on the costly part is low and invalidation is per follow/unfollow." }
+      ],
+      "trade_offs": "DataLoaders add request-scoped state and a small dispatch delay; depth/complexity limits can reject legitimate deep queries and need tuning against real client queries. Reusing localContext data couples resolvers to the parent's query shape.",
+      "validation": {
+        "metric": "Number of SQL statements logged for one GraphQL request articles(first:20){edges{node{author{username following}}}} in a staging environment",
+        "expectation": "Statement count falls from (list queries + 2 per edge) to a constant independent of first:N.",
+        "falsifier": "If the statement count for that query is already constant in N, the resolvers are batched somewhere this review did not see.",
+        "safety": "not-safe-on-production",
+        "guard": "A test executing a nested GraphQL query through DgsQueryExecutor and asserting the mapper invocation count stays constant as the seeded article count grows.",
+        "commands": [
+          { "command": "curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' -d '{\"query\":\"{ articles(first: 20) { edges { node { slug author { username following } } } } }\"}'", "purpose": "Run against a local/staging instance with DEBUG mapper logging (already enabled) and count logged statements per request", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "53cd02a67392e529",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 27, "symbol": "V1__create_tables" },
+      "tags": ["scalability-risk"],
+      "problem": "The only migration creates no secondary indexes. follows has no key at all; article_tags, comments.article_id, articles.user_id, articles.created_at, tags.name and article_favorites.user_id are unindexed, yet they are the predicates or sort keys of nearly every read path, so those reads scan whole tables whose size grows with all users' activity.",
+      "performance_principle": "A lookup issued per request should cost in proportion to the rows it returns, not to the size of the table it searches.",
+      "evidence": [
+        { "statement": "follows(user_id, follow_id) has neither primary key nor index.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 27 },
+        { "statement": "article_tags(article_id, tag_id) has neither primary key nor index; joined on article_id in every article read.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 37 },
+        { "statement": "comments.article_id is unindexed; comment listing filters on it.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 45 },
+        { "statement": "articles.user_id and articles.created_at are unindexed; feed filters on user_id and every list orders by created_at.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 12 },
+        { "statement": "tags.name is unindexed; findTag (per tag on create) and the tag filter use it.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 34 },
+        { "statement": "isUserFollowing (follows by user_id, follow_id) runs on every authenticated article view, profile view, and per GraphQL author.", "kind": "static", "file": "src/main/resources/mapper/UserRelationshipQueryService.xml", "line": 4 },
+        { "statement": "Searched for any later migration or CREATE INDEX: only V1 exists, no CREATE INDEX anywhere.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "service" },
+      "conditions": "Matters once follows, comments, article_tags and articles exceed what a full scan reads cheaply. Assumed: they grow without bound (no retention, V1__create_tables.sql). Row counts unknown, so confidence is capped at Medium.",
+      "counter_evidence": [
+        { "statement": "UNIQUE on users.username/email and articles.slug and PK on article_favorites(article_id,user_id) create implicit indexes, so slug/username point lookups and favorites-by-article are covered.", "effect": "bounds-impact", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 24 },
+        { "statement": "SQLite may build automatic transient indexes for unindexed join columns; this caps nested-loop cost but still scans the table once per statement.", "effect": "no-effect" },
+        { "statement": "No row counts exist to show the tables are large today.", "effect": "lowers-confidence" }
+      ],
+      "why_this_might_not_matter": "SQLite scans tens of thousands of narrow rows from page cache quickly; for a small deployment every one of these scans may be sub-millisecond and the indexes would only add write cost.",
+      "recommendation": "Add a V2 migration with indexes that match actual predicates: follows(user_id, follow_id) (as a primary key or unique index, which also prevents duplicate follows), article_tags(article_id, tag_id) and article_tags(tag_id), comments(article_id, created_at), articles(user_id, created_at), articles(created_at), tags(name) unique, article_favorites(user_id). Run ANALYZE afterwards because SQLite gathers no statistics on its own.",
+      "alternatives": [
+        { "option": "A — Targeted indexes matching each mapper predicate, then ANALYZE", "preferred": true, "why": "Turns per-request full scans into index probes; each index is justified by a named query." },
+        { "option": "B — Index every column", "preferred": false, "why": "Pays write and storage cost for indexes no query uses." },
+        { "option": "C — Cache follow relations / comment lists", "preferred": false, "why": "Per-viewer data with per-write invalidation; hides the scan instead of removing it." }
+      ],
+      "trade_offs": "Each index adds work to every insert/delete on its table and grows the database file; in SQLite the single writer holds the lock slightly longer per write. Building indexes on a large existing file takes the write lock for the duration of the build.",
+      "validation": {
+        "metric": "EXPLAIN QUERY PLAN for isUserFollowing, followingAuthors, comments findByArticleId, findArticlesOfAuthors: SCAN versus SEARCH ... USING INDEX",
+        "expectation": "Plans change from SCAN of follows/comments/article_tags/articles to SEARCH using the new indexes.",
+        "falsifier": "If plans already show SEARCH via an index (for example one created out-of-band in production), this finding is wrong for that deployment.",
+        "safety": "safe-on-production",
+        "guard": "A test that runs EXPLAIN QUERY PLAN for each mapper statement against the migrated schema and fails on SCAN of follows, comments or article_tags.",
+        "commands": [
+          { "command": "sqlite3 dev.db \"EXPLAIN QUERY PLAN SELECT count(1) FROM follows WHERE user_id = 'x' AND follow_id = 'y';\"", "purpose": "Confirm follows lookups scan the whole table", "safety": "safe-on-production" },
+          { "command": "sqlite3 dev.db \".indexes\"", "purpose": "List existing indexes on the deployed file, in case any were created outside migrations", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "ac5d0366f109d611",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "src/main/resources/mapper/CommentReadService.xml", "line": 24, "symbol": "CommentReadService.findByArticleIdWithCursor" },
+      "tags": ["quick-win"],
+      "problem": "Both comment read paths return every comment on an article: REST findByArticleId has no LIMIT by design, and the GraphQL cursor query omits LIMIT entirely even though it receives a page parameter, so CommentQueryService fetches all comments after the cursor, runs followingAuthors over all of them, then removes a single element.",
+      "performance_principle": "A read endpoint's cost must have an enforced upper bound independent of data volume.",
+      "evidence": [
+        { "statement": "findByArticleId selects all comments where article_id matches; no LIMIT.", "kind": "static", "file": "src/main/resources/mapper/CommentReadService.xml", "line": 20 },
+        { "statement": "findByArticleIdWithCursor orders by created_at but never references page.queryLimit.", "kind": "static", "file": "src/main/resources/mapper/CommentReadService.xml", "line": 24 },
+        { "statement": "findByArticleIdWithCursor in the service builds followingAuthors over all returned comments, then comments.remove(page.getLimit()) removes only one element.", "kind": "static", "file": "src/main/java/io/spring/application/CommentQueryService.java", "line": 76 },
+        { "statement": "GET /articles/{slug}/comments returns the full list.", "kind": "static", "file": "src/main/java/io/spring/api/CommentsApi.java" },
+        { "statement": "comments.article_id is unindexed (PERF-003), so each call also scans the whole comments table.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql", "line": 45 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Matters for articles with many comments; the GraphQL Article.comments resolver additionally runs once per article in a list (PERF-002). Comment counts per article are unknown; assumed some articles are popular. Workload unknown, so confidence is capped at Medium.",
+      "counter_evidence": [
+        { "statement": "Looked for a caller-side truncation or SQL LIMIT: none on either path.", "effect": "no-effect" },
+        { "statement": "The REST RealWorld spec returns all comments without pagination, so the REST behavior is a contract choice rather than an oversight.", "effect": "lowers-confidence", "file": "src/main/java/io/spring/api/CommentsApi.java" }
+      ],
+      "why_this_might_not_matter": "Most articles in a blogging app collect few comments; the response stays small for the vast majority of requests, and the REST spec expects the full list.",
+      "recommendation": "Add LIMIT #{page.queryLimit} to findByArticleIdWithCursor (the service already expects limit+1 rows) and run followingAuthors only over the trimmed page. For REST, add an optional limit with a server-side maximum if the API contract can change; otherwise keep the full list but index comments(article_id, created_at) (PERF-003) so cost tracks the article's comments, not the table.",
+      "alternatives": [
+        { "option": "A — Apply the existing page limit in SQL for GraphQL; bound or index the REST path", "preferred": true, "why": "Uses the pagination the code already models; one-line mapper change." },
+        { "option": "B — Truncate in Java after fetching", "preferred": false, "why": "Still reads and maps every row." }
+      ],
+      "trade_offs": "A server-side maximum on REST comments changes the observable API; clients expecting the full list need a pagination parameter.",
+      "validation": {
+        "metric": "Rows returned by the comment mapper and number of comments in the GraphQL response for comments(first: 5) on an article with more than 6 comments",
+        "expectation": "After the fix, at most 6 rows are fetched and 5 returned; today all comments are fetched and all but one returned.",
+        "falsifier": "If comments(first: 5) already returns 5 comments, the query is limited somewhere this review did not find.",
+        "safety": "not-safe-on-production",
+        "guard": "A CommentQueryService test seeding more comments than the page size and asserting the returned size equals the requested limit.",
+        "commands": [
+          { "command": "./gradlew test --tests 'io.spring.application.comment.CommentQueryServiceTest'", "purpose": "Run the existing comment query tests locally after adding a page-size assertion", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "0ffc28f5498cb0d5",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "concurrency",
+      "location": { "file": "src/main/resources/application.properties", "line": 1, "symbol": "spring.datasource.url" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "All reads and writes go to one SQLite file through a multi-connection pool left at framework defaults, with no journal_mode, busy_timeout, or pool size configured. SQLite admits one writer at a time; in the default rollback-journal mode readers also block a committing writer, so the long scans of PERF-001/003/004 lengthen every write's wait and concurrent writes surface as SQLITE_BUSY rather than queueing.",
+      "performance_principle": "Concurrency admitted upstream must match what the shared resource can serve; extra connections to a single-writer resource add contention, not throughput.",
+      "evidence": [
+        { "statement": "spring.datasource.url is a SQLite file; no spring.datasource.hikari.* or pool settings present.", "kind": "static", "file": "src/main/resources/application.properties", "line": 1 },
+        { "statement": "sqlite-jdbc 3.36.0.3 is the only datastore driver.", "kind": "static", "file": "build.gradle", "line": 43 },
+        { "statement": "Searched for PRAGMA, journal_mode, busy_timeout, hikari in src/main: none.", "kind": "static" },
+        { "statement": "Writes like MyBatisArticleRepository.save run in a @Transactional block spanning several statements, holding the write lock across them.", "kind": "static", "file": "src/main/java/io/spring/infrastructure/repository/MyBatisArticleRepository.java", "line": 20 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "system-wide" },
+      "conditions": "Matters only if this SQLite configuration is what runs in production and concurrent requests include writes; it grows worse as read scans (PERF-001, PERF-003) lengthen. Assumed: production uses the configured SQLite file in a single JVM. Unknown whether that is true; the README describes SQLite as a local-testing convenience.",
+      "counter_evidence": [
+        { "statement": "README says the database 'can be changed easily in the application.properties for any other database', suggesting SQLite may be a development default only.", "effect": "lowers-confidence", "file": "README.md" },
+        { "statement": "Write endpoints issue a handful of short statements each; at low write rates the single-writer lock is rarely contended.", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "If production swaps the URL for a client-server database, or write traffic is low and single-process, SQLite's single writer is never the constraint.",
+      "recommendation": "Decide explicitly. If SQLite stays in production: enable WAL (readers then no longer block the writer), set a non-zero busy_timeout so writers wait briefly instead of failing, size the pool deliberately (reads benefit from several connections in WAL mode; writes do not) and keep write transactions short. If production uses another engine, move the SQLite URL to a dev profile so the default configuration is not the production one.",
+      "alternatives": [
+        { "option": "A — Measure first: read PRAGMA journal_mode/busy_timeout on the deployed file and count SQLITE_BUSY errors, then enable WAL + busy_timeout if SQLite is retained", "preferred": true, "why": "Cheap, reversible, and directly addresses the single-writer mechanism." },
+        { "option": "B — Move to a client-server relational engine", "preferred": false, "why": "Removes the single-writer ceiling but is a migration with operational cost; justified only by write-concurrency evidence." },
+        { "option": "C — Enlarge the pool", "preferred": false, "why": "Adds more connections contending for the same writer lock; can increase SQLITE_BUSY." }
+      ],
+      "trade_offs": "WAL adds a -wal file that needs checkpointing and is unsafe on network filesystems; busy_timeout converts errors into latency. A different engine adds a server to operate.",
+      "validation": {
+        "metric": "PRAGMA journal_mode on the deployed file; count of SQLITE_BUSY exceptions in application logs under concurrent write load in staging",
+        "expectation": "With WAL and busy_timeout set, SQLITE_BUSY errors under a concurrent write test drop and read latency stops spiking during writes.",
+        "falsifier": "If production does not use SQLite, or a concurrent-write load test in staging produces no SQLITE_BUSY and no read stalls, the finding does not apply.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "sqlite3 dev.db \"PRAGMA journal_mode;\"", "purpose": "Show whether the deployed file is in rollback-journal or WAL mode", "safety": "safe-on-production" },
+          { "command": "./gradlew dependencies --configuration runtimeClasspath", "purpose": "Confirm which connection pool implementation (and version) the build ships", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "8971a77ac2ebd7a1",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "concurrency",
+      "location": { "file": "src/main/resources/application.properties", "line": 13, "symbol": "mybatis.configuration.default-statement-timeout" },
+      "tags": ["quick-win"],
+      "problem": "default-statement-timeout=3000 is read by MyBatis as seconds, so a runaway statement (for example a deep or fan-out list query from PERF-001/PERF-002) may hold a pooled connection and the SQLite lock for up to 50 minutes rather than the 3 seconds the value suggests.",
+      "performance_principle": "Every operation on a shared resource needs a timeout shorter than the latency budget of the callers waiting behind it.",
+      "evidence": [
+        { "statement": "mybatis.configuration.default-statement-timeout=3000.", "kind": "static", "file": "src/main/resources/application.properties", "line": 13 },
+        { "statement": "Derivation: MyBatis documents defaultStatementTimeout in seconds; 3000 s / 60 = 50 minutes.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "system-wide" },
+      "conditions": "Matters whenever a statement runs long — growing tables (PERF-001, PERF-003) or nested GraphQL queries (PERF-002) — because the held connection and SQLite lock delay other requests. Independent of traffic level as a configuration defect; confidence Medium only because driver support for query timeouts was not verified.",
+      "counter_evidence": [
+        { "statement": "Not verified whether sqlite-jdbc 3.36.0.3 enforces Statement.setQueryTimeout; if it ignores it, the value is moot and there is effectively no statement timeout at all, which leaves the finding's conclusion unchanged.", "effect": "lowers-confidence" },
+        { "statement": "Searched for request-level timeouts (server.tomcat, async timeouts, spring.mvc.async): none configured.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "If every statement finishes in milliseconds at current data size, no timeout ever fires and the value is irrelevant until data grows.",
+      "recommendation": "Set the statement timeout in seconds to a value below the client-facing latency budget (choose from the SLO once one exists), and verify on staging that a deliberately slow query is cancelled.",
+      "alternatives": [
+        { "option": "A — Correct the unit and pick a budget-derived value; verify driver enforcement", "preferred": true, "why": "One-line change that bounds worst-case connection hold time." },
+        { "option": "B — Rely on client/proxy timeouts", "preferred": false, "why": "The client gives up but the server statement keeps running and keeps the lock." }
+      ],
+      "trade_offs": "Too low a value cancels legitimate slow queries (for example the count on a large table) and turns slowness into errors.",
+      "validation": {
+        "metric": "Whether a deliberately slow statement on staging is cancelled at the configured timeout",
+        "expectation": "With a seconds-scale value, a long query raises a timeout exception at roughly that bound instead of running to completion.",
+        "falsifier": "If a slow statement is already cancelled near 3 seconds, the property is being interpreted differently than MyBatis documents.",
+        "safety": "not-safe-on-production",
+        "guard": "Startup assertion or test that the configured timeout is below a declared maximum."
+      }
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "18003c3cb6937bb8",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "src/main/java/io/spring/application/ArticleQueryService.java", "line": 114, "symbol": "ArticleQueryService.findUserFeed" },
+      "tags": ["scalability-risk"],
+      "problem": "The feed loads every followed user id into memory (unbounded), binds them all into an IN list for the article query, and on REST runs a second full count over the same IN list on every request; articles.user_id is unindexed, so both statements scan articles.",
+      "performance_principle": "Push set membership into the datastore as a join or subquery rather than shipping an unbounded key list through the application, and avoid recomputing an exact total per page.",
+      "evidence": [
+        { "statement": "followedUsers selects all follow_id for the user, no LIMIT.", "kind": "static", "file": "src/main/resources/mapper/UserRelationshipQueryService.xml", "line": 15 },
+        { "statement": "findArticlesOfAuthors binds the full list into A.user_id IN (...).", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 93 },
+        { "statement": "countFeedSize repeats the IN list for a count on every REST feed request.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 101 },
+        { "statement": "findUserFeed calls followedUsers, findArticlesOfAuthors, fillExtraInfo, countFeedSize sequentially.", "kind": "static", "file": "src/main/java/io/spring/application/ArticleQueryService.java", "line": 113 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Matters for users who follow many authors; the bound-parameter count also grows with follows and SQLite has a compile-time maximum on bound parameters. Follow counts are unknown; assumed some users follow many authors.",
+      "counter_evidence": [
+        { "statement": "Feed is authenticated-only (WebSecurityConfig), so it is per logged-in user rather than anonymous traffic.", "effect": "bounds-impact", "file": "src/main/java/io/spring/api/security/WebSecurityConfig.java" },
+        { "statement": "Searched for a cap on follows per user: none.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Typical users follow tens of authors; an IN list of that size is cheap and well under any parameter limit.",
+      "recommendation": "Express the feed as a join/subquery: articles WHERE user_id IN (SELECT follow_id FROM follows WHERE user_id = ?) with indexes on follows(user_id) and articles(user_id, created_at); add ORDER BY created_at (missing today, see COR-002); drop or cache the exact count if the contract allows.",
+      "alternatives": [
+        { "option": "A — Subquery in SQL plus supporting indexes", "preferred": true, "why": "One statement, no unbounded parameter list, index-ordered page." },
+        { "option": "B — Chunk the IN list", "preferred": false, "why": "Avoids the parameter limit but multiplies statements and breaks global ordering." }
+      ],
+      "trade_offs": "Requires PERF-003's indexes to pay off; changes two mapper statements and their cursor variant.",
+      "validation": {
+        "metric": "Statements per GET /articles/feed and EXPLAIN QUERY PLAN for the feed query",
+        "expectation": "Statement count drops by one (no separate followedUsers fetch) and the plan searches articles by user_id index instead of scanning.",
+        "falsifier": "If the feed for a user following many authors is already fast with a SEARCH plan, the finding is immaterial.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "sqlite3 dev.db \"EXPLAIN QUERY PLAN SELECT count(1) FROM articles A WHERE A.user_id IN ('a','b','c');\"", "purpose": "Show whether feed queries scan articles", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-008",
+      "stable_id": "d116a8f6a9fc7cb8",
+      "root_cause_id": "ROOT-008",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "observability",
+      "location": { "file": "build.gradle", "line": 33, "symbol": "dependencies" },
+      "tags": ["quick-win"],
+      "problem": "There is no metrics, tracing, actuator, pool instrumentation, benchmark, or load test in the repository, so none of the findings above can be confirmed or their fixes validated with runtime data.",
+      "performance_principle": "A system that is not measured cannot be tuned; measurement precedes optimization.",
+      "evidence": [
+        { "statement": "Dependencies include no actuator, micrometer, or tracing library.", "kind": "static", "file": "build.gradle", "line": 33 },
+        { "statement": "Searched the repository for actuator, micrometer, prometheus, opentelemetry, k6, jmh, gatling: no text matches.", "kind": "static" }
+      ],
+      "evidence_quality": "Strong",
+      "impact": { "position": "offline", "frequency": "rare", "growth": "O(1)", "blast_radius": "service" },
+      "conditions": "Applies at any workload; it is what keeps every other finding below Confirmed.",
+      "counter_evidence": [
+        { "statement": "Looked for logging of request duration as a substitute: only MyBatis DEBUG statement logging exists, which records statements but not timings or pool wait.", "effect": "no-effect" }
+      ],
+      "recommendation": "Add spring-boot-starter-actuator with Micrometer, expose HTTP server request timers and the connection pool's active/pending/acquire-time metrics, and add a query-count assertion helper for tests.",
+      "alternatives": [
+        { "option": "A — Actuator + Micrometer + pool metrics", "preferred": true, "why": "Standard for Spring Boot, low overhead, gives endpoint percentiles and pool wait time." }
+      ],
+      "trade_offs": "Exposed actuator endpoints need access control; metrics add small per-request overhead and an operational backend to store them.",
+      "validation": {
+        "metric": "Presence of http.server.requests and pool acquire/pending metrics at the metrics endpoint",
+        "expectation": "Per-endpoint latency percentiles and pool wait time become observable.",
+        "falsifier": "Not applicable beyond presence; if metrics already flow from an agent outside the repository, this finding is moot.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-009",
+      "stable_id": "29a4c1a166ce90c7",
+      "root_cause_id": "ROOT-009",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "io",
+      "location": { "file": "src/main/resources/application.properties", "line": 20, "symbol": "logging.level.io.spring.infrastructure.mybatis.mapper" },
+      "tags": ["quick-win"],
+      "problem": "The main application.properties sets DEBUG for all write mappers and ArticleReadService, so every statement, its bound parameters and row totals are formatted and written to the log on every request, multiplied by the per-item query counts of PERF-002.",
+      "performance_principle": "Per-request diagnostic output should be opt-in; logging cost scales with statement count.",
+      "evidence": [
+        { "statement": "logging.level...ArticleReadService=DEBUG and logging.level...mybatis.mapper=DEBUG in the default (not a dev-only) properties file.", "kind": "static", "file": "src/main/resources/application.properties", "line": 19 }
+      ],
+      "evidence_quality": "Strong",
+      "impact": { "position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "service" },
+      "conditions": "Matters at request rates where synchronous log I/O becomes visible; rate unknown. Constant-factor cost per statement.",
+      "counter_evidence": [
+        { "statement": "Only ArticleReadService and the mapper package are at DEBUG; other read services log at the default level.", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Move the DEBUG levels to a dev profile; keep INFO in the default configuration.",
+      "alternatives": [
+        { "option": "A — Profile-scoped DEBUG", "preferred": true, "why": "Keeps the diagnostic available locally at zero production cost." }
+      ],
+      "trade_offs": "Loses ad hoc statement visibility in production; PERF-008's metrics replace it.",
+      "validation": {
+        "metric": "Log lines emitted per GET /articles request",
+        "expectation": "Drops to zero MyBatis lines per request at INFO.",
+        "falsifier": "If a production logback configuration outside the repository already overrides these levels, the finding does not apply.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-010",
+      "stable_id": "e53b1c2257764bb4",
+      "root_cause_id": "ROOT-010",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/main/java/io/spring/application/ArticleQueryService.java", "line": 175, "symbol": "ArticleQueryService.fillExtraInfo" },
+      "problem": "An authenticated single-article read issues the article query plus three separate scalar queries (isUserFavorite, articleFavoriteCount, isUserFollowing); write endpoints (favorite, unfavorite, create article, create comment) then re-read via the same path, and the slug validator on create performs a full four-table article read just to test existence.",
+      "performance_principle": "Fetch the data a response needs in as few round trips as practical; an existence check should not materialize the entity.",
+      "evidence": [
+        { "statement": "fillExtraInfo(String, User, ArticleData) runs three queries.", "kind": "static", "file": "src/main/java/io/spring/application/ArticleQueryService.java", "line": 175 },
+        { "statement": "DuplicatedArticleValidator calls articleQueryService.findBySlug(..., null) for an existence check.", "kind": "static", "file": "src/main/java/io/spring/application/article/DuplicatedArticleValidator.java", "line": 16 },
+        { "statement": "ArticleFavoriteApi re-reads with findBySlug after each favorite/unfavorite.", "kind": "static", "file": "src/main/java/io/spring/api/ArticleFavoriteApi.java" }
+      ],
+      "evidence_quality": "Strong",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "endpoint", "amplification": "4x" },
+      "conditions": "Bounded constant cost per detail request; matters only at high request rates. SQLite is in-process so each extra statement is cheap; isUserFollowing scans follows until PERF-003 is fixed.",
+      "counter_evidence": [
+        { "statement": "SQLite has no network round trip; per-statement overhead is in-process.", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Fold the favorite count and the two per-viewer flags into the article query (correlated subqueries or joins keyed on the current user) and use a SELECT 1 ... LIMIT 1 existence query in the validator.",
+      "trade_offs": "A wider, viewer-dependent query is harder to reuse across anonymous and authenticated paths.",
+      "validation": {
+        "metric": "Statements per authenticated GET /articles/{slug}",
+        "expectation": "Falls from 4 to 1.",
+        "falsifier": "If statement count is already 1, another layer combined them.",
+        "safety": "not-safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-011",
+      "stable_id": "a40d540ccb0c9ba0",
+      "root_cause_id": "ROOT-011",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/main/java/io/spring/infrastructure/repository/MyBatisArticleRepository.java", "line": 30, "symbol": "MyBatisArticleRepository.createNew" },
+      "problem": "Article creation runs findTag (a scan of tags, unindexed name), possibly insertTag, and insertArticleTagRelation for each tag inside one write transaction, and tagList has no size validation, so the SQLite write lock is held for a number of statements the caller controls.",
+      "performance_principle": "Write paths should issue a bounded number of statements and hold the write lock as briefly as possible.",
+      "evidence": [
+        { "statement": "for (Tag tag : article.getTags()) { findTag; insertTag; insertArticleTagRelation } inside @Transactional save.", "kind": "static", "file": "src/main/java/io/spring/infrastructure/repository/MyBatisArticleRepository.java", "line": 30 },
+        { "statement": "NewArticleParam.tagList has no @Size bound.", "kind": "static", "file": "src/main/java/io/spring/application/article/NewArticleParam.java" }
+      ],
+      "evidence_quality": "Strong",
+      "impact": { "position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Matters only if clients send long tag lists or write rates are high; typical articles carry a handful of tags.",
+      "counter_evidence": [
+        { "statement": "Article constructor de-duplicates tags via HashSet, bounding repeats but not distinct count.", "effect": "bounds-impact", "file": "src/main/java/io/spring/core/article/Article.java", "line": 45 }
+      ],
+      "recommendation": "Validate a maximum tag count, look up existing tags with one IN query, and insert missing tags and relations as batches.",
+      "trade_offs": "A tag-count cap changes accepted input; batching adds code to the repository.",
+      "validation": {
+        "metric": "Statements per POST /articles with k tags",
+        "expectation": "From 2k-3k+2 statements to a constant.",
+        "falsifier": "If statement count does not depend on k, the loop is not on the executed path.",
+        "safety": "not-safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-012",
+      "stable_id": "d82efd9d66602b62",
+      "root_cause_id": "ROOT-012",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/main/resources/mapper/ArticleMapper.xml", "line": 32, "symbol": "ArticleMapper.delete" },
+      "tags": ["scalability-risk"],
+      "problem": "Deleting an article deletes only the articles row; its article_tags, comments and article_favorites rows remain forever, and those tables are scanned (PERF-003) or joined (PERF-001) on every read, so dead rows add to read cost over time.",
+      "performance_principle": "Data that is logically gone should be physically removed from tables that hot paths scan.",
+      "evidence": [
+        { "statement": "delete from articles where id = #{id}; no dependent deletes.", "kind": "static", "file": "src/main/resources/mapper/ArticleMapper.xml", "line": 32 },
+        { "statement": "No foreign keys or ON DELETE CASCADE in the schema.", "kind": "static", "file": "src/main/resources/db/migration/V1__create_tables.sql" }
+      ],
+      "evidence_quality": "Strong",
+      "impact": { "position": "async", "frequency": "rare", "growth": "O(n)", "blast_radius": "service" },
+      "conditions": "Matters in proportion to how often articles with many comments/favorites are deleted; delete rate unknown.",
+      "counter_evidence": [
+        { "statement": "Orphaned article_favorites rows are excluded from list results because the join starts from articles; they cost scan time but do not change results.", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Delete dependent rows in the same transaction (or add foreign keys with ON DELETE CASCADE and enable PRAGMA foreign_keys), and run a one-off cleanup of existing orphans followed by VACUUM if space matters.",
+      "trade_offs": "Deletes become multi-statement and hold the write lock longer; cascade requires enabling foreign-key enforcement per connection in SQLite.",
+      "validation": {
+        "metric": "Count of article_tags/comments/article_favorites rows whose article_id has no articles row",
+        "expectation": "Zero after the fix and cleanup.",
+        "falsifier": "If the orphan count is already zero on a long-running database, deletes are rare enough not to matter.",
+        "safety": "not-safe-on-production",
+        "commands": [
+          { "command": "sqlite3 copy-of-prod.db \"SELECT count(*) FROM comments C WHERE NOT EXISTS (SELECT 1 FROM articles A WHERE A.id = C.article_id);\"", "purpose": "Count orphaned comments on a copy of the database", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-013",
+      "stable_id": "46d217e20dfa3073",
+      "root_cause_id": "ROOT-013",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/main/resources/mapper/TagReadService.xml", "line": 4, "symbol": "TagReadService.all" },
+      "tags": ["scalability-risk"],
+      "problem": "GET /tags and GraphQL tags return every row of tags with no limit; tags are never deleted, so the response grows with the number of distinct tags ever used.",
+      "performance_principle": "A read endpoint's response must have an enforced maximum.",
+      "evidence": [
+        { "statement": "select name from tags; no LIMIT.", "kind": "static", "file": "src/main/resources/mapper/TagReadService.xml", "line": 4 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Matters if distinct tag count grows large; createNew de-duplicates by name, so growth is in distinct names, not articles. Distinct tag count unknown.",
+      "counter_evidence": [
+        { "statement": "Tags are reused by name on insert (findTag), bounding growth to distinct names.", "effect": "bounds-impact", "file": "src/main/java/io/spring/infrastructure/repository/MyBatisArticleRepository.java", "line": 32 }
+      ],
+      "recommendation": "Return the most-used tags with a server-side limit (the RealWorld UI shows 'popular tags').",
+      "trade_offs": "Ranking by usage needs a count over article_tags (index from PERF-003).",
+      "validation": {
+        "metric": "Response size of GET /tags",
+        "expectation": "Bounded by the configured limit.",
+        "falsifier": "If distinct tags stay in the low hundreds, the response stays small and the finding is immaterial.",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "mybatis.configuration.cache-enabled=true suggests a second-level cache that could hide repeated reads",
+      "why_discarded": "No mapper XML declares <cache/>, so no second-level cache is active; nothing is cached or masked.",
+      "location": "src/main/resources/application.properties:12",
+      "path": "All MyBatis read statements",
+      "evidence_checked": ["src/main/resources/mapper/*.xml (no <cache> element)", "src/main/resources/application.properties"],
+      "revisit_when": "A <cache/> element is added to any mapper, which would introduce staleness across viewers for per-viewer data."
+    },
+    {
+      "observation": "JwtTokenFilter is registered both as a @Bean and in the security chain, which could run its user lookup twice per request",
+      "why_discarded": "It extends OncePerRequestFilter and also skips when an Authentication is already set, so the users-by-id primary-key lookup runs at most once per request.",
+      "location": "src/main/java/io/spring/api/security/JwtTokenFilter.java:19",
+      "path": "Every authenticated request",
+      "evidence_checked": ["src/main/java/io/spring/api/security/WebSecurityConfig.java:25-28,64", "src/main/java/io/spring/api/security/JwtTokenFilter.java:19,32"],
+      "revisit_when": "The filter stops extending OncePerRequestFilter or the user lookup gains joins."
+    },
+    {
+      "observation": "BCrypt password hashing on login and registration consumes CPU per request",
+      "why_discarded": "Deliberate, security-required cost on low-frequency endpoints; reducing it would weaken password storage.",
+      "location": "src/main/java/io/spring/api/security/WebSecurityConfig.java:30-33",
+      "path": "POST /users/login, POST /users, GraphQL login/createUser",
+      "evidence_checked": ["src/main/java/io/spring/graphql/UserMutation.java:59", "src/main/java/io/spring/application/user/UserService.java:39"],
+      "revisit_when": "Login rate becomes a measurable share of CPU, or the endpoints face credential-stuffing load without rate limiting."
+    },
+    {
+      "observation": "REST list pagination uses offset, which degrades with depth",
+      "why_discarded": "Merged into PERF-001: the offset cost is dominated by the same join fan-out and sort; reported there rather than separately.",
+      "location": "src/main/java/io/spring/application/Page.java:18",
+      "path": "GET /articles",
+      "evidence_checked": ["src/main/resources/mapper/ArticleReadService.xml:61", "src/main/java/io/spring/application/Page.java"],
+      "revisit_when": "After PERF-001 is fixed, if deep-offset requests remain slow."
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "The JWT HS512 signing secret is committed in the default application.properties; anyone with repository access can mint valid tokens for any user id on a deployment that uses this file unchanged.",
+      "evidence": [ { "statement": "jwt.secret is set to a literal value in the default properties file (value not reproduced here).", "kind": "static", "file": "src/main/resources/application.properties", "line": 9 } ],
+      "recommendation": "Load the secret from the environment or a secret store, rotate it, and fail startup if it is absent.",
+      "location": "src/main/resources/application.properties:9",
+      "assessed_properly_by": "A security review and a secret-scanning tool (for example a repository secret scanner) plus rotation of any deployed key."
+    },
+    {
+      "id": "SEC-002",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "DEBUG logging for the mapper package writes bound parameters to logs, including user email addresses and password hashes on UserMapper insert/update.",
+      "evidence": [ { "statement": "logging.level.io.spring.infrastructure.mybatis.mapper=DEBUG; UserMapper.insert/update bind #{user.password} and #{user.email}.", "kind": "static", "file": "src/main/resources/application.properties", "line": 20 } ],
+      "recommendation": "Remove DEBUG mapper logging from the default profile (also PERF-009) and treat existing logs as containing personal data.",
+      "location": "src/main/resources/application.properties:20",
+      "assessed_properly_by": "A privacy/security logging review."
+    },
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "GraphQL comment pagination does not paginate: the cursor query has no LIMIT and the service removes only the element at index `limit`, so comments(first: N) returns all comments but one, and hasNextPage is true whenever more than N exist.",
+      "evidence": [
+        { "statement": "No LIMIT in findByArticleIdWithCursor.", "kind": "static", "file": "src/main/resources/mapper/CommentReadService.xml", "line": 24 },
+        { "statement": "comments.remove(page.getLimit()) removes one element.", "kind": "static", "file": "src/main/java/io/spring/application/CommentQueryService.java", "line": 78 }
+      ],
+      "recommendation": "Add LIMIT #{page.queryLimit} to the mapper statement (same fix as PERF-004) and add a test asserting page size.",
+      "location": "src/main/resources/mapper/CommentReadService.xml:24",
+      "assessed_properly_by": "A correctness-focused test suite covering cursor pagination for comments."
+    },
+    {
+      "id": "COR-002",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "Feed queries apply LIMIT to joined article x tag rows rather than to articles, so a page can contain fewer articles than requested and an article's tag list can be cut off at the page boundary; the REST feed query also has no ORDER BY, so page order is undefined.",
+      "evidence": [
+        { "statement": "findArticlesOfAuthors: selectArticleData (joins article_tags/tags) ... limit offset,limit; no ORDER BY.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 93 },
+        { "statement": "findArticlesOfAuthorsWithCursor: same join with limit #{page.queryLimit} on joined rows; hasExtra is computed from collapsed article count.", "kind": "static", "file": "src/main/resources/mapper/ArticleReadService.xml", "line": 134 }
+      ],
+      "recommendation": "Select article ids first (with ORDER BY created_at and LIMIT), then load article data for those ids, as the non-feed list path already does.",
+      "location": "src/main/resources/mapper/ArticleReadService.xml:93",
+      "assessed_properly_by": "A correctness-focused test seeding authors with multi-tag articles and asserting page sizes and ordering."
+    },
+    {
+      "id": "COR-003",
+      "kind": "correctness",
+      "confidence": "Medium",
+      "risk": "Low",
+      "problem": "DateTimeHandler shares one static java.util.Calendar across all threads and passes it to JDBC getTimestamp/setTimestamp; Calendar is not thread-safe and drivers may mutate the passed instance, risking wrong timestamps under concurrency.",
+      "evidence": [ { "statement": "private static final Calendar UTC_CALENDAR used by every setParameter/getResult.", "kind": "static", "file": "src/main/java/io/spring/infrastructure/mybatis/DateTimeHandler.java", "line": 18 } ],
+      "recommendation": "Create a Calendar per call (cheap) or use java.time types with a driver that supports them.",
+      "location": "src/main/java/io/spring/infrastructure/mybatis/DateTimeHandler.java:18",
+      "assessed_properly_by": "A concurrency test hammering timestamp reads/writes in parallel, or review of sqlite-jdbc's use of the Calendar argument."
+    },
+    {
+      "id": "MAINT-001",
+      "kind": "maintenance",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "The build targets Spring Boot 2.6.3, DGS 4.9.21, sqlite-jdbc 3.36.0.3 and Java 11; the Spring Boot 2.x line no longer receives open-source support.",
+      "evidence": [ { "statement": "org.springframework.boot version '2.6.3'; sourceCompatibility = '11'.", "kind": "static", "file": "build.gradle", "line": 2 } ],
+      "recommendation": "Plan an upgrade to a supported Spring Boot 3.x line (requires Java 17 and the jakarta namespace) and current DGS and sqlite-jdbc releases.",
+      "location": "build.gradle:2",
+      "assessed_properly_by": "A dependency-update pass with a vulnerability scanner."
+    }
+  ]
+}
