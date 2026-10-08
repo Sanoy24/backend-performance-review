@@ -77,6 +77,15 @@ counter-evidence search; `path` prevents a locally true inefficiency from floati
 impact; `disposition` prevents silent deletion. The ledger is working memory, not a third
 review artifact: do not emit it wholesale in the report or JSON.
 
+**`discard` is for candidates that are not real, not for candidates that are small.** Discard
+only when counter-evidence refutes the mechanism, the path is unreachable, the candidate merges
+into another, or it has no current or projected cost under any workload the code supports
+(`Informational`). A mechanism that is real and reachable is promoted even when its impact is
+small: counter-evidence that bounds it lowers Severity (§6), down to `Low`, and the output budget
+moves it into the ranked table rather than out of the report. Discarding real, minor
+mechanisms to keep a report short is how a careful review ends up telling the reader less than
+a careless one.
+
 A candidate becomes a finding only after it survives the workload, critical-path, evidence,
 alternative-explanation, counterfactual, and intent tests below. A discarded candidate enters
 `considered_not_reported` only when it was plausible and material enough that a future
@@ -234,6 +243,18 @@ coverage check, not a demand to manufacture a candidate:
 - For every shared pool, queue, event loop, worker set, lock, datastore, cache, and downstream,
   check every in-scope path that acquires or loads it, its bound, its release point, and whether
   wait time or saturation is observable.
+- **Write paths.** For every in-scope create, update, and delete path, check what one logical
+  write actually issues: a statement per item inside a loop, related objects saved or reloaded
+  along with the record, deletes that fan out one row at a time, and how long the write holds a
+  transaction or lock. These are easy to skip because a review naturally starts from what users
+  read.
+- **Growth over time.** For every table, collection, or index a critical path reads, check what
+  bounds its size: retention, cleanup, archival. Rows that are logically removed but never
+  physically deleted, append-only records, and per-event rows with no expiry make a path that is
+  fast today slower every week, with no code change at all.
+- **Fixed work on every request.** Find work a request repeats regardless of its result:
+  recomputed totals and counts, aggregates over whole tables, related records loaded in full
+  only to read an identifier, and middleware or authentication that runs more than once.
 - Reconcile symptoms that name the same constraint before scoring. A path-local candidate and
   a shared-resource candidate may be one root cause with a wider blast radius.
 - If a path or shared resource could not be examined, record a `not-examined` completeness

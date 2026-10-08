@@ -53,6 +53,33 @@ class CandidateFlowContractTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn("presentation depth only", self.skill)
 
+    def test_discard_is_reserved_for_candidates_that_are_not_real(self):
+        # Breadth regression (benchmark/ab-results/second-comparison.md): on one pinned model,
+        # guided reviews found real, minor issues and then discarded them, reporting 69% as many
+        # real issues as plain reviews. Small impact must lower severity, not delete the finding.
+        section = " ".join(self.method.split("## 2. Keep a private candidate ledger", 1)[1]
+                           .split("## 3.", 1)[0].split())
+        self.assertIn("`discard` is for candidates that are not real", section)
+        self.assertIn("promoted even when its impact is small", section)
+        for allowed in ("refutes", "unreachable", "merges into", "Informational"):
+            with self.subTest(allowed=allowed):
+                self.assertIn(allowed, section)
+
+    def test_final_sweep_covers_write_paths_growth_and_fixed_per_request_work(self):
+        # The same comparison: every issue the guided runs never surfaced sat on a write path,
+        # in data that grows without bound, or in work repeated on every request.
+        sweep = " ".join(self.method.split("## 7. Final coverage sweep", 1)[1]
+                         .split("## 8.", 1)[0].split())
+        for area in ("**Write paths.**", "**Growth over time.**", "**Fixed work on every request.**"):
+            with self.subTest(area=area):
+                self.assertIn(area, sweep)
+
+    def test_skill_names_the_widened_sweep_and_the_discard_rule(self):
+        phase = " ".join(self.skill.split("### Phase 6", 1)[1].split("Load:", 1)[0].split())
+        self.assertIn("write paths", phase)
+        self.assertIn("data growth", phase)
+        self.assertIn("only refuted, unreachable, duplicate, or impact-free candidates are discarded", phase)
+
     def test_final_sweep_covers_every_path_and_shared_resource(self):
         sweep = self.method.split("## 7. Final coverage sweep", 1)[1].split(
             "## 8.", 1)[0]
