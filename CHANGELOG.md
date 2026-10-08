@@ -40,6 +40,17 @@ value and `[Unreleased]` accumulates.
 
 ### Added
 
+- **The validator ships with the skill.** In the third comparison a guided review failed the
+  official validator, but its agent believed it valid: the validator lived at the repository
+  root, outside the skill, so the agent wrote a weaker checker of its own. `validate_review.py`,
+  `json_schema_lite.py`, and the review and finding schemas are now bundled in the skill;
+  `SKILL.md` tells the agent to run it and fix every problem before finishing, and pre-approves
+  the command. Its lookups now also find `SKILL.md` and `compute_stable_id.py` in an installed
+  skill's own layout — without that, its priority-matrix and stable-ID checks would have been
+  skipped silently there. Tests install only the skill directory elsewhere and prove both
+  checks fire, and that the bundled files stay byte-identical to the root copies. The bundled
+  copy catches the exact failure that slipped through.
+
 - **The third A/B comparison: breadth recovered, Phase 2 not met.** Pre-registered (#103) and
   run on Node and Spring Boot repositories that played no part in #102's tuning, all six arms
   on `claude-opus-5-5`. Guided breadth reached 87% of plain (the bar was 75%) and the guided

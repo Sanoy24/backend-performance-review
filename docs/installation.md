@@ -84,8 +84,9 @@ Two notes on specific fields:
   A description reading "A skill for backend performance reviews" would be correct and
   useless. The spec caps it at 1,024 characters and Claude Code truncates its skill listing
   at 1,536, so the key use cases come first.
-- **`allowed-tools`** pre-approves the read-only tools the review needs plus the bundled
-  detection script, so a review does not generate a permission prompt per file. The grant
+- **`allowed-tools`** pre-approves the read-only tools the review needs plus the three bundled
+  scripts — detection, stable-ID computation, and review validation — so a review does not
+  generate a permission prompt per file. The grant
   lasts for the invoking turn only. `${CLAUDE_SKILL_DIR}` expands to the installed skill
   directory in both the frontmatter rule and the skill body, so the rule matches the exact
   command the body tells the agent to run.
@@ -267,6 +268,12 @@ validator job, and publisher stay unchanged.
 ---
 
 ## 6. The detection script
+
+**The validator ships with the skill.** `scripts/validate_review.py`, its schema reader, and the
+review and finding schemas are bundled inside `skills/backend-performance-review/`, so an
+installed skill can run the same publishability check CI and the Action apply, and `SKILL.md`
+tells the agent to run it before finishing. The bundled files are byte-identical to the
+repository-root copies; a test fails if they drift.
 
 `skills/backend-performance-review/scripts/detect_stack.py` is an accelerator, not a
 dependency. If Python is unavailable or the script errors, the skill falls back to manual

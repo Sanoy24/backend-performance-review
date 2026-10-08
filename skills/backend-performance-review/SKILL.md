@@ -3,7 +3,7 @@ name: backend-performance-review
 description: Reviews backend codebases for performance bottlenecks using an evidence-first, workload-driven methodology. Use when investigating latency, throughput, slow endpoints, database or query performance, N+1 queries, connection pool exhaustion, event-loop blocking, lock contention, memory or CPU pressure, queue lag, or timeout and retry storms — and when asked to audit, review, or improve the performance or scalability of a backend service, API, worker, or data layer. Trigger phrases include "performance review", "why is this slow", "audit performance", "find bottlenecks", "will this scale", "review this service for performance", "perf review of this PR". Works on any language, framework, runtime, or datastore.
 license: MIT
 compatibility: Requires read access to the target repository. Optional accelerator scripts require Python 3.8+ (standard library only). No network access required.
-allowed-tools: Read Grep Glob Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *)
+allowed-tools: Read Grep Glob Bash(python ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/detect_stack.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/validate_review.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/validate_review.py *)
 metadata:
   version: 2.0.0
   spec: backend-performance-review/2.0
@@ -188,7 +188,7 @@ plan after that summary; do not gain brevity by deleting required reasoning.
 Every significant recommendation needs a validation path. Include a copyable
 repository-local command when the evidence supports one, with its purpose and its own
 production-safety label; omit rather than invent a command. Emit the machine-readable JSON
-alongside the Markdown (template §10, `schemas/review.schema.json`) — the Markdown is
+alongside the Markdown (template §10, the bundled `schemas/review.schema.json`) — the Markdown is
 authoritative; the JSON is the same content in a form that can be diffed and scored,
 including any commands under `validation.commands`. Compute each finding's `stable_id` by
 running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <location.file>
@@ -196,6 +196,11 @@ running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <locatio
 Two independently-run reviews were found to disagree completely on a hand-computed
 `stable_id` even when they agreed on everything else; the script exists so that stops being
 possible.
+
+Before finishing, run `python ${CLAUDE_SKILL_DIR}/scripts/validate_review.py --review
+<review.json>` and fix every problem it reports until it prints `is a valid review`. It is
+the same check publishing applies, bundled with this skill; never substitute a checker of
+your own, which will miss the rules it does not know.
 
 Load: `methodology/validation.md`.
 
