@@ -65,6 +65,13 @@ value and `[Unreleased]` accumulates.
   roadmap's out-of-scope rule now separates reading existing telemetry from acting on a live
   system.
 
+### Fixed
+
+- **The GitHub Action could not be listed on the Marketplace.** The Marketplace requires an action
+  description under 125 characters, and `action.yml`'s was 154, so publishing v2.1.0 there was
+  refused. The description is now 109 characters, and a repository invariant enforces the limit,
+  because the Marketplace reads `action.yml` from the release tag and a violation costs a release.
+
 ## [2.1.0] — 2026-10-09
 
 A minor release. The headline is evidence: **the methodology met its Phase 2 exit criterion** in

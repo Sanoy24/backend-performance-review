@@ -1,7 +1,7 @@
 name: Backend Performance Review
 description: >-
-  Publish a backend performance review to a pull request — SARIF for code scanning, a
-  comment, and a verdict. Advisory by default; it does not block merges.
+  Publish a backend performance review on a pull request: SARIF, a comment, and a verdict.
+  Advisory by default.
 author: backend-performance-review contributors
 
 # What this action does and does not do
