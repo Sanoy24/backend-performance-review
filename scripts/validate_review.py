@@ -18,6 +18,7 @@ enforced from there, so it lives in exactly one place — see docs/architecture.
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -305,6 +306,8 @@ def _semantic_problems(review):
             problems.append("duplicate runtime evidence id %s" % artifact_id)
         elif artifact_id:
             runtime_by_id[artifact_id] = artifact
+        if artifact.get("origin") == "connected-tool":
+            problems.extend(_connected_tool_problems(artifact_id, artifact))
 
     for finding in findings:
         finding_id = finding.get("id")
@@ -333,6 +336,36 @@ def _semantic_problems(review):
                 "Confirmed requires finding evidence with kind=runtime and "
                 "runtime_evidence_id" % finding_id)
 
+    return problems
+
+
+def _parse_date_time(value):
+    if not isinstance(value, str) or not value:
+        return None
+    normalized = value[:-1] + "+00:00" if value[-1] in "Zz" else value
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
+def _connected_tool_problems(artifact_id, artifact):
+    """A pulled artifact is only evidence if a reader can re-run the same read."""
+    label = artifact_id if isinstance(artifact_id, str) and artifact_id else "a runtime artifact"
+    problems = []
+    for field in ("tool", "query", "window", "environment"):
+        value = artifact.get(field)
+        if not value or (isinstance(value, str) and not value.strip()):
+            problems.append(
+                "%s is a connected-tool artifact without %s; see "
+                "methodology/runtime-evidence.md" % (label, field))
+    window = artifact.get("window")
+    if isinstance(window, dict):
+        start = _parse_date_time(window.get("start"))
+        end = _parse_date_time(window.get("end"))
+        if (start and end and start.utcoffset() is not None
+                and end.utcoffset() is not None and end < start):
+            problems.append("%s has a window that ends before it starts" % label)
     return problems
 
 

@@ -124,7 +124,9 @@ layer gate, not just the ones the script happened to name.
 
 **Inventory observability before anything else.** What metrics, traces, logs, benchmarks,
 load tests, dashboards-as-code, and SLOs exist in the repo? This sets the ceiling on the
-confidence any finding in this review can reach. Do it now, not at the end.
+confidence any finding in this review can reach. Do it now, not at the end. Note any connected
+telemetry tools (APM, tracing, database monitoring); ask in Phase 2 to read them, read-only, under
+`methodology/runtime-evidence.md`.
 
 If the user supplies call-graph, query-shape, or changed-path output, or explicitly opts
 into an available structural producer, load `methodology/structural-evidence.md`. Treat
@@ -213,7 +215,7 @@ Two scored axes. Priority is **derived**, never chosen.
 
 | Level | Meaning |
 |:--|:--|
-| `Confirmed` | Runtime evidence exists **and is cited**: profile, `EXPLAIN` plan, benchmark, trace, metrics export, load-test result. Uncited `Confirmed` is a violation. |
+| `Confirmed` | Runtime evidence that shows the mechanism exists **and is cited**: profile, `EXPLAIN` plan, benchmark, trace, metrics export, load-test result. Uncited `Confirmed` is a violation. |
 | `High` | Follows unambiguously from the code alone. Query in a loop over a variable-length collection; blocking call in an async handler; unbounded query with no `LIMIT`. |
 | `Medium` | Code pattern plus a stated, unverified workload or data-volume assumption. The assumption goes in `Conditions`. |
 | `Low` | Plausible only under conditions nothing evidences. Frame as a risk or question, not an assertion. |
