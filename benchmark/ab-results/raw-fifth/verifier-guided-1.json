@@ -1,0 +1,416 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-09T00:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "model": "Claude Code / claude-opus-5-5",
+    "repository": {
+      "name": "github-signature-verifier",
+      "commit": "1239b2c335773e00897999c90e50c2b16160e4f1"
+    }
+  },
+  "services": [
+    { "name": "src", "path": "src", "runtime": ["node"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      { "question": "Function timeout", "answer": "30 s", "source": "repository", "asked": false, "evidence_checked": ["terraform/lambda.tf:15"] },
+      { "question": "Function memory allocation", "answer": "128 MB", "source": "repository", "asked": false, "evidence_checked": ["terraform/lambda.tf:13"] },
+      { "question": "Runtime", "answer": "nodejs4.3", "source": "repository", "asked": false, "evidence_checked": ["terraform/lambda.tf:14"] },
+      { "question": "Reserved or provisioned concurrency", "answer": "None declared", "source": "repository", "asked": false, "evidence_checked": ["terraform/lambda.tf", "terraform/*.tf"] },
+      { "question": "Remote secret-store calls per webhook", "answer": "One SSM GetParameters (with decryption) per valid verifier invocation; concurrency slots held per in-flight webhook = 2 under the documented synchronous caller pattern", "source": "derived", "asked": false, "evidence_checked": ["src/index.js:24-39", "src/index.js:75", "src/example.js:16-19"] },
+      { "question": "Roughly how many webhook deliveries per minute at peak, and how bursty?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["terraform/*.tf", "README.md", "src/*.js"], "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "highest" },
+      { "question": "Do production consumers call the verifier synchronously as in src/example.js, and how many are there?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["src/example.js", "README.md:22", "terraform/lambda.tf:3"], "decision_dimensions": ["confidence", "recommendation"], "expected_decision_value": "high" },
+      { "question": "Is account Lambda concurrency / SSM throughput shared with other critical workloads, and have Throttles or SSM ThrottlingExceptions been observed?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["terraform/lambda.tf", "terraform/iam.tf"], "decision_dimensions": ["severity"], "expected_decision_value": "high" },
+      { "question": "How often is GitHubWebhookSecret rotated and what staleness is acceptable?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["README.md:18-19", "terraform/iam.tf"], "decision_dimensions": ["recommendation"], "expected_decision_value": "medium" },
+      { "question": "Which webhook event types are subscribed, and what are typical and maximum payload sizes?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["src/create-test-event.js", "README.md"], "decision_dimensions": ["severity"], "expected_decision_value": "medium" },
+      { "question": "Does the deployed function still run nodejs4.3 at 128 MB, and how frequent are cold starts (Init Duration)?", "answer": "No answer available", "source": "unanswered", "asked": true, "evidence_checked": ["terraform/lambda.tf:13-14"], "decision_dimensions": ["severity", "recommendation"], "expected_decision_value": "low" }
+    ],
+    "scenarios": ["normal", "burst", "degraded-dependency", "cold-start"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Every text file in the repository read in full; the PNG diagram was not read",
+    "critical_paths_identified": 2,
+    "critical_paths_analyzed": 2,
+    "shared_resources_identified": 4,
+    "shared_resources_analyzed": 4,
+    "technology_support": [
+      { "technology": "node", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "terraform", "tier": "deep", "detection_confidence": 0.9 },
+      { "technology": "serverless (AWS Lambda)", "tier": "deep" }
+    ],
+    "unknowns": [
+      { "subject": "Webhook arrival rate and burstiness", "reason": "no-evidence-exists", "what_would_resolve_it": "CloudWatch AWS/Lambda Invocations at 1-minute resolution" },
+      { "subject": "SSM/KMS latency and throttling history", "reason": "no-evidence-exists", "what_would_resolve_it": "CloudTrail GetParameters events with errorCode; X-Ray subsegments" },
+      { "subject": "Drift between terraform/ and the deployed function", "reason": "no-evidence-exists", "what_would_resolve_it": "terraform plan (read-only)" },
+      { "subject": "API Gateway integration timeout and throttling", "reason": "out-of-scope", "what_would_resolve_it": "The gateway definition, which is not in this repository" },
+      { "subject": "SSM Parameter Store / KMS engine-specific behavior", "reason": "technology-unsupported", "what_would_resolve_it": "Account/region AWS service quotas and service documentation" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Function timeout 30 s (terraform/lambda.tf:15)",
+      "Memory 128 MB (terraform/lambda.tf:13)",
+      "Runtime nodejs4.3 (terraform/lambda.tf:14)",
+      "No reserved/provisioned concurrency and no tracing configuration (terraform/lambda.tf:7-17)",
+      "One SSM GetParameters with decryption per valid invocation, client constructed per call (src/index.js:24-39, 75)",
+      "Documented callers invoke synchronously with RequestResponse and forward the whole event (src/example.js:16-19, README.md:22)",
+      "No timeout or retry configuration on any AWS SDK client (src/index.js:6-9, 26; src/example.js:5-9, 15)"
+    ],
+    "unknown": [
+      "Webhook arrival rate, peak and burstiness",
+      "SSM/KMS latency distribution and throttling history",
+      "Number of caller functions and their timeouts",
+      "Cold-start frequency and init duration",
+      "Secret rotation frequency and acceptable staleness",
+      "Whether the live function matches the Terraform"
+    ],
+    "assumed": [
+      "Production callers follow src/example.js as the README directs (affects PERF-003, PERF-002)",
+      "Webhook traffic arrives in bursts tied to repository activity (affects PERF-001, PERF-002)",
+      "Webhook bodies vary in size and can exceed the test fixture (affects PERF-004)"
+    ],
+    "derived": [
+      "Remote secret-store calls per webhook = 1 per verifier invocation, no warm reuse - from src/index.js:75 inside handler and no module-scope memoization",
+      "Concurrency slots held per in-flight webhook = 2 - from RequestResponse invocation at src/example.js:18",
+      "Worst-case slot hold under SSM degradation is bounded by the 30 s verifier timeout (terraform/lambda.tf:15); slots held ~= 2 x arrival rate x time-to-fail, arrival rate unknown so not sized"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    { "question": "Peak webhook deliveries per minute and burstiness", "what_it_would_change": "Near SSM throughput or account concurrency: PERF-001 and PERF-002 move to High/P1. Very low rate: they stay P2 or drop to P3", "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "highest", "affects": ["PERF-001", "PERF-002"] },
+    { "question": "Do production consumers invoke the verifier synchronously as in example.js?", "what_it_would_change": "Yes: PERF-003 confidence High. No: PERF-003 is withdrawn", "decision_dimensions": ["confidence", "recommendation"], "expected_decision_value": "high", "affects": ["PERF-003"] },
+    { "question": "Have Lambda Throttles or SSM ThrottlingExceptions been observed; is concurrency shared?", "what_it_would_change": "Observed throttling raises PERF-002 blast radius to system-wide and severity to High", "decision_dimensions": ["severity"], "expected_decision_value": "high", "affects": ["PERF-002", "PERF-001"] },
+    { "question": "Secret rotation frequency and acceptable staleness", "what_it_would_change": "Sets PERF-001's memoization TTL or argues for refetch-on-mismatch", "decision_dimensions": ["recommendation"], "expected_decision_value": "medium", "affects": ["PERF-001"] },
+    { "question": "Subscribed event types and payload sizes", "what_it_would_change": "Large payloads raise PERF-004 above Low", "decision_dimensions": ["severity"], "expected_decision_value": "medium", "affects": ["PERF-004"] },
+    { "question": "Is nodejs4.3 at 128 MB actually deployed, and how frequent are cold starts?", "what_it_would_change": "Decides whether PERF-006 matters and whether memory sizing is worth testing", "decision_dimensions": ["severity", "recommendation"], "expected_decision_value": "low", "affects": ["PERF-006"] }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Unchanging secret re-read from a remote store (SSM + KMS) on every invocation, with no reuse across warm invocations", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "No deadline budget across the caller -> verifier -> SSM chain; only the 30 s function timeout bounds waits", "findings": ["PERF-002"] },
+    { "id": "ROOT-003", "description": "Verification implemented as a separate synchronously-invoked function on the blocking path", "findings": ["PERF-003"] },
+    { "id": "ROOT-004", "description": "Unconditional full-payload logging on the hot path", "findings": ["PERF-004"] },
+    { "id": "ROOT-005", "description": "No instrumentation on the verification path", "findings": ["PERF-005"] },
+    { "id": "ROOT-006", "description": "Avoidable module-scope initialization work on cold start", "findings": ["PERF-006"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "c435ea8496ac7d60",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "io",
+      "location": { "service": "src", "file": "src/index.js", "line": 24, "symbol": "getSecret" },
+      "tags": ["quick-win"],
+      "problem": "Every valid verification makes a remote ssm.getParameters call with WithDecryption through a newly constructed SSM client to read a value that almost never changes; nothing is reused across warm invocations.",
+      "performance_principle": "Do not repeat remote work whose result does not change between requests; fixed per-request I/O on a blocking path adds latency to every request and load to a shared dependency.",
+      "evidence": [
+        { "statement": "getSecret constructs new AWS.SSM() and calls getParameters with WithDecryption: true on each call", "kind": "static", "file": "src/index.js", "line": 26 },
+        { "statement": "getSecret is invoked inside exports.handler, i.e. per invocation; only AWS.config is set at module scope", "kind": "static", "file": "src/index.js", "line": 75 },
+        { "statement": "IAM grants only ssm:GetParameters, consistent with a runtime fetch and no pre-provisioned secret", "kind": "static", "file": "terraform/iam.tf", "line": 31 },
+        { "statement": "No runtime evidence (trace, metric, CloudTrail export) was supplied", "kind": "static" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "unknown" },
+      "conditions": "Applies at any traffic level as per-request latency; becomes a shared-resource (SSM/KMS throughput) problem only if peak webhook rate is a significant fraction of the account's SSM GetParameters throughput together with other SSM users. Rate is unknown; assumption is bursty low-to-moderate traffic, which keeps severity Medium.",
+      "counter_evidence": [
+        { "statement": "Searched for module-scope memoization, a parameter-caching extension/layer, or an env-var secret: none found", "effect": "no-effect", "file": "src/index.js" },
+        { "statement": "Searched for a rate cap (API Gateway throttling, reserved concurrency): none in repo", "effect": "no-effect", "file": "terraform/lambda.tf" },
+        { "statement": "Input-validation early return skips SSM for malformed requests, bounding invalid-traffic load", "effect": "bounds-impact", "file": "src/index.js", "line": 70 }
+      ],
+      "why_this_might_not_matter": "Webhook volume for one GitHub organization may be a handful per minute; one SSM round trip per webhook is then unnoticeable and far from any quota, and warm reuse is not guaranteed for sparse traffic.",
+      "recommendation": "Construct the SSM client once at module scope and memoize the secret promise per execution environment with a bounded TTL, with a rate-limited refetch on signature mismatch to pick up rotation. Removes the repeated read rather than masking its latency. Hit rate: every warm invocation reuses the single key; invalidation: TTL plus refetch-on-mismatch; granularity: one key; stampede: at most one fetch per concurrently cold environment; consistency: rotation staleness is already inherent and the acceptable window is a product decision.",
+      "alternatives": [
+        { "option": "Module-scope client + memoized secret with TTL and refetch-on-mismatch", "preferred": true, "why": "Removes the call from warm invocations with a few lines, no new infrastructure, secret stays in SSM" },
+        { "option": "AWS parameter-caching Lambda extension", "preferred": false, "why": "Same effect, adds a layer dependency and a local hop" },
+        { "option": "Encrypted environment variable", "preferred": false, "why": "Removes SSM call but ties rotation to redeploys" },
+        { "option": "Leave as is", "preferred": false, "why": "Defensible only if traffic proves very low" }
+      ],
+      "trade_offs": "Secret held in memory for the environment's lifetime; staleness window after rotation bounded by TTL; refetch-on-mismatch must be rate-limited so forged requests cannot drive SSM reads.",
+      "validation": {
+        "metric": "Ratio of CloudTrail GetParameters events to Lambda Invocations over the same window; warm-invocation Duration p50",
+        "expectation": "GetParameters calls fall from about one per valid invocation to about one per cold start or TTL expiry; warm Duration falls by the SSM round trip (magnitude unmeasured)",
+        "falsifier": "GetParameters volume does not drop, meaning environments are not reused at this traffic level and impact was overstated",
+        "safety": "safe-on-production",
+        "guard": "Unit test asserting getParameters is called once across two handler invocations in one module instance",
+        "commands": [
+          { "command": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=GetParameters --max-results 50", "purpose": "GetParameters volume and throttling errors", "safety": "safe-on-production" },
+          { "command": "aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Invocations --dimensions Name=FunctionName,Value=github-signature-verifier --statistics Sum --period 60 --start-time $(date -u -d '-7 days' +%FT%TZ) --end-time $(date -u +%FT%TZ)", "purpose": "Invocation baseline and peak per-minute rate", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "a5aa87772eb9e807",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "networking",
+      "location": { "service": "src", "file": "src/index.js", "line": 24, "symbol": "getSecret" },
+      "tags": ["quick-win"],
+      "problem": "Neither outbound call on the webhook path (SSM in the verifier, lambda.invoke in the documented caller) has an explicit per-attempt timeout, retry cap, or budget; the only bound in the repo is the 30 s function timeout, during which the synchronous caller is also blocked.",
+      "performance_principle": "Every remote call on a blocking path needs a bound smaller than its caller's remaining budget; otherwise a slow dependency becomes resource exhaustion in every caller.",
+      "evidence": [
+        { "statement": "SDK configured with apiVersions and region only; SSM client created with defaults, no httpOptions timeouts or maxRetries", "kind": "static", "file": "src/index.js", "line": 26 },
+        { "statement": "Caller's Lambda client created with defaults and lambda.invoke awaited with no timeout", "kind": "static", "file": "src/example.js", "line": 22 },
+        { "statement": "Function timeout of 30 s is the only time bound", "kind": "static", "file": "terraform/lambda.tf", "line": 15 },
+        { "statement": "Slots held under SSM degradation ~= 2 x arrival rate x time-to-fail, capped at 30 s per webhook; arrival rate unknown so not sized", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "unknown" },
+      "conditions": "Matters when SSM, KMS, or Lambda invoke is slow or throttling; cost scales with webhook arrival rate. If peak rate x 30 s x 2 approaches unreserved account concurrency (unknown), blast radius becomes system-wide and severity High.",
+      "counter_evidence": [
+        { "statement": "Searched for client timeouts, SDK retry config, or getRemainingTimeInMillis use: none", "effect": "no-effect", "file": "src/index.js" },
+        { "statement": "The 30 s Lambda timeout bounds the worst case, so this is not an unbounded hang", "effect": "bounds-impact", "file": "terraform/lambda.tf", "line": 15 },
+        { "statement": "Searched for reserved concurrency to isolate blast radius: not set", "effect": "no-effect", "file": "terraform/lambda.tf" }
+      ],
+      "why_this_might_not_matter": "SSM is normally fast; at low webhook rates even a 30 s stall holds few slots, and GitHub deliveries can be redelivered.",
+      "recommendation": "Set explicit connect/read timeouts and a retry cap on both SDK clients, sized so the verifier's total fits inside the caller's remaining time and the caller's inside the gateway's integration timeout. Derive values from measured latency (not yet available); add the bound now and tune from data. PERF-001 also shrinks this exposure to cold starts and TTL refreshes.",
+      "alternatives": [
+        { "option": "Explicit per-attempt timeout and retry cap on both clients within the caller's budget", "preferred": true, "why": "Directly bounds slot hold time; small config change" },
+        { "option": "Lower the Lambda function timeout", "preferred": false, "why": "Blunt; kills slow-healthy calls and does not bound the caller" },
+        { "option": "Reserved concurrency on the verifier", "preferred": false, "why": "Isolates blast radius but converts overload to throttles; complementary" }
+      ],
+      "trade_offs": "Too-short timeouts turn healthy slow calls into 500s and, with retries, add load to SSM during a brownout; values need measurement and revisiting.",
+      "validation": {
+        "metric": "Verifier Duration maximum and count of 'Task timed out' log lines",
+        "expectation": "Worst-case Duration bounded by the configured client budget instead of 30 s during SSM slowness",
+        "falsifier": "Duration maximum never approaches 30 s over a window that includes SSM incidents",
+        "safety": "safe-on-production",
+        "guard": "CloudWatch alarms on Duration maximum and Throttles",
+        "commands": [
+          { "command": "aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Duration --dimensions Name=FunctionName,Value=github-signature-verifier --statistics Maximum Average --period 300 --start-time $(date -u -d '-7 days' +%FT%TZ) --end-time $(date -u +%FT%TZ)", "purpose": "How close invocations come to the 30 s ceiling", "safety": "safe-on-production" },
+          { "command": "aws logs filter-log-events --log-group-name /aws/lambda/github-signature-verifier --filter-pattern \"\\\"Task timed out\\\"\"", "purpose": "Count timeout-terminated invocations (log group contains payloads; restrict access)", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "fd4b587f7db0cadb",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "networking",
+      "location": { "service": "src", "file": "src/example.js", "line": 12, "symbol": "validateSignature" },
+      "tags": ["needs-measurement"],
+      "problem": "The documented pattern has each consumer invoke the verifier with RequestResponse, so the consumer sits idle and billed while a second function runs, cold-starts independently and fetches the secret; the whole event is serialized into the invoke payload and parsed back.",
+      "performance_principle": "Do not add a synchronous network hop and a second compute unit on a blocking path for work that can be done locally or handed off; each serial hop adds latency, tail and resource hold time.",
+      "evidence": [
+        { "statement": "new AWS.Lambda() per call; InvocationType RequestResponse; Payload JSON.stringify(event)", "kind": "static", "file": "src/example.js", "line": 18 },
+        { "statement": "Consumer awaits invoke and JSON.parse(data.Payload)", "kind": "static", "file": "src/example.js", "line": 33 },
+        { "statement": "README prescribes this integration", "kind": "static", "file": "README.md", "line": 22 },
+        { "statement": "No runtime evidence; production consumer usage unknown", "kind": "static" }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "service", "amplification": "2x" },
+      "conditions": "Assumes production consumers follow example.js (unconfirmed). Duration and concurrency cost scale with webhook rate (unknown); cold-start compounding matters when traffic is sparse enough for environments to go cold between deliveries.",
+      "counter_evidence": [
+        { "statement": "example.js is not deployed by this repo's Terraform (only index.js is zipped), so production use is unproven", "effect": "lowers-confidence", "file": "terraform/lambda.tf", "line": 3 },
+        { "statement": "Design reason is explicit: keep the secret out of consumers' IAM scope; mechanism stands but constrains the recommendation", "effect": "no-effect", "file": "README.md", "line": 22 }
+      ],
+      "why_this_might_not_matter": "At low webhook volume the extra billed duration and second concurrency slot are negligible, and secret isolation may be worth more than the cost.",
+      "recommendation": "Keep isolation but stop blocking the consumer: make the verifier the API Gateway target, verify, then dispatch to downstream functions asynchronously (Event invocation or a queue). If the topology stays, at least construct the Lambda client at module scope in consumers.",
+      "alternatives": [
+        { "option": "Verifier as front door with async dispatch to consumers", "preferred": true, "why": "Removes the blocked caller and double cold start while preserving secret isolation" },
+        { "option": "Shared verification module in each consumer", "preferred": false, "why": "Removes the hop but grants every consumer secret access" },
+        { "option": "API Gateway Lambda authorizer", "preferred": false, "why": "Request authorizers do not receive the body needed for HMAC" },
+        { "option": "Keep topology, hoist client to module scope", "preferred": false, "why": "Minimal gain; double hold remains" }
+      ],
+      "trade_offs": "Routing change (one gateway target dispatching by event type); downstream processing becomes asynchronous, so consumers cannot return a synchronous result and need a dead-letter path.",
+      "validation": {
+        "metric": "Synchronous functions per webhook; consumer billed Duration vs verifier Duration",
+        "expectation": "One synchronous function instead of two; consumer duration no longer includes verification",
+        "falsifier": "No production consumer invokes the verifier synchronously",
+        "safety": "safe-on-production",
+        "guard": "IaC/architecture rule: single synchronous function behind the webhook route"
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "d11a358ed09719b8",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "cost",
+      "location": { "service": "src", "file": "src/index.js", "line": 66, "symbol": "handler" },
+      "tags": ["quick-win"],
+      "problem": "console.log(event) and console.log(context) run unconditionally before validation, shipping every webhook body, headers and context to CloudWatch Logs with no retention declared.",
+      "performance_principle": "Hot-path instrumentation should be proportional to its diagnostic value; whole-payload logging makes ingestion cost and I/O scale with payload size on every request.",
+      "evidence": [
+        { "statement": "Unconditional full event and context logging", "kind": "static", "file": "src/index.js", "line": 66 },
+        { "statement": "No aws_cloudwatch_log_group with retention in terraform/", "kind": "static", "file": "terraform/lambda.tf" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint" },
+      "conditions": "Cost proportional to webhook rate x payload size, both unknown; retained volume grows without bound absent a retention setting.",
+      "counter_evidence": [
+        { "statement": "Searched for a log-level gate, debug flag, or log-group retention resource: none found", "effect": "no-effect", "file": "src/index.js" }
+      ],
+      "recommendation": "Log a bounded summary (delivery id, event type, outcome, duration); gate full-payload logging behind an explicit debug flag; declare the log group with a retention period.",
+      "trade_offs": "Less raw data for after-the-fact debugging; GitHub's delivery log partly covers it.",
+      "validation": {
+        "metric": "CloudWatch Logs IncomingBytes for the function's log group",
+        "expectation": "Drops in proportion to average payload size",
+        "falsifier": "No measurable change, meaning payloads are tiny",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "9584fa285537c886",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "observability",
+      "location": { "file": "terraform/lambda.tf", "line": 7, "symbol": "aws_lambda_function.github_signature_verifier" },
+      "tags": ["needs-measurement"],
+      "problem": "No tracing, custom metrics, alarms, or timing around the SSM call; no finding here can be confirmed or fix validated from data the system produces.",
+      "performance_principle": "A critical path that is not measured cannot be optimized defensibly; instrumentation precedes optimization.",
+      "evidence": [
+        { "statement": "aws_lambda_function declares no tracing configuration; no alarm resources in terraform/", "kind": "static", "file": "terraform/lambda.tf", "line": 7 },
+        { "statement": "Handler has no timing or metrics emission", "kind": "static", "file": "src/index.js" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "endpoint" },
+      "conditions": "Applies regardless of traffic; value grows with how much of this review is acted on.",
+      "counter_evidence": [
+        { "statement": "Searched for X-Ray SDK, tracing config, metric/alarm resources, embedded metric format: none; platform metrics exist outside the repo but are unused", "effect": "no-effect" }
+      ],
+      "recommendation": "Enable active tracing on the function and add alarms on Duration maximum, Errors and Throttles; sequence before PERF-001/002.",
+      "trade_offs": "Small per-invocation tracing overhead and cost; additional IAM permission for trace export.",
+      "validation": {
+        "metric": "Presence of SSM subsegments and Init Duration in traces",
+        "expectation": "Each invocation shows an SSM GetParameters subsegment; cold starts show Init Duration",
+        "falsifier": "Not applicable to an enabling capability; if traces show no SSM subsegment, PERF-001's premise is wrong",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "e4f50ddf2406ed37",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "infrastructure",
+      "location": { "service": "src", "file": "src/index.js", "line": 3, "symbol": "<module>" },
+      "tags": ["needs-measurement"],
+      "problem": "The whole aws-sdk v2 package is required at module scope rather than only the SSM client, on a 128 MB function, adding to init time on every cold start.",
+      "performance_principle": "Do only the initialization the request path needs; startup work is paid on every cold start and scale-out.",
+      "evidence": [
+        { "statement": "require('aws-sdk') at module scope", "kind": "static", "file": "src/index.js", "line": 3 },
+        { "statement": "memory_size 128 sets the smallest CPU share", "kind": "static", "file": "terraform/lambda.tf", "line": 13 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": { "position": "critical-path", "frequency": "rare", "growth": "O(1)", "blast_radius": "endpoint" },
+      "conditions": "Matters only if cold starts are frequent (sparse or bursty traffic); cold-start frequency and the runtime SDK's loading behavior are unmeasured.",
+      "counter_evidence": [
+        { "statement": "Deployment zip contains only index.js, so package size is minimal and the SDK comes from the runtime; SDK may load service definitions lazily", "effect": "lowers-confidence", "file": "terraform/lambda.tf", "line": 3 }
+      ],
+      "recommendation": "Require only aws-sdk/clients/ssm, or adopt the modular v3 SSM client as part of the runtime upgrade.",
+      "trade_offs": "Minor code change; v3 migration changes the client API.",
+      "validation": {
+        "metric": "X-Ray Init Duration on cold starts",
+        "expectation": "Init Duration decreases (magnitude unmeasured)",
+        "falsifier": "No change in Init Duration",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "128 MB memory allocation may lengthen duration because CPU scales with memory",
+      "why_discarded": "Outcome depends entirely on duration data that does not exist; carried as a workload question rather than a finding",
+      "location": "terraform/lambda.tf:13",
+      "path": "Verifier handler",
+      "evidence_checked": ["terraform/lambda.tf:13", "src/index.js:41-47"],
+      "revisit_when": "Duration and Init Duration metrics are available"
+    },
+    {
+      "observation": "HMAC-SHA1 and regex CPU cost on the request path",
+      "why_discarded": "Single small HMAC and an engine-compiled regex literal on an I/O-dominated path; no profile to attribute CPU",
+      "location": "src/index.js:15",
+      "path": "Verifier handler",
+      "evidence_checked": ["src/index.js:15", "src/index.js:41-47"],
+      "revisit_when": "A profile attributes material time to handler CPU"
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "HMAC signature compared with non-constant-time ===, using only the SHA-1 X-Hub-Signature header; format regex not end-anchored.",
+      "evidence": [
+        { "statement": "requestSignature === expectedSignature", "kind": "static", "file": "src/index.js", "line": 46 },
+        { "statement": "Regex /^sha1=[0-9a-f]{40}/ lacks end anchor", "kind": "static", "file": "src/index.js", "line": 15 }
+      ],
+      "recommendation": "Use crypto.timingSafeEqual on equal-length buffers, verify the SHA-256 signature header, and anchor the regex (requires the runtime upgrade in MAINT-001).",
+      "location": "src/index.js:46",
+      "assessed_properly_by": "A dedicated security review of the webhook authentication flow"
+    },
+    {
+      "id": "SEC-002",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "Low",
+      "problem": "Full webhook payloads, signature headers and invocation context are logged for every request, with no log retention declared.",
+      "evidence": [
+        { "statement": "console.log(event); console.log(context)", "kind": "static", "file": "src/index.js", "line": 66 }
+      ],
+      "recommendation": "Log a minimal summary and set a log-group retention period.",
+      "location": "src/index.js:66",
+      "assessed_properly_by": "A data-handling / logging-policy review"
+    },
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "Documented caller invokes FunctionName 'githubSignatureVerifier' but Terraform deploys 'github-signature-verifier', so a copied consumer fails every invoke.",
+      "evidence": [
+        { "statement": "FunctionName: 'githubSignatureVerifier'", "kind": "static", "file": "src/example.js", "line": 17 },
+        { "statement": "function_name = \"github-signature-verifier\"", "kind": "static", "file": "terraform/lambda.tf", "line": 9 }
+      ],
+      "recommendation": "Align example and README with the deployed name or use the lambda_function_name Terraform output.",
+      "location": "src/example.js:17",
+      "assessed_properly_by": "An integration test of the consumer-to-verifier contract"
+    },
+    {
+      "id": "MAINT-001",
+      "kind": "maintenance",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "End-of-life runtime and toolchain: Lambda runtime nodejs4.3, Terraform ~> 0.9 pre-0.12 syntax, AWS SDK for JavaScript v2, no lockfile; the function cannot be updated as declared, blocking every fix in this review.",
+      "evidence": [
+        { "statement": "runtime = \"nodejs4.3\"", "kind": "static", "file": "terraform/lambda.tf", "line": 14 },
+        { "statement": "required_version = \"~> 0.9\"", "kind": "static", "file": "terraform/config.tf", "line": 2 },
+        { "statement": "\"aws-sdk\": \"^2.22.0\"", "kind": "static", "file": "src/package.json", "line": 20 }
+      ],
+      "recommendation": "Upgrade to a supported Node.js Lambda runtime, migrate to modular AWS SDK v3 clients, modernize Terraform and pin providers; bundle PERF-001/002/006 and SEC-001 into that change.",
+      "location": "terraform/lambda.tf:14",
+      "assessed_properly_by": "A dependency and runtime upgrade pass"
+    }
+  ]
+}
