@@ -224,9 +224,15 @@ def export_run_packs(manifest, destination, root=ROOT):
     prompt = _path(root, manifest["prompt"]).read_bytes()
     if hashlib.sha256(prompt).hexdigest() != plan["prompt_sha256"]:
         raise AblationError("common prompt changed during export")
+    # The bundled validator, its schema reader, and its schemas are part of the skill (#106):
+    # SKILL.md tells the agent to run it, so every arm gets the same copy.
     helpers = ("schemas/review.schema.json", "schemas/finding.schema.json",
                "skills/backend-performance-review/templates/review-report.md",
-               "skills/backend-performance-review/scripts/compute_stable_id.py")
+               "skills/backend-performance-review/scripts/compute_stable_id.py",
+               "skills/backend-performance-review/scripts/validate_review.py",
+               "skills/backend-performance-review/scripts/json_schema_lite.py",
+               "skills/backend-performance-review/schemas/review.schema.json",
+               "skills/backend-performance-review/schemas/finding.schema.json")
     helper_contents = {helper: _path(root, helper).read_bytes() for helper in helpers}
     reference_contents = {}
     for _, planned, _, _ in assignments:
@@ -268,7 +274,9 @@ def export_run_packs(manifest, destination, root=ROOT):
                 "target repository directly.\n\n"
                 "Use prompt.txt as the common request. Return a Markdown report and "
                 "review.json conforming to schemas/review.schema.json. Use the bundled "
-                "report template and compute_stable_id.py for stable IDs. Record actual model usage, "
+                "report template and compute_stable_id.py for stable IDs, and run "
+                "skills/backend-performance-review/scripts/validate_review.py --review "
+                "review.json until it reports a valid review. Record actual model usage, "
                 "elapsed time, and cost from their respective sources; do not estimate them.\n"
             ) % (repository["url"], repository["commit"], plan["model"])
             (package / "TASK.md").write_text(task, encoding="utf-8")
