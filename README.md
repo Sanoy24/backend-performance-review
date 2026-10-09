@@ -44,7 +44,8 @@ npx skills add https://github.com/Sanoy24/backend-performance-review/tree/v2.1.0
 ```
 
 That installs the skill alone. The doctor and `validate_review.py` used below come from the
-clone above.
+clone above. The skill is also listed on [skills.sh](https://skills.sh/Sanoy24/backend-performance-review)
+and [SkillsMP](https://skillsmp.com/creators/sanoy24/backend-performance-review/skills-backend-performance-review).
 
 The doctor should end with `Doctor result: 0 failure(s), 0 warning(s).` Then paste this exact
 prompt into your coding agent:
