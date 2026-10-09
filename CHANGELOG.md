@@ -40,6 +40,12 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **Reference-ablation packages lacked the validator the skill tells agents to run.** Since #106,
+  `SKILL.md` tells the agent to run the bundled validator before finishing, but exported ablation
+  slots shipped without it. Every arm would have been pushed into writing its own weaker checker,
+  the failure #106 fixed. Each slot now carries `validate_review.py`, its schema reader, and the
+  skill's schemas, and `TASK.md` says to run it. A test runs the validator from inside a slot.
+
 - **The documented Action usage pointed at a tag that does not exist.** `docs/github-action.md`
   said `uses: Sanoy24/backend-performance-review@v1`, but releases are full `vX.Y.Z` tags with no
   moving major tag, so the snippet failed for anyone who copied it. Found right after the Action

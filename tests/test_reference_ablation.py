@@ -39,6 +39,11 @@ class ReferenceAblationTests(unittest.TestCase):
                    / "review-report.md",
                    self.root / "skills" / "backend-performance-review" / "templates"
                    / "review-report.md")
+        bundled = ROOT / "skills" / "backend-performance-review"
+        for relative in ("scripts/validate_review.py", "scripts/json_schema_lite.py",
+                         "schemas/review.schema.json", "schemas/finding.schema.json"):
+            self._copy(bundled / relative,
+                       self.root / "skills" / "backend-performance-review" / relative)
 
         references = {
             "common": ["skills/backend-performance-review/SKILL.md"],
@@ -252,6 +257,27 @@ class ReferenceAblationTests(unittest.TestCase):
             self.assertTrue((package / "skills/backend-performance-review/templates/review-report.md").is_file())
             self.assertIn("read-only", (package / "TASK.md").read_text(encoding="utf-8"))
         self.assertTrue((destination / "coordinator.json").is_file())
+
+    def test_every_slot_carries_the_bundled_validator_and_runs_it(self):
+        # SKILL.md tells the agent to run the bundled validator before finishing (#106). A slot
+        # without it pushes every arm into writing its own, weaker checker -- the failure #106
+        # fixed -- so each slot ships the validator, its schema reader, and its schemas.
+        import subprocess
+        destination = self.root / "run-packs"
+        ablation.export_run_packs(self.manifest, destination, self.root)
+        example = ROOT / "docs" / "examples" / "review.example.json"
+        for slot in ("slot-1", "slot-2", "slot-3"):
+            package = destination / "orders-fixture" / "first" / slot
+            skill = package / "skills" / "backend-performance-review"
+            for relative in ("scripts/validate_review.py", "scripts/json_schema_lite.py",
+                             "schemas/review.schema.json", "schemas/finding.schema.json"):
+                with self.subTest(slot=slot, file=relative):
+                    self.assertTrue((skill / relative).is_file())
+            self.assertIn("validate_review.py", (package / "TASK.md").read_text(encoding="utf-8"))
+            run = subprocess.run(
+                [sys.executable, str(skill / "scripts" / "validate_review.py"),
+                 "--review", str(example)], capture_output=True, text=True)
+            self.assertIn("is a valid review", run.stdout + run.stderr)
 
     def test_export_does_not_overwrite_an_existing_directory(self):
         destination = self.root / "existing"
