@@ -51,6 +51,16 @@ value and `[Unreleased]` accumulates.
   checks fire, and that the bundled files stay byte-identical to the root copies. The bundled
   copy catches the exact failure that slipped through.
 
+- **The fifth A/B comparison: Phase 2 met.** Pre-registered (#111) and run on Rails and ASP.NET
+  Core realworld apps for breadth, plus a Lambda signature verifier for its two scope traps, none
+  used in any earlier comparison or tuning. All eight arms ran on `claude-opus-5-5`. Guided breadth
+  was 89% of plain against a 75% bar. The guided arm made no unsourced performance estimate (plain:
+  six) and filed both trap concerns, an end-of-life runtime and a timing-unsafe comparison, as
+  adjacent findings (the plain run folded both into performance findings). All four guided reviews
+  passed the bundled validator. This is the first comparison to meet both halves of the criterion. It
+  does not show that #110 caused the change, since the repositories differ from the fourth
+  comparison's. Raw output is in `benchmark/ab-results/raw-fifth/`.
+
 - **The fourth A/B comparison: discipline held, breadth not, Phase 2 not met.** Pre-registered
   (#107) and run on URLshortener (Go, Redis) and the FastAPI full-stack template, neither used in
   any tuning, all six arms on `claude-opus-5-5`. The guided arm made no unsourced performance

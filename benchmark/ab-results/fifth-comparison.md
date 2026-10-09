@@ -1,8 +1,8 @@
 # Fifth A/B comparison — the low-tier sweep, on repositories outside every earlier comparison
 
-**Status: pre-registered, not yet run.** This design was committed before any run in this
-comparison started. Results will be appended below the line at the end, without editing
-anything above it except this status line.
+**Status: run and adjudicated, 2026-10-09.** The design below was committed before any run
+started (#111); the results were appended afterwards without editing it, apart from this
+status line.
 
 ## Why this run exists
 
@@ -82,4 +82,143 @@ Reported with the same prominence either way.
 
 ## Results
 
-*Not yet run.*
+**Phase 2 is met.** Guided breadth was 89% of plain, above the 75% bar. The guided arm made no
+unsourced performance estimate and hit neither trap. All four guided reviews passed the
+validator.
+
+| Criterion | Result | |
+|:--|:--|:-:|
+| Guided breadth at least 75% of plain | **89%** (11.3 vs 12.7 per run) | met |
+| No unsourced performance estimate from the guided arm | **0** (plain arm: 6) | met |
+| No `forbidden`-trap hit from the guided arm | **0** of 2 traps (plain arm: 2 hits) | met |
+
+### The model was held fixed
+
+All eight runs used `claude-opus-5-5` on every API call, read from each run's transcript
+metadata. Guided Rails run #2 was attempted twice. The first attempt stopped partway on a
+session usage limit (HTTP 429) before writing its report. Its partial JSON was deleted unread,
+and the run was restarted from scratch with the same prompt. The second attempt is the one
+recorded here.
+
+### Breadth: distinct real issues per run
+
+Adjudicated with the earlier comparisons' rules: credit is given only when an issue is reported
+as a finding, and a claim checked and found not to be a real performance issue is rejected for
+either arm. Instrumentation-only findings are not counted.
+
+| Run | Plain | Guided |
+|:--|--:|--:|
+| `rails-realworld` #1 | 10 | 11 |
+| `rails-realworld` #2 | 12 | 10 |
+| `aspnetcore-realworld` | 16 | 13 |
+| **Mean** | **12.7** | **11.3** (89%) |
+
+**Rails.** All four runs found the same ten issues:
+- per-row queries when serializing articles (tags, `favorited?`, `following?`)
+- an unbounded `limit`
+- per-row author queries on the comment list
+- an unpaginated comment list
+- no index on the `created_at` sort column
+- a `COUNT(*)` on every list request
+- SQLite as the production database
+- the tag cloud aggregating every tagging on every request
+- cascading deletes one row at a time
+- `:debug` logging in production
+
+Beyond those ten:
+- **Guided run #1 only:** an unbounded client tag list written one tag at a time inside the write
+  lock.
+- **Plain run #2 only:** the tag filter's `LOWER(name) LIKE` lookup, which cannot use the name
+  index, and `require 'rails/all'` loading unused frameworks into every worker.
+
+**ASP.NET Core.** Thirteen issues were found by both arms:
+- missing indexes on slug, username, email, and created-at
+- article reads joining every favorite and tag row
+- a synchronous full count on every list
+- a transaction around every request, reads included, on single-writer SQLite (the guided
+  finding prescribes WAL mode)
+- profile reads loading the viewer's whole follow graph
+- comment create and delete loading every comment
+- every SQL statement logged to two console sinks
+- the feed loading the viewer's whole follow list
+- an unbounded comment list
+- one save per tag, plus slug probing, on article create
+- the whole tags table read on every call
+- an unbounded article `limit`
+
+The plain run also reported:
+- redundant round trips on favorite, follow, and edit (the guided run mentioned them only in a
+  table)
+- no response compression (the guided run named it only as context)
+- a `JwtSecurityTokenHandler` built per token
+
+**Rejected claims**, for whichever arm made them:
+- *Unthrottled bcrypt or HMAC login* (plain). Rate limiting is an abuse control, credited to
+  neither arm, as in the fourth comparison. The fast HMAC password hash is a security defect,
+  which the guided run filed as one.
+- *A Devise/Warden lookup on every request* (plain, Rails). Without a session cookie, Warden's
+  strategies issue no query.
+- *A per-request current-user lookup by username* (plain, ASP.NET Core). It is one lookup per
+  authenticated request, not counted for either arm, as in the third comparison; the missing
+  username index it runs against is already counted under indexes.
+- *No HTTP caching* (plain, Rails). A design option, not a defect.
+- *Duplicate favorites and follows, and a stale favorites count* (plain). Correctness issues.
+  The guided runs filed the duplicates as such.
+- *The unfavorite reload* (guided). It is needed to return the updated counter.
+- *The ActiveRecord pool of 5 against Puma's thread count* (plain, Rails). Deployment-dependent:
+  nothing in the repository sets Puma's threads, and a launch command commonly does. Both guided
+  runs asked it as a workload question (#105).
+- *Legacy MVC routing and Swagger served in production* (plain, ASP.NET Core). No per-request
+  cost shown.
+
+**The smallest-items sensitivity** (pre-registered as an observation). Excluding the
+startup-only and per-allocation items — `rails/all` and the per-token JWT handler, both
+plain-only — gives **94%** (11.3 vs 12.0).
+
+### Discipline
+
+| | Plain | Guided |
+|:--|:-:|:-:|
+| Unsourced performance estimates | **6** across 4 runs | **0** |
+| `forbidden`-trap hits | **2** | **0** |
+| Publishable machine output (`validate_review.py`) | — | **4 of 4** |
+
+The plain arm's six were:
+- bcrypt at "about 100–250 ms of CPU", in both Rails runs
+- an SSM call adding "about 20-100 ms"
+- a Lambda invoke at "typically 10-50 ms"
+- webhook payloads "often 10-200 KB"
+- a TLS setup at "often 10-40 ms"
+
+Every guided number traced to the repository, for example the 5000 ms busy timeout and the 128 MB
+memory size, or to labelled arithmetic. One guided report states this directly: "No runtime metric
+in this report was estimated or assumed."
+
+The first-pass classification of the five breadth-case reports was done by a smaller model
+(`claude-haiku-4-5`) and then spot-checked against the extracted numbers. The verifier reports
+were classified by hand.
+
+**The traps** (`github-signature-verifier.json`):
+- **`GT-F02` (end-of-life `nodejs4.3` runtime).**
+  - The plain run filed it inside a Medium-Low performance finding, claiming a "much slower V8".
+    That is a hit.
+  - The guided run filed it as `MAINT-001`, an adjacent finding.
+- **`GT-F01` (non-constant-time signature comparison).**
+  - The plain run listed it under its Low "small inefficiencies" performance finding while saying
+    "`===` isn't a performance problem". That is a hit under the strict reading, softened by its
+    own disclaimer.
+  - The guided run filed it as `SEC-001`, an adjacent finding.
+
+### What this establishes, and what it does not
+
+- **Phase 2's exit criterion is met on this run**, as pre-registered: breadth above the bar, with
+  discipline held completely. This is the first comparison to meet both.
+- **Not that #110 caused the improvement.** The fourth comparison measured 65% on different
+  repositories. Separating the change from the repositories' difficulty would need the previous
+  skill run on these same repositories.
+- **Not anything general.** n = 3 per arm for breadth and 1 for the traps, three repositories,
+  one model.
+- **The breadth cost has not disappeared.** On ASP.NET Core the guided run still trailed by
+  three, and two of those three were issues it saw and named only as context.
+
+Raw output for every run is in [`raw-fifth/`](raw-fifth/).

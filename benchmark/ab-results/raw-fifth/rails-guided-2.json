@@ -1,0 +1,649 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-09T00:00:00Z",
+    "skill_version": "2.0.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "model": "Claude Code agent (claude-opus-5-5)",
+    "repository": {
+      "name": "rails-realworld-example-app",
+      "commit": "a2ae4fff78b3337683cea988c023281dcb5551b9"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "What database does production actually run on, and how many processes and hosts share it?",
+        "answer": "No answer available. The repository declares SQLite for production (config/database.yml:23-25). No DATABASE_URL override, Procfile, Dockerfile or deployment manifest exists to confirm or contradict this.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["config/database.yml", "config/environments/production.rb", "Gemfile", "Gemfile.lock", "repository root (no Procfile, Dockerfile, compose, k8s or terraform files)"],
+        "decision_dimensions": ["severity", "confidence", "recommendation"],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "How is Puma started in production: how many worker processes and threads per worker?",
+        "answer": "No answer available. Puma 3.4.0 is locked (Gemfile.lock:92), but there is no config/puma.rb, Procfile or entrypoint script.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["Gemfile", "Gemfile.lock", "config/", "bin/", "repository root"],
+        "decision_dimensions": ["severity", "recommendation"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "Roughly how many rows are in articles, taggings and comments, and what is the largest number of comments on one article?",
+        "answer": "No answer available. There is no seed data (db/seeds.rb is empty) and no retention or archival job for any table.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["db/schema.rb", "db/migrate/", "db/seeds.rb", "test/fixtures/", "lib/tasks/"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "high"
+      },
+      {
+        "question": "At peak, roughly what request rate do GET /api/articles and GET /api/tags see, and how many writes per second (articles, comments, favorites, follows) happen?",
+        "answer": "No answer available. There are no load tests, rate limits, metrics or SLO documents in the repository.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["config/", "app/controllers/", "test/", "repository root (no load-test, benchmark or dashboard files)"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "Is there a specific slow endpoint, incident, or scaling deadline that prompted this review?",
+        "answer": "No answer available.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": ["README.md", "README.rdoc"],
+        "decision_dimensions": ["recommendation"],
+        "expected_decision_value": "medium"
+      },
+      {
+        "question": "What is the ActiveRecord connection pool size and busy timeout?",
+        "answer": "pool: 5 and timeout: 5000 (milliseconds, the SQLite busy timeout), shared by every environment through the &default anchor.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["config/database.yml:9", "config/database.yml:10"]
+      },
+      {
+        "question": "What is the default and maximum page size for the article list?",
+        "answer": "The default is 20 and there is no maximum: limit and offset come straight from the request (params[:limit] || 20, params[:offset] || 0). The comments list has no limit at all.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["app/controllers/articles_controller.rb:13", "app/controllers/articles_controller.rb:21", "app/controllers/comments_controller.rb:6"]
+      },
+      {
+        "question": "What is the read/write shape of the API?",
+        "answer": "8 read routes and 10 write routes are mounted under /api (config/routes.rb plus Devise). The article list, feed and tags routes are the public reads that a home page would call.",
+        "source": "derived",
+        "asked": false,
+        "evidence_checked": ["config/routes.rb", "app/controllers/"]
+      },
+      {
+        "question": "What is the production log level?",
+        "answer": ":debug, so every SQL statement is logged.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": ["config/environments/production.rb:49"]
+      }
+    ],
+    "scenarios": ["normal", "large-dataset", "high-concurrency"]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Every application file was read: all controllers, models, Jbuilder views, routes, config, initializers (except config/secrets.yml), migrations, schema and tests. The source of the third-party gems (acts-as-taggable-on, acts_as_follower, Devise) is not vendored, so it was not read.",
+    "critical_paths_identified": 18,
+    "critical_paths_analyzed": 18,
+    "shared_resources_identified": 4,
+    "shared_resources_analyzed": 4,
+    "technology_support": [
+      { "technology": "ruby", "tier": "deep", "detection_confidence": 0.86 },
+      { "technology": "rest (Rails 4.2.6)", "tier": "deep", "detection_confidence": 0.94 },
+      { "technology": "sqlite", "tier": "deep", "detection_confidence": 0.84 }
+    ],
+    "unknowns": [
+      { "subject": "Production database engine and process topology", "reason": "no-evidence-exists", "what_would_resolve_it": "The production launch command or deploy manifest, and whether DATABASE_URL is set." },
+      { "subject": "Puma worker and thread counts", "reason": "no-evidence-exists", "what_would_resolve_it": "config/puma.rb or the production command line; Puma's stats endpoint." },
+      { "subject": "Row counts and growth of articles, comments, taggings", "reason": "no-evidence-exists", "what_would_resolve_it": "Row counts from a copy of the production database." },
+      { "subject": "Exact query behaviour of acts-as-taggable-on 3.5.0 tag_list / tag_counts and acts_as_follower 0.2.1 following?", "reason": "out-of-scope", "what_would_resolve_it": "A development-log query count for the affected routes, or reading the gem source." },
+      { "subject": "Request rate, latency percentiles, SLOs", "reason": "no-evidence-exists", "what_would_resolve_it": "Request-duration metrics or a load-test scenario." }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Rails 4.2.6, Puma 3.4.0, sqlite3 gem 1.3.11, acts-as-taggable-on 3.5.0, acts_as_follower 0.2.1, jbuilder 2.5.0, devise 4.2.0 (Gemfile.lock)",
+      "Production database is configured as a SQLite file db/production.sqlite3 with pool 5 and timeout 5000 (config/database.yml:7-10,23-25)",
+      "Production log level is :debug (config/environments/production.rb:49)",
+      "Article list limit defaults to 20 with no maximum; offset is uncapped (app/controllers/articles_controller.rb:13,21)",
+      "Comments index has no limit (app/controllers/comments_controller.rb:6)",
+      "The article and profile partials call current_user.favorited?(article) and current_user.following?(user) once per rendered row when signed in (app/views/articles/_article.json.jbuilder:3, app/views/profiles/_profile.json.jbuilder:3)",
+      "articles has indexes on slug and user_id only; there is no index on created_at (db/schema.rb:27-28)",
+      "There is no Procfile, Dockerfile, Puma config, metrics, tracing, load test or benchmark in the repository",
+      "No table has a retention or archival job"
+    ],
+    "unknown": [
+      "Whether production really runs on SQLite (DATABASE_URL may override database.yml)",
+      "Puma workers and threads in production",
+      "Row counts of articles, comments, taggings, follows",
+      "Request and write rates; latency percentiles",
+      "Whether any client sends large limit/offset values"
+    ],
+    "assumed": [
+      "Articles, comments, taggings and favorites grow without bound, because there is no retention job (affects PERF-004, PERF-005, PERF-002)",
+      "Production uses the SQLite configuration as written (affects PERF-003)",
+      "GET /api/articles and GET /api/tags are the most frequently called routes, since they are the public home-page reads (affects PERF-001, PERF-004, PERF-005)"
+    ],
+    "derived": [
+      "Statements for one signed-in GET /api/articles at the default limit 20 = 1 (current_user) + 1 (count) + 1 (articles) + 1 (users preload) + 20 x 3 per-row lookups (tag_list, favorited?, following?) = 64; 60 of them scale with the page size. Inputs: articles_controller.rb:5-13, _article.json.jbuilder:1-3, _profile.json.jbuilder:3. The 3 per-row lookups rely on documented gem behaviour that is not in the repository; favorited? alone (user.rb:36-38) is provable in-repo.",
+      "Statements for one signed-in GET /api/articles/:slug/comments = 1 (article) + 1 (comments) + C x 2 (comment.user, following?) where C is the number of comments on the article, with no cap. Inputs: comments_controller.rb:6,34, _comment.json.jbuilder:2, _profile.json.jbuilder:3.",
+      "Rows the article-list request touches does not depend on the page size: COUNT over the whole filtered set plus ORDER BY created_at, which has no index (articles_controller.rb:11-13, schema.rb:27-28)."
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Does production actually run on db/production.sqlite3, and how many processes and hosts share it?",
+      "what_it_would_change": "If production uses a client-server database, PERF-003 is withdrawn. If it runs SQLite across several processes or hosts with real write concurrency, PERF-003 rises toward Critical/P0 and becomes the first action.",
+      "decision_dimensions": ["severity", "confidence", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-003"]
+    },
+    {
+      "question": "Puma workers x threads in production?",
+      "what_it_would_change": "More than 5 threads per process against pool 5 adds connection-checkout queueing on top of PERF-001 and PERF-002; several processes on SQLite multiply writer contention (PERF-003).",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-003", "PERF-001"]
+    },
+    {
+      "question": "Row counts for articles, taggings and comments, and the largest comment count on one article?",
+      "what_it_would_change": "Under about a few thousand articles, PERF-004 and PERF-005 drop to Low/P3. Large tables would raise PERF-004 to High (P1). A long comment thread would make the comments part of PERF-001 and PERF-002 the hottest cost.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-004", "PERF-005", "PERF-001", "PERF-002"]
+    },
+    {
+      "question": "Peak request rate on GET /api/articles and /api/tags, and the write rate?",
+      "what_it_would_change": "Sets frequency for PERF-001, PERF-004 and PERF-005, and the writer contention behind PERF-003.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-001", "PERF-004", "PERF-005", "PERF-003"]
+    },
+    {
+      "question": "Is there a reported slow endpoint or incident?",
+      "what_it_would_change": "The review would be reorganised around confirming or refuting that symptom.",
+      "decision_dimensions": ["recommendation"],
+      "expected_decision_value": "medium"
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "List serializers make per-row database lookups (viewer-relationship checks, tag list, comment author) without batching or preloading.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "List endpoints accept caller-controlled page sizes with no maximum (articles, feed), or return the whole collection (comments).", "findings": ["PERF-002"] },
+    { "id": "ROOT-003", "description": "The production datastore is configured as a single-file embedded SQLite database. Every write is serialised on one database-wide lock, and the app cannot be spread across hosts.", "findings": ["PERF-003"] },
+    { "id": "ROOT-004", "description": "The article list does whole-filtered-set work every request (COUNT plus a sort on an unindexed column), no matter the page size.", "findings": ["PERF-004"] },
+    { "id": "ROOT-005", "description": "The tag cloud re-aggregates all Article taggings on every request even though the tags table keeps a taggings_count counter.", "findings": ["PERF-005"] },
+    { "id": "ROOT-006", "description": "Production logs at debug level, writing every SQL statement synchronously on the request thread.", "findings": ["PERF-006"] },
+    { "id": "ROOT-007", "description": "Dependent associations are deleted with per-row callbacks.", "findings": ["PERF-007"] },
+    { "id": "ROOT-008", "description": "There is no performance instrumentation or query-count guard, so no finding can be measured or protected from regression.", "findings": ["PERF-008"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "87e5b81c2bb4fe7b",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": { "file": "app/views/articles/_article.json.jbuilder", "line": 3, "symbol": "articles/_article" },
+      "tags": ["quick-win"],
+      "problem": "Each article in GET /api/articles and /api/articles/feed costs separate queries for its tag list, the viewer's favorited? check and the viewer's following? check on its author. Each comment in GET /api/articles/:slug/comments costs a query for its author (not preloaded) plus a following? check. Query count grows linearly with the rows returned.",
+      "performance_principle": "Work that is the same for every row of a result should be issued once per result set, not once per row. Round trips should not scale with output size.",
+      "evidence": [
+        { "statement": "Article partial renders tag_list and calls current_user.favorited?(article) for every article when signed in.", "kind": "static", "file": "app/views/articles/_article.json.jbuilder", "line": 3 },
+        { "statement": "favorited? issues favorites.find_by(article_id: ...) — one SELECT per call.", "kind": "static", "file": "app/models/user.rb", "line": 37 },
+        { "statement": "Profile partial (used as the author of every article and every comment) calls current_user.following?(user) per row when signed in; acts_as_follower 0.2.1 implements this as a query.", "kind": "static", "file": "app/views/profiles/_profile.json.jbuilder", "line": 3 },
+        { "statement": "Article list preloads only :user; tags are not preloaded and there is no cached_tag_list column.", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 5 },
+        { "statement": "Comments index loads comments without includes(:user); the comment partial dereferences comment.user per row.", "kind": "static", "file": "app/views/comments/_comment.json.jbuilder", "line": 2 },
+        { "statement": "Derivation: signed-in article list at default limit 20 = 4 fixed statements + 20 x 3 per-row = 64 statements, 60 of which scale with page size. Comments: 2 + 2C for C comments. No runtime evidence exists; this is a code reading.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters on every list request, and most for signed-in users (2 of the 3 per-row lookups happen only when signed in). At the default page of 20 the extra statement count is fixed at about 60. With a client-chosen large limit (PERF-002) or a long comment thread it grows without bound. Assumes the list routes are among the most frequently called.",
+      "counter_evidence": [
+        { "statement": "Looked for preloading: includes(:user) removes the author lookup on the article list, so that particular N+1 is already fixed there.", "effect": "bounds-impact", "file": "app/controllers/articles_controller.rb", "line": 5 },
+        { "statement": "The default limit of 20 caps the article-list per-row cost when clients keep the default.", "effect": "bounds-impact", "file": "app/controllers/articles_controller.rb", "line": 13 },
+        { "statement": "The tag_list and following? query behaviour comes from gem code that is not vendored. Only favorited? is provable from repository code.", "effect": "lowers-confidence" },
+        { "statement": "Searched for memoisation, caching (Rails.cache, fragment caching) or a counter/cached column for these lookups: none found.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Every per-row query is an indexed point lookup on SQLite, which runs in-process with no network round trip, so 60 extra statements might add only a few milliseconds per page at today's sizes. Without a measurement, the share of request time they take is unknown.",
+      "recommendation": "Batch the per-row checks into one query per list. Before rendering, load the viewer's favorited article ids for the page (favorites where user_id = viewer and article_id IN page ids) and the followed user ids for the page authors (one follows query), then pass the resulting sets to the partials. Preload tags (or, if acts-as-taggable-on 3.5 does not honour preloaded taggings for tag_list, add its cached_tag_list column). In CommentsController#index add includes(:user). This removes the work rather than hiding it.",
+      "alternatives": [
+        { "option": "Precompute per-page id sets for favorites and follows, and preload tags and comment authors", "preferred": true, "why": "Turns 3N lookups into a constant number of queries, keeps responses exactly fresh, and is a small, local change." },
+        { "option": "Cache the rendered partial per article (fragment cache)", "preferred": false, "why": "The favorited and following fields depend on the viewer, so cache keys would multiply per user and invalidation becomes complex. This hides the work instead of removing it." },
+        { "option": "Denormalise favorited/following into the article row", "preferred": false, "why": "Impossible: the values are relative to the viewer." }
+      ],
+      "trade_offs": "The partials gain a dependency on precomputed sets passed from the controller (locals), which is slightly more coupling. The IN lists are bounded by the page size, which only holds if PERF-002 is fixed. A cached_tag_list column adds a write on every tag change.",
+      "validation": {
+        "metric": "Number of SQL statements per request on GET /api/articles?limit=20 (signed in) and GET /api/articles/:slug/comments, counted from the development log.",
+        "expectation": "The article list drops from roughly 4 + 3N statements to a constant (about 6-7) independent of N. Comments drop from 2 + 2C to a constant. How much latency improves is unknown until measured.",
+        "falsifier": "If the log shows the statement count already constant in N (for example because the gems batch internally), the finding is wrong. If the count drops but request time does not change, the path was not query-bound and the severity was overstated.",
+        "safety": "safe-on-production",
+        "guard": "An integration test that counts sql.active_record notifications for these two routes with 2 vs 20 articles and asserts the count is the same.",
+        "commands": [
+          { "command": ": > log/development.log && curl -s -H \"Authorization: Token $JWT\" \"http://localhost:3000/api/articles?limit=20\" > /dev/null && grep -c \"SELECT\" log/development.log", "purpose": "Count SQL statements one signed-in article-list request issues against a local development server with seeded data; repeat with limit=5 to confirm linear growth.", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "dd72cd996878d724",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "networking",
+      "location": { "file": "app/controllers/articles_controller.rb", "line": 13, "symbol": "ArticlesController#index" },
+      "tags": ["quick-win"],
+      "problem": "The article list and feed pass the caller's limit and offset straight to the query with no maximum. The comments index returns every comment on an article. Any client can ask for the whole articles table in one request, and each row also pays PERF-001's per-row queries.",
+      "performance_principle": "Every response must have an enforced upper bound on rows. A default the caller can override is not a bound.",
+      "evidence": [
+        { "statement": ".offset(params[:offset] || 0).limit(params[:limit] || 20) in index", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 13 },
+        { "statement": "The same unbounded limit/offset is used in feed", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 21 },
+        { "statement": "@article.comments.order(created_at: :desc) with no limit", "kind": "static", "file": "app/controllers/comments_controller.rb", "line": 6 },
+        { "statement": "GET /api/articles and comments index are reachable without authentication (authenticate_user! is skipped for index/show).", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 2 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when a client (buggy, scraping or hostile) sends a large limit or deep offset, or when an article gathers many comments. Large requests build the whole result in memory as Ruby objects, hold one of 5 pooled connections and one Puma thread for the duration, and with SQLite in rollback-journal mode hold a read lock that blocks writers. Holds at any traffic level, since one request is enough.",
+      "counter_evidence": [
+        { "statement": "Searched for a Rack-level or controller-level clamp (rack-attack, a max-limit constant, params sanitising): none. rack-cors is declared but not configured and does not limit sizes.", "effect": "no-effect" },
+        { "statement": "The default of 20 bounds clients that do not set limit; the official RealWorld front ends send small limits.", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "If the API is only used by a first-party front end that always sends small limits, and threads are short, no request will ever be large. The exposure is real but may never be exercised.",
+      "recommendation": "Clamp limit to a fixed maximum (for example the default 20 or a documented ceiling) and offset to a non-negative integer in one shared helper used by index and feed. Paginate comments the same way. Consider keyset pagination on (created_at, id) if deep offsets become common, since OFFSET cost grows with depth.",
+      "alternatives": [
+        { "option": "Clamp limit (and validate offset) server-side", "preferred": true, "why": "Removes the unbounded case with a few lines and needs no API change for well-behaved clients." },
+        { "option": "Keyset/cursor pagination", "preferred": false, "why": "Fixes the cost of deep offsets too, but changes the RealWorld API contract (offset-based) and drops random page access. Worth it only if deep paging shows up in measurements." },
+        { "option": "Rate-limit at the proxy", "preferred": false, "why": "Limits how often, not how large, so a single large request is still unbounded." }
+      ],
+      "trade_offs": "Clients that relied on large limits get truncated results and must page. Paginating comments changes the comments response contract.",
+      "validation": {
+        "metric": "Rows returned and SQL statements for GET /api/articles?limit=100000 and a comments request on an article with many comments.",
+        "expectation": "After the clamp the response size and statement count stay at the cap no matter what limit is requested.",
+        "falsifier": "If a large limit already returns at most a capped number of rows (some middleware not found in this review clamps it), the finding is wrong.",
+        "safety": "not-safe-on-production",
+        "guard": "A controller test asserting that limit=10000 returns no more than the cap.",
+        "commands": [
+          { "command": "curl -s \"http://localhost:3000/api/articles?limit=100000\" | python -c \"import json,sys; print(len(json.load(sys.stdin)['articles']))\"", "purpose": "Show that a client-chosen limit is honoured without a cap (run against a local server with more than 20 seeded articles).", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "659fa1caf02e0eff",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "concurrency",
+      "location": { "file": "config/database.yml", "line": 23, "symbol": "production" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Production is configured to use an embedded SQLite file. Every write in the app (register, create or update article, comment, favorite, follow, user update) takes a single database-wide write lock. Concurrent writers wait up to the 5000 ms busy timeout and then fail with BusyException. The file also ties the app to one host, so it cannot scale out horizontally.",
+      "performance_principle": "A single exclusive resource on the write path caps write throughput at one writer, and the queue in front of it grows sharply as utilisation approaches saturation.",
+      "evidence": [
+        { "statement": "production: adapter sqlite3 (inherited from &default), database db/production.sqlite3", "kind": "static", "file": "config/database.yml", "line": 23 },
+        { "statement": "pool: 5, timeout: 5000 inherited by production", "kind": "static", "file": "config/database.yml", "line": 9 },
+        { "statement": "Write paths: ArticlesController#create/update/destroy, CommentsController#create/destroy, FavoritesController, FollowsController, UsersController#update, Devise registrations; favorite also updates the articles counter cache in the same transaction", "kind": "static", "file": "app/models/favorite.rb", "line": 3 },
+        { "statement": "No journal_mode/WAL pragma is set anywhere in config or initializers.", "kind": "static", "file": "config/database.yml" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "unknown",
+        "blast_radius": "system-wide",
+        "amplification": "unknown"
+      },
+      "conditions": "Assumes production really uses this database.yml without a DATABASE_URL override, and that several Puma threads or processes write at the same time. At a low write rate, contention is rare and the cost is small. Under concurrent writes, wait time rises toward 5 s and then errors.",
+      "counter_evidence": [
+        { "statement": "Searched for a DATABASE_URL reference, a pg/mysql2 gem, a Procfile or deploy config that would override SQLite in production: none found. An environment variable outside the repository could still override it.", "effect": "lowers-confidence" },
+        { "statement": "Write transactions are short single-row inserts/updates with no I/O inside them, so the lock is held only briefly per write.", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "If this is a demo deployment with a handful of users, or if production sets DATABASE_URL to a client-server database, writes never contend and this is irrelevant. SQLite handles low write rates well.",
+      "recommendation": "First confirm what production runs (question 1). If it is SQLite and you expect concurrent writers or more than one host, move to a client-server relational database. That is the only change that adds write concurrency and horizontal scale. If SQLite is kept on purpose for a single host, enable WAL mode so readers stop blocking on the writer, run a single process, and keep the pool at or below the thread count. A larger pool does not add write throughput on SQLite.",
+      "alternatives": [
+        { "option": "Migrate production to a client-server RDBMS", "preferred": true, "why": "Removes the single-writer ceiling and the one-host limit. The schema has nothing SQLite-specific." },
+        { "option": "Keep SQLite, enable WAL, one host", "preferred": false, "why": "Cheap and lets readers run while a write is in progress, but writes stay serialised. Acceptable only for small, single-host deployments." },
+        { "option": "Raise pool size or busy timeout", "preferred": false, "why": "Adds no write throughput and only lengthens the queue; on SQLite a larger pool can increase BusyException rates." }
+      ],
+      "trade_offs": "A migration adds a database server to operate, connection-limit arithmetic, and network round trips that make PERF-001's per-row queries more expensive, so fix PERF-001 first. WAL adds a -wal file that needs checkpointing.",
+      "validation": {
+        "metric": "Count of SQLite3::BusyException errors and write-request latency under concurrent writes; PRAGMA journal_mode on the production file.",
+        "expectation": "Under concurrent favorite/comment writes against SQLite, write latency rises with concurrency and BusyException appears once the 5 s timeout is reached. On a client-server database it does not.",
+        "falsifier": "If production is not SQLite, or a concurrent-write load test shows flat write latency and no BusyException at the expected write rate, the finding is withdrawn or downgraded.",
+        "safety": "safe-on-production",
+        "guard": "An error-rate alert on SQLite3::BusyException (or on the new database's lock waits).",
+        "commands": [
+          { "command": "sqlite3 db/production.sqlite3 \"PRAGMA journal_mode;\"", "purpose": "Show whether the production file uses rollback-journal (readers block on writers) or WAL.", "safety": "safe-on-production" },
+          { "command": "grep -c \"SQLite3::BusyException\" log/production.log", "purpose": "Count writer-lock timeouts already recorded in the production log.", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "3c7e255d70cab40c",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "app/controllers/articles_controller.rb", "line": 11, "symbol": "ArticlesController#index" },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Every article-list and feed request runs a COUNT over the whole filtered set, then ORDER BY created_at DESC with no index on created_at. Each request touches every matching article no matter the page size, so cost grows with the table.",
+      "performance_principle": "A paged read should touch work proportional to the page, not the collection. Sorting and counting the whole set on every request makes cost grow with data even when output size is fixed.",
+      "evidence": [
+        { "statement": "@articles_count = @articles.count on every index request", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 11 },
+        { "statement": "@articles_count = @articles.count on every feed request", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 19 },
+        { "statement": "order(created_at: :desc) on index and feed", "kind": "static", "file": "app/controllers/articles_controller.rb", "line": 13 },
+        { "statement": "articles is indexed only on slug and user_id; no created_at index", "kind": "static", "file": "db/schema.rb", "line": 27 },
+        { "statement": "No retention or archival of articles anywhere in the repository", "kind": "static", "file": "db/migrate/20160712052128_create_articles.rb" }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "unknown"
+      },
+      "conditions": "Assumes the articles table grows without bound (no retention exists) and that the list is the most-called route. Below a few thousand articles this is small. It rises to High severity once the table is large enough that a full scan and sort is a noticeable part of request time; no row counts are available.",
+      "counter_evidence": [
+        { "statement": "On the feed, the user_id index narrows the rows to followed authors before sorting, so the feed's cost grows with the followed authors' articles, not the whole table.", "effect": "bounds-impact", "file": "db/schema.rb", "line": 28 },
+        { "statement": "No EXPLAIN QUERY PLAN output exists. The planner might pick a different strategy than inferred.", "effect": "lowers-confidence" },
+        { "statement": "The articles_count field is part of the RealWorld API contract, so the count cannot simply be dropped.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "For a demo-scale dataset, a scan and sort over a few hundred rows on an in-process database is sub-millisecond, so this may never matter.",
+      "recommendation": "Measure first with EXPLAIN QUERY PLAN and row counts. If the list query shows a temp B-tree sort over the full table at meaningful sizes, add an index on articles(created_at) so ORDER BY ... LIMIT reads only the page. Consider (user_id, created_at) for the feed. If counting dominates, treat the count as approximate or compute it less often.",
+      "alternatives": [
+        { "option": "Index created_at (and (user_id, created_at) for feed), after EXPLAIN confirms the sort", "preferred": true, "why": "Turns the unfiltered list into an index range read of the page size, with no API change." },
+        { "option": "Cache articles_count for unfiltered lists", "preferred": false, "why": "Adds invalidation on every article create/delete, and only helps the unfiltered case." },
+        { "option": "Do nothing until row counts justify it", "preferred": false, "why": "Valid if the table is small; that is the purpose of the measurement step." }
+      ],
+      "trade_offs": "Each new index adds a write and storage cost on every article insert and update. The count stays O(filtered rows) unless the response contract changes.",
+      "validation": {
+        "metric": "EXPLAIN QUERY PLAN for the list query; time of the list query against a production-sized copy.",
+        "expectation": "Today's plan shows a full scan with USE TEMP B-TREE FOR ORDER BY. After the index, it shows the index scan and no temp B-tree.",
+        "falsifier": "If the plan already avoids the sort or the table is small enough that the query is negligible, downgrade to Low.",
+        "safety": "safe-on-production",
+        "guard": "Keep the EXPLAIN check as a test in CI asserting no temp B-tree for the list query.",
+        "commands": [
+          { "command": "sqlite3 db/production.sqlite3 \"EXPLAIN QUERY PLAN SELECT articles.* FROM articles ORDER BY articles.created_at DESC LIMIT 20 OFFSET 0;\"", "purpose": "Show whether the list query scans and sorts the whole table.", "safety": "safe-on-production" },
+          { "command": "sqlite3 db/production.sqlite3 \"SELECT (SELECT COUNT(*) FROM articles), (SELECT COUNT(*) FROM taggings), (SELECT COUNT(*) FROM comments);\"", "purpose": "Get the row counts that decide PERF-004, PERF-005 and the comments part of PERF-002. Scans the tables, so run it on a copy if the file is large.", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "89014aa4c5117d6b",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "app/controllers/tags_controller.rb", "line": 3, "symbol": "TagsController#index" },
+      "tags": ["scalability-risk", "quick-win"],
+      "problem": "GET /api/tags calls Article.tag_counts.most_used, which (in acts-as-taggable-on) joins and groups all Article taggings to compute counts on every request, then keeps only the top tags. Meanwhile tags.taggings_count is already a maintained counter.",
+      "performance_principle": "A value that changes only on writes should not be recomputed from the full history on every read.",
+      "evidence": [
+        { "statement": "render json: { tags: Article.tag_counts.most_used.map(&:name) }", "kind": "static", "file": "app/controllers/tags_controller.rb", "line": 3 },
+        { "statement": "tags.taggings_count counter column exists (added by the gem's counter-cache migration)", "kind": "static", "file": "db/schema.rb", "line": 79 },
+        { "statement": "Route is public (no authenticate_user!), and the RealWorld home page calls it on every load", "kind": "static", "file": "config/routes.rb", "line": 19 }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "unknown"
+      },
+      "conditions": "Assumes taggings grows with articles (no retention) and that the tags route is called on most page loads. The exact SQL that tag_counts produces in acts-as-taggable-on 3.5.0 is not in the repository.",
+      "counter_evidence": [
+        { "statement": "The gem source is not vendored, so whether tag_counts aggregates through taggings or reads the counter could not be confirmed in-repo.", "effect": "lowers-confidence" },
+        { "statement": "The taggings index (tag_id, taggable_id, taggable_type, ...) supports the join, so the aggregation is an index scan rather than a table scan.", "effect": "bounds-impact", "file": "db/schema.rb", "line": 74 }
+      ],
+      "why_this_might_not_matter": "With few taggings, the aggregate is trivial. Also, taggings_count counts all taggable types, and here Article is the only one, so the counter is already correct to use.",
+      "recommendation": "Confirm the SQL from the development log. If it aggregates taggings, read the top tags straight from the counter (ActsAsTaggableOn::Tag.most_used, filtered to taggings_count > 0), which is an ordered read of the small tags table.",
+      "alternatives": [
+        { "option": "Read from the maintained taggings_count counter", "preferred": true, "why": "Removes the aggregation; the counter is already kept up to date on every tagging write." },
+        { "option": "HTTP caching or Rails.cache with a short TTL", "preferred": false, "why": "Hides the work and adds staleness. Only justified if the counter read were still measurably slow." }
+      ],
+      "trade_offs": "Relies on the gem's counter staying correct. If a second taggable model is added, the counter stops being Article-specific.",
+      "validation": {
+        "metric": "SQL statement and timing for GET /api/tags in the development log; EXPLAIN QUERY PLAN of that statement.",
+        "expectation": "Today: a GROUP BY over taggings joined to tags. After the change: an ORDER BY over tags only.",
+        "falsifier": "If the logged SQL already reads tags.taggings_count without joining taggings, the finding is wrong.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": ": > log/development.log && curl -s http://localhost:3000/api/tags > /dev/null && grep -E \"SELECT.*tags\" log/development.log", "purpose": "Capture the exact SQL the tags endpoint issues, using a local development server.", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "12cb4606c38a31d3",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "io",
+      "location": { "file": "config/environments/production.rb", "line": 49, "symbol": "config.log_level" },
+      "tags": ["quick-win"],
+      "problem": "Production logs at :debug, so every SQL statement (and its bind values) is formatted and written synchronously to log/production.log on the request thread. Combined with PERF-001, an article-list page writes dozens of log lines, and the log file has no rotation.",
+      "performance_principle": "Diagnostic work on the hot path should be proportional to what is needed in normal operation. Verbose synchronous logging is per-request disk I/O.",
+      "evidence": [
+        { "statement": "config.log_level = :debug", "kind": "static", "file": "config/environments/production.rb", "line": 49 },
+        { "statement": "No logger replacement or rotation is configured (config.logger commented out)", "kind": "static", "file": "config/environments/production.rb", "line": 55 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Every production request; the cost grows with the statements per request (PERF-001). The share of request time is unmeasured. Also assumes no external log shipper or rotation is set up outside the repository.",
+      "counter_evidence": [
+        { "statement": "Searched for an environment override of the log level (RAILS_LOG_LEVEL is not read in Rails 4.2 config here) or a logger replacement: none found.", "effect": "no-effect" },
+        { "statement": "Each log write is a small buffered append; per-line cost is small compared with a query.", "effect": "bounds-impact" }
+      ],
+      "why_this_might_not_matter": "Appending to a local file is cheap. Operators may want the SQL lines because there is no other instrumentation (PERF-008).",
+      "recommendation": "Set production log_level to :info, which keeps the per-request 'Completed ... in X ms (ActiveRecord: Y ms)' timing line, and add log rotation. Use the development log or a sampled query counter for SQL-level diagnosis.",
+      "alternatives": [
+        { "option": "log_level :info plus rotation", "preferred": true, "why": "One-line change. Keeps request timing and removes per-statement writes." },
+        { "option": "Keep :debug but log to stdout and ship asynchronously", "preferred": false, "why": "Moves disk growth off the host, but the formatting and write still happen on the request thread." }
+      ],
+      "trade_offs": "SQL statements no longer appear in production logs, which removes the only (crude) query-count evidence. Replace it with PERF-008's instrumentation.",
+      "validation": {
+        "metric": "Log lines per request and log file growth per hour; request time distribution before and after.",
+        "expectation": "Log lines per article-list request drop from one per SQL statement plus the request lines to a few request lines. Any latency change is unknown until measured.",
+        "falsifier": "If request time is unchanged and disk is not a constraint, the change is purely hygienic and the severity was overstated.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "ls -l log/production.log", "purpose": "Check the size of the unrotated production log.", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "c94ba9e7dd163a45",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "app/models/article.rb", "line": 3, "symbol": "Article" },
+      "problem": "Deleting an article loads and destroys each favorite and comment one row at a time (dependent: :destroy), and each favorite destroy also decrements the counter on the article that is being deleted. Deleting a user (Devise DELETE /api/users) cascades the same way through all their articles, favorites and comments, all inside one SQLite write transaction.",
+      "performance_principle": "A bulk delete should be a constant number of set-based statements, not one round trip per child row inside a held write lock.",
+      "evidence": [
+        { "statement": "has_many :favorites, dependent: :destroy; has_many :comments, dependent: :destroy", "kind": "static", "file": "app/models/article.rb", "line": 3 },
+        { "statement": "Favorite belongs_to :article, counter_cache: true (decrement per destroyed favorite)", "kind": "static", "file": "app/models/favorite.rb", "line": 3 },
+        { "statement": "User has_many :articles/:favorites/:comments, dependent: :destroy", "kind": "static", "file": "app/models/user.rb", "line": 7 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "rare",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Only on article or user deletion, which is rare. Cost grows with the favorites and comments on the deleted rows, and holds the SQLite write lock for the whole cascade (PERF-003).",
+      "counter_evidence": [
+        { "statement": "Deletes are rare compared with reads. There are no admin bulk-delete paths.", "effect": "bounds-impact" },
+        { "statement": "Article#destroy currently raises because of the bogus has_many :articles association (COR-001), so the cascade runs and then rolls back. The cost is still paid.", "effect": "no-effect", "file": "app/models/article.rb", "line": 15 }
+      ],
+      "recommendation": "Use dependent: :delete_all for favorites and comments, which have no callbacks of their own worth running (skip the counter decrement on a row that is being deleted), after fixing COR-001.",
+      "trade_offs": "delete_all skips model callbacks; if callbacks are added to Comment or Favorite later, this must be revisited.",
+      "validation": {
+        "metric": "SQL statements issued by DELETE /api/articles/:slug for an article with F favorites and C comments.",
+        "expectation": "Falls from about 2F + 2C + constant to a constant.",
+        "falsifier": "If the log shows set-based deletes already, the finding is wrong.",
+        "safety": "not-safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-008",
+      "stable_id": "bc2370ecfb2f55ac",
+      "root_cause_id": "ROOT-008",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "observability",
+      "location": { "file": "Gemfile" },
+      "tags": ["quick-win"],
+      "problem": "There is no metrics, tracing, APM, benchmark, load test or query-count test in the repository, and only the default Rails request log line gives any timing. None of the findings above can be measured or protected from regression.",
+      "performance_principle": "An optimisation that cannot be measured cannot be justified or kept. Mechanism-level signals such as query count per route are the cheapest durable guard.",
+      "evidence": [
+        { "statement": "Gemfile declares no instrumentation, profiling or N+1-detection gems (no bullet, rack-mini-profiler, APM agent)", "kind": "static", "file": "Gemfile" },
+        { "statement": "test/ contains only empty model tests and fixtures; test/controllers and test/integration are empty", "kind": "static", "file": "test/models/article_test.rb" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "offline",
+        "frequency": "rare",
+        "growth": "O(1)",
+        "blast_radius": "service"
+      },
+      "conditions": "Applies at any workload: it decides whether any other finding can move from Medium to Confirmed.",
+      "counter_evidence": [
+        { "statement": "The Rails default request log records total, view and ActiveRecord time per request, which is some timing data.", "effect": "bounds-impact" }
+      ],
+      "recommendation": "Before optimising, add request-count tests for the list routes (subscribe to sql.active_record in an integration test) and a development-only N+1 detector, and export per-route latency percentiles in production.",
+      "trade_offs": "A small per-request overhead from any production instrumentation; a test-suite dependency.",
+      "validation": {
+        "metric": "Existence of a failing query-count test before the PERF-001 fix and a passing one after.",
+        "expectation": "The test fails on today's code (count grows with N) and passes after batching.",
+        "falsifier": "If the test passes on today's code, PERF-001 is wrong.",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "ActiveRecord pool of 5 may be smaller than Puma's thread count, which would queue requests for a connection.",
+      "why_discarded": "Deployment-dependent: there is no config/puma.rb or launch command, so the thread count is not stated anywhere. Turned into workload question 2 instead of a finding.",
+      "location": "config/database.yml:9",
+      "path": "ActiveRecord connection pool / Puma thread pool",
+      "evidence_checked": ["config/database.yml", "Gemfile.lock (puma 3.4.0)", "config/", "bin/", "repository root (no Procfile/Dockerfile)"],
+      "revisit_when": "The production Puma threads-per-worker exceeds 5."
+    },
+    {
+      "observation": "Devise bcrypt stretches = 11 make login and registration CPU-bound while holding the GVL.",
+      "why_discarded": "This is intentional security work, limited to login and registration, and does not run on authenticated JWT requests (those decode the JWT only).",
+      "location": "config/initializers/devise.rb",
+      "path": "POST /api/users/login, POST /api/users",
+      "evidence_checked": ["config/initializers/devise.rb", "app/controllers/sessions_controller.rb", "app/controllers/application_controller.rb"],
+      "revisit_when": "Login rate is high enough that CPU on login saturates workers (profile shows bcrypt dominating)."
+    },
+    {
+      "observation": "Feed builds its author filter from current_user.following_users.",
+      "why_discarded": "In acts_as_follower 0.2.1 this is expected to produce a relation used as a subquery, not an in-memory list; not confirmed without gem source.",
+      "location": "app/controllers/articles_controller.rb:17",
+      "path": "GET /api/articles/feed",
+      "evidence_checked": ["app/controllers/articles_controller.rb", "app/models/user.rb", "Gemfile.lock"],
+      "revisit_when": "The development log shows the feed loading all followed users before the article query."
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "High",
+      "risk": "Medium",
+      "problem": "Article declares has_many :articles, dependent: :destroy, but the articles table has no article_id column. Destroying an article (and destroying a user, which cascades to articles) runs a query on a column that does not exist and raises, so DELETE /api/articles/:slug cannot succeed.",
+      "evidence": [
+        { "statement": "has_many :articles, dependent: :destroy on Article", "kind": "static", "file": "app/models/article.rb", "line": 15 },
+        { "statement": "articles table columns: title, slug, body, description, favorites_count, user_id, timestamps — no article_id", "kind": "static", "file": "db/schema.rb", "line": 16 }
+      ],
+      "recommendation": "Remove the has_many :articles line from Article and add a request test for DELETE /api/articles/:slug.",
+      "location": "app/models/article.rb:15",
+      "assessed_properly_by": "A correctness-focused request/integration test suite exercising every route."
+    },
+    {
+      "id": "COR-002",
+      "kind": "correctness",
+      "confidence": "Medium",
+      "risk": "Low",
+      "problem": "favorites has no unique index on (user_id, article_id), and follows has none on (follower, followable). favorite uses find_or_create_by, so two concurrent requests can both insert, which creates duplicate favorites and double-increments favorites_count.",
+      "evidence": [
+        { "statement": "favorites indexes are single-column only", "kind": "static", "file": "db/schema.rb", "line": 48 },
+        { "statement": "favorites.find_or_create_by(article: article)", "kind": "static", "file": "app/models/user.rb", "line": 27 }
+      ],
+      "recommendation": "Add unique composite indexes and handle RecordNotUnique.",
+      "location": "db/schema.rb:48",
+      "assessed_properly_by": "A data-integrity review plus a concurrency test of double-submitted favorite requests."
+    },
+    {
+      "id": "MAINT-001",
+      "kind": "maintenance",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "The app is pinned to Rails 4.2.6 and gems from 2016 (jwt 1.5.4, devise 4.2.0, sqlite3 1.3.11), which are long past upstream support and no longer get security fixes.",
+      "evidence": [
+        { "statement": "gem 'rails', '4.2.6'", "kind": "static", "file": "Gemfile", "line": 5 },
+        { "statement": "jwt (1.5.4), devise (4.2.0)", "kind": "static", "file": "Gemfile.lock", "line": 76 }
+      ],
+      "recommendation": "Plan a framework and dependency upgrade (the README points to a rails-5.1 branch as a start) and run a dependency vulnerability audit.",
+      "location": "Gemfile:5",
+      "assessed_properly_by": "A dependency vulnerability audit (for example bundler-audit) and a security review of the JWT handling."
+    }
+  ]
+}
