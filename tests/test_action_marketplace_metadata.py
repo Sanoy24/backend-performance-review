@@ -35,3 +35,22 @@ class MarketplaceMetadataTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DocumentedUsageTests(unittest.TestCase):
+    """The usage snippet people copy from the docs (and the Marketplace page) must resolve.
+
+    docs/github-action.md said `uses: Sanoy24/backend-performance-review@v1`, but releases are
+    full vX.Y.Z tags and no `v1` tag exists, so the snippet failed for anyone who copied it.
+    """
+
+    def test_the_documented_uses_line_pins_the_current_release(self):
+        import re
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        current = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE).group(1)
+        doc = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+        refs = re.findall(r"uses:\s*Sanoy24/backend-performance-review@(\S+)", doc)
+        self.assertTrue(refs)
+        for ref in refs:
+            with self.subTest(ref=ref):
+                self.assertEqual(ref, "v" + current)

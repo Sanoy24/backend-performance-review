@@ -58,7 +58,8 @@ A release is a deliberate milestone, not an automatic consequence of merging:
    section under a dated version heading and bumps the version everywhere the
    version-coherence invariant checks: `.claude-plugin/plugin.json`, both fields of
    `.claude-plugin/marketplace.json`, `skills/backend-performance-review/SKILL.md`, README's
-   badge, **README's quickstart clone tag**, and `CITATION.cff`. CI fails if any disagree.
+   badge, **README's quickstart clone tag**, the `uses:` tag in `docs/github-action.md`, and
+   `CITATION.cff`. CI fails if any disagree.
 2. Merge it, then tag that merge commit on `main` — `.github/workflows/release.yml` publishes
    the GitHub release from that version's CHANGELOG section on any `v*.*.*` tag push.
 3. There is nothing to sync afterwards; there is no second branch.

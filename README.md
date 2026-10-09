@@ -76,7 +76,8 @@ and unknowns. No application file should have changed.
 
 Want automatic discovery, a personal installation, or a platform-specific path instead? Use
 the [installation guide](docs/installation.md). Want this on every pull request after the first
-review works? Add the [GitHub Action](docs/github-action.md), which is advisory by default.
+review works? Add the [GitHub Action](docs/github-action.md), which is advisory by default and listed on the
+[GitHub Marketplace](https://github.com/marketplace/actions/backend-performance-review).
 
 ### Maintained workflow recipes
 

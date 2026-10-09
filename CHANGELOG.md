@@ -38,6 +38,15 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The documented Action usage pointed at a tag that does not exist.** `docs/github-action.md`
+  said `uses: Sanoy24/backend-performance-review@v1`, but releases are full `vX.Y.Z` tags with no
+  moving major tag, so the snippet failed for anyone who copied it. Found right after the Action
+  was listed on the GitHub Marketplace. The docs now pin `@v2.2.0`, and the version-coherence
+  invariant checks that tag on every release, as it already did for the quickstart. The README and
+  the Action docs link the Marketplace listing.
+
 ## [2.2.0] — 2026-10-09
 
 A minor release. The skill can now confirm findings from a team's own telemetry: with the user's
