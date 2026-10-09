@@ -1,0 +1,72 @@
+{
+  "model": "claude-opus-5-5",
+  "prompt": "benchmark/ablation-results/first-ablation-prompt.txt",
+  "prompt_sha256": "efdd77aacd05c600a113220c8ac1ac32b892068b56a7df07f63ebfa13a2d5f5f",
+  "cases": [
+    {
+      "id": "fastapi-template",
+      "truth": "benchmark/ground-truth/fastapi-full-stack-template.json",
+      "references": {
+        "common": [
+          "skills/backend-performance-review/SKILL.md",
+          "skills/backend-performance-review/rubrics.md",
+          "skills/backend-performance-review/methodology/discovery.md",
+          "skills/backend-performance-review/methodology/workload.md",
+          "skills/backend-performance-review/methodology/critical-paths.md",
+          "skills/backend-performance-review/methodology/bottleneck-analysis.md",
+          "skills/backend-performance-review/methodology/validation.md"
+        ],
+        "category": [
+          "skills/backend-performance-review/principles/latency.md",
+          "skills/backend-performance-review/principles/throughput.md",
+          "skills/backend-performance-review/principles/resources.md",
+          "skills/backend-performance-review/principles/concurrency-and-contention.md",
+          "skills/backend-performance-review/principles/work-and-algorithms.md",
+          "skills/backend-performance-review/application/api.md",
+          "skills/backend-performance-review/application/data-access.md",
+          "skills/backend-performance-review/application/async-and-blocking.md",
+          "skills/backend-performance-review/application/serialization.md",
+          "skills/backend-performance-review/application/connection-pools.md",
+          "skills/backend-performance-review/databases/universal.md",
+          "skills/backend-performance-review/databases/relational.md",
+          "skills/backend-performance-review/runtimes/universal.md"
+        ],
+        "technology": [
+          "skills/backend-performance-review/technology/python.md",
+          "skills/backend-performance-review/technology/postgres.md",
+          "skills/backend-performance-review/technology/rest.md"
+        ],
+        "full": [
+          "skills/backend-performance-review/infrastructure/resources.md",
+          "skills/backend-performance-review/technology/docker.md"
+        ]
+      },
+      "trials": [
+        {
+          "id": "repeat-1",
+          "order": [
+            "category_only",
+            "category_technology",
+            "full_routed"
+          ]
+        },
+        {
+          "id": "repeat-2",
+          "order": [
+            "full_routed",
+            "category_only",
+            "category_technology"
+          ]
+        },
+        {
+          "id": "repeat-3",
+          "order": [
+            "category_technology",
+            "full_routed",
+            "category_only"
+          ]
+        }
+      ]
+    }
+  ]
+}

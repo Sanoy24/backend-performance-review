@@ -1,0 +1,2 @@
+# Byte-exact inputs: reference_ablation.py hashes these files, so line endings must never be converted.
+benchmark/ablation-results/*-prompt.txt -text
