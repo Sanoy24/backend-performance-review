@@ -38,6 +38,22 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-10-09
+
+A minor release. The headline is evidence: **the methodology met its Phase 2 exit criterion** in
+the fifth pre-registered A/B comparison, run on one pinned model. Guided reviews found 89% as many
+real issues as an unguided agent while inventing no performance figures and declining every
+out-of-scope trap. Getting there took three methodology changes, each measured on repositories it
+was not tuned on:
+- discard only what is not real;
+- ask a deployment-dependent mechanism as a question;
+- sweep the low tier deliberately.
+
+The validator now ships inside the skill, the skill passes the Agent Skills reference validator,
+and installation is one pinned command. No rubric definition, schema field, or reference path
+changed, so reports issued under 2.0.0 remain valid. n = 3 per arm on one model: directional, not
+a general accuracy claim.
+
 ### Added
 
 - **The validator ships with the skill.** In the third comparison a guided review failed the

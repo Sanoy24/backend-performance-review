@@ -16,7 +16,7 @@ Performance principle → observed implementation → technology manifestation
 ```
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.1.0-informational.svg)](CHANGELOG.md)
 [![checks](https://github.com/Sanoy24/backend-performance-review/actions/workflows/checks.yml/badge.svg)](.github/workflows/checks.yml)
 
 ---
@@ -27,11 +27,11 @@ This path works with any coding agent that can read a local file. Run these comm
 the backend repository you want reviewed:
 
 ```bash
-git clone --branch v2.0.0 https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
+git clone --branch v2.1.0 https://github.com/Sanoy24/backend-performance-review.git ../backend-performance-review
 python ../backend-performance-review/scripts/doctor.py --project . --skill-dir ../backend-performance-review/skills/backend-performance-review --output .
 ```
 
-This clones the `v2.0.0` release tag, so the skill and helpers you run are a fixed, released
+This clones the `v2.1.0` release tag, so the skill and helpers you run are a fixed, released
 version rather than a moving branch. The maintained workflow example separately pins both of
 its tool checkouts to one tested, immutable commit.
 
@@ -40,7 +40,7 @@ adds it to Claude Code, GitHub Copilot, Cursor, Codex, and other agents that rea
 pinned to the same release:
 
 ```bash
-npx skills add https://github.com/Sanoy24/backend-performance-review/tree/v2.0.0/skills/backend-performance-review
+npx skills add https://github.com/Sanoy24/backend-performance-review/tree/v2.1.0/skills/backend-performance-review
 ```
 
 That installs the skill alone. The doctor and `validate_review.py` used below come from the
