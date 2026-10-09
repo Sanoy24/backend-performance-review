@@ -38,6 +38,15 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-10-09
+
+A minor release. The skill can now confirm findings from a team's own telemetry: with the user's
+opt-in, it reads traces, metrics, and captured query statistics through connected read-only
+tools such as MCP servers, and cites every read so it can be re-run. It never writes a statement
+for a tool to execute. The release also lets the GitHub Action be listed on the Marketplace,
+which refused v2.1.0's over-long description. The review format change is additive, so reports
+issued under 2.1.0 remain valid.
+
 ### Added
 
 - **Runtime evidence from connected telemetry tools, read-only and opt-in.** A finding reaches
