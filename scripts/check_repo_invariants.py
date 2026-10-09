@@ -380,6 +380,17 @@ def check_version_coherence():
     else:
         fail("README.md: the quickstart must clone a release tag (git clone --branch vX.Y.Z)")
 
+    # The usage snippet people copy from the Action docs and the Marketplace page. Releases
+    # are full vX.Y.Z tags with no moving major tag, so `@v1` would not resolve.
+    action_doc = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+    for ref in re.findall(r"uses:\s*Sanoy24/backend-performance-review@(\S+)", action_doc):
+        match = re.fullmatch(r"v(\d+\.\d+\.\d+)", ref)
+        if match:
+            sources["docs/github-action.md uses: tag"] = match.group(1)
+        else:
+            fail(f"docs/github-action.md: uses: ...@{ref} is not a release tag (vX.Y.Z); "
+                 "no moving major tag exists, so it would not resolve")
+
     for label, value in sources.items():
         if value != current:
             fail(f"{label} is '{value}', but CHANGELOG.md's newest entry is "

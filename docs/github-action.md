@@ -1,7 +1,11 @@
 # GitHub Action
 
 Run a change-scoped performance review on every pull request, and publish it as a comment
-and a SARIF upload.
+and a SARIF upload. The action is listed on the
+[GitHub Marketplace](https://github.com/marketplace/actions/backend-performance-review).
+
+Pin it to a release tag, as below. Releases are full `vX.Y.Z` tags, and there is no moving `v1`
+or `v2` tag.
 
 ---
 
@@ -55,7 +59,7 @@ jobs:
           ...
 
       # ── The half this action does ─────────────────────────────────────────
-      - uses: Sanoy24/backend-performance-review@v1
+      - uses: Sanoy24/backend-performance-review@v2.2.0
         with:
           review: review.json
 ```
