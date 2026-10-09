@@ -128,7 +128,11 @@ debated at length:
 - **Modifying code.** The skill reads, reasons, and reports. It will not open a PR, apply
   a fix, or run a formatter — see README's "What it does not do".
 - **Running anything against a live or production system.** Every diagnostic command in a
-  report carries a safety label; the skill itself never executes one.
+  report carries a safety label; the skill itself never executes one. Reading telemetry that
+  already exists is different, and in scope when the user opts in: traces, metrics, error
+  summaries, and database statistics read through a connected read-only tool, under the rules in
+  [`methodology/runtime-evidence.md`](../skills/backend-performance-review/methodology/runtime-evidence.md).
+  Executing statements, generating load, or changing anything on the system stays out.
 - **Security or correctness review.** Out of scope by design — a performance review that
   also tries to be a security audit does neither well. (Bugs *in this project's own*
   detection or tooling code are still fair game for SECURITY.md.)

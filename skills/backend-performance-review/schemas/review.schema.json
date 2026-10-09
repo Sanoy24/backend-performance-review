@@ -149,7 +149,7 @@
       }
     },
     "runtime_evidence": {
-      "description": "Runtime artifacts supplied by the user. An empty list is why most findings cap below Confirmed, and saying so plainly is part of an honest review.",
+      "description": "Runtime artifacts supplied by the user or, with the user's opt-in, read from a connected read-only telemetry tool (methodology/runtime-evidence.md). An empty list is why most findings cap below Confirmed, and saying so plainly is part of an honest review.",
       "type": "array",
       "items": {
         "type": "object",
@@ -175,7 +175,37 @@
             ]
           },
           "source": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "timestamp": { "type": "string", "format": "date-time" },
+          "origin": {
+            "description": "Where the artifact came from. Absent means supplied. A connected-tool artifact must also carry tool, query, window, and environment, so a reader can re-run the same read.",
+            "type": "string",
+            "enum": ["supplied", "connected-tool"]
+          },
+          "tool": {
+            "description": "The connected server and tool as the agent saw them, e.g. datadog/search_spans.",
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "description": "The exact query or filter sent, after redaction: normalized statements, no bound values or identifiers.",
+            "type": "string",
+            "minLength": 1
+          },
+          "window": {
+            "description": "The time range of the data read. end must not precede start.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "string", "format": "date-time" },
+              "end": { "type": "string", "format": "date-time" }
+            }
+          },
+          "environment": {
+            "description": "The deployment the data came from, e.g. production or staging. Environments are never mixed in one artifact.",
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },

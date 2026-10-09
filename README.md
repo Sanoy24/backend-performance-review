@@ -162,11 +162,17 @@ manufactures problems to fill a report.
   supplied, or to a labelled derivation.
 - **Produces a validation plan** with every recommendation, including a falsifier and a
   production-safety label on every diagnostic command.
+- **Can confirm findings from your own telemetry, if you let it.** With APM, tracing, or database
+  monitoring connected to your agent (for example as MCP servers) and your opt-in, it reads
+  existing traces, metrics, and query statistics read-only, cites the exact query and time window,
+  and redacts identifiers. A slow endpoint alone never confirms a cause.
 
 ## What it does not do
 
 It does not modify code, run anything against your production systems, replace a profiler
-or APM, or perform security or correctness review. It reads, reasons, and reports.
+or APM, or perform security or correctness review. Reading telemetry you have connected is the one
+contact it has with a live system, and it is read-only: it never executes a statement, generates
+load, or changes anything. It reads, reasons, and reports.
 
 ---
 

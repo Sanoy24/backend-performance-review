@@ -38,6 +38,33 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- **Runtime evidence from connected telemetry tools, read-only and opt-in.** A finding reaches
+  `Confirmed` only with cited runtime evidence, which until now meant an artifact the user pasted
+  in, so almost none did. Many teams now connect APM, tracing, and database monitoring to their
+  agents as MCP servers. The new `methodology/runtime-evidence.md` says how to use them:
+  - **Opt-in:** only when the user agrees, asked alongside the workload questions.
+  - **Read-only, recorded data only:** traces, metrics, and the statistics and plans a monitoring
+    product already captured. The agent never writes SQL or any other statement for a tool to run,
+    `EXPLAIN` included; that goes in the validation plan for a person. It also never reads
+    application rows, writes, generates load, or changes configuration, and a tool's own read-only
+    claim is not taken as proof.
+  - **Bounded:** every query has a window and a limit, and reads stop on throttling.
+  - **Targeted:** each read is aimed at a specific candidate.
+  - **Cited:** every read records its tool, exact query, time window, and environment.
+  - **Redacted:** identifiers and bound values are stripped.
+  - **Mechanism, not latency:** a slow endpoint alone is not evidence of a cause; `Confirmed`
+    requires telemetry that shows the mechanism, from code that has not changed since. The rubric's
+    `Confirmed` row now says so.
+  - **Both directions:** telemetry that bounds or refutes a finding counts as counter-evidence.
+
+  `runtime_evidence[]` gains optional `origin`, `tool`, `query`, `window`, and `environment`
+  fields. The validator rejects a `connected-tool` artifact missing any of them, or with a
+  backwards window. The change is additive, so every review valid under 2.1.0 stays valid. The
+  roadmap's out-of-scope rule now separates reading existing telemetry from acting on a live
+  system.
+
 ## [2.1.0] — 2026-10-09
 
 A minor release. The headline is evidence: **the methodology met its Phase 2 exit criterion** in
