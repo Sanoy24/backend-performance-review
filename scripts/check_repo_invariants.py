@@ -672,6 +672,40 @@ def check_agent_skills_spec():
         fail("SKILL.md: compatibility exceeds the spec's 500 characters")
 
 
+MARKETPLACE_DESCRIPTION_LIMIT = 125
+
+
+def action_description(text):
+    """Read action.yml's top-level description, plain or folded (>- / >), without a YAML library."""
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        match = re.match(r"^description:\s*(.*?)\s*$", line)
+        if not match:
+            continue
+        value = match.group(1)
+        if value not in (">", ">-", "|", "|-"):
+            return value.strip("'\"")
+        parts = []
+        for continuation in lines[index + 1:]:
+            if continuation.strip() and not continuation[0].isspace():
+                break
+            if continuation.strip():
+                parts.append(continuation.strip())
+        return " ".join(parts)
+    return ""
+
+
+def check_marketplace_action_metadata():
+    # GitHub Marketplace refuses to list an action whose description is 125 characters or
+    # more, and it reads action.yml from the release's tag, so a violation costs a release.
+    description = action_description((ROOT / "action.yml").read_text(encoding="utf-8"))
+    if not description:
+        fail("action.yml: missing top-level description")
+    elif len(description) >= MARKETPLACE_DESCRIPTION_LIMIT:
+        fail("action.yml: description is %d characters; GitHub Marketplace requires fewer "
+             "than %d" % (len(description), MARKETPLACE_DESCRIPTION_LIMIT))
+
+
 def check_benchmark_dataset():
     try:
         benchmark_dataset.validate(ROOT)
@@ -695,6 +729,7 @@ def main():
     check_benchmark_dataset()
     check_schema_is_referenced()
     check_agent_skills_spec()
+    check_marketplace_action_metadata()
     if entries:
         check_tier_summary_counts(entries)
         check_technology_registry_consistency(entries)
