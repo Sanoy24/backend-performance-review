@@ -1,7 +1,7 @@
 {
   "repository": {
     "name": "antonosmond/github-signature-verifier",
-    "commit": "unpinned-at-review-time",
+    "commit": "1239b2c335773e00897999c90e50c2b16160e4f1",
     "url": "https://github.com/antonosmond/github-signature-verifier",
     "language": "Node.js",
     "framework": "AWS Lambda",
@@ -10,7 +10,7 @@
   "annotation": {
     "annotated_by": "repository maintainers",
     "method": "blind-pass-derived",
-    "notes": "Retro-annotated from docs/evaluation.md §3.7 (manual review, Medium severity on the core finding) and §3.8 (independent blind pass on the same repository, which reproduced the core finding, found a second real one the manual review missed, and made a better-evidenced case for a HIGHER severity on the core finding using evidence — src/example.js documenting synchronous cross-function invocation — the manual review had looked at but set aside). §3.8's corrected severity (High, not Medium) is taken as authoritative here, and is itself the point of this file: it is a documented case where a second independent pass produced a materially different, better-supported score for the same finding, which is exactly what severity-calibration scoring (benchmark/README.md) exists to catch."
+    "notes": "Retro-annotated from docs/evaluation.md §3.7 (manual review, Medium severity on the core finding) and §3.8 (independent blind pass on the same repository, which reproduced the core finding, found a second real one the manual review missed, and made a better-evidenced case for a HIGHER severity on the core finding using evidence — src/example.js documenting synchronous cross-function invocation — the manual review had looked at but set aside). §3.8's corrected severity (High, not Medium) is taken as authoritative here, and is itself the point of this file: it is a documented case where a second independent pass produced a materially different, better-supported score for the same finding, which is exactly what severity-calibration scoring (benchmark/README.md) exists to catch. Annotation v2 pinned the commit to 1239b2c335773e00897999c90e50c2b16160e4f1 and moved GT-F02 from terraform/main.tf, which does not exist, to terraform/lambda.tf:14, where the nodejs4.3 runtime is declared; nothing else changed."
   },
   "expected": [
     {
@@ -52,7 +52,8 @@
     {
       "id": "GT-F02",
       "location": {
-        "file": "terraform/main.tf"
+        "file": "terraform/lambda.tf",
+        "line": 14
       },
       "category": "infrastructure",
       "why_not": "The Terraform config declares the long-unsupported nodejs4.3 Lambda runtime. This is real, but it is a maintenance/support-lifecycle fact, not a performance one — an end-of-life runtime is \"no performance impact demonstrated,\" not \"no impact,\" and filing it as Informational/P3 on the performance rubric misrepresents a different-axis concern as a benign performance non-issue. Report as a MAINT- adjacent finding with a full write-up, never as a PERF- finding and never folded silently into prose."

@@ -6,7 +6,8 @@
       "split": "development",
       "pre_registered_before_review": false,
       "license": {"spdx": null, "evidence_url": null},
-      "annotations": [{"version": 1, "sha256": "bb0148b239875eb4356e5addb2c57dfbdce4972c64cbe2e5084006aa3d6c6e2b", "origin": "baseline-existing-corpus"}]
+      "annotations": [{"version": 1, "sha256": "bb0148b239875eb4356e5addb2c57dfbdce4972c64cbe2e5084006aa3d6c6e2b", "origin": "baseline-existing-corpus"},
+                      {"version": 2, "sha256": "663c5a2a690cae5e05af3c35a2e1a8ea580114a03532a5ae8d5ee7f0c7b6cdc6", "origin": "maintainer-relocation", "reason": "Expanded the abbreviated commit a397d119 to the full SHA it uniquely resolves to; no content changed", "affected_runs": []}]
     },
     "fastapi-full-stack-template": {
       "split": "development",
@@ -30,7 +31,8 @@
       "split": "development",
       "pre_registered_before_review": false,
       "license": {"spdx": null, "evidence_url": null},
-      "annotations": [{"version": 1, "sha256": "ff738fe3ee40c3f756052084c88893544107fefead47ef749b97cd80c4098f40", "origin": "baseline-existing-corpus"}]
+      "annotations": [{"version": 1, "sha256": "ff738fe3ee40c3f756052084c88893544107fefead47ef749b97cd80c4098f40", "origin": "baseline-existing-corpus"},
+                      {"version": 2, "sha256": "115cd56a7578925bbb381adecf9f11db4161577cab3d00d97d7f0d107dd2a839", "origin": "maintainer-relocation", "reason": "Pinned the commit and moved GT-F02 from terraform/main.tf, which does not exist, to terraform/lambda.tf; no mechanism, verdict, or severity changed", "affected_runs": []}]
     },
     "node-express-realworld-prisma-postgres": {
       "split": "development",
