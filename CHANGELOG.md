@@ -146,6 +146,13 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **Two more answer keys pinned.** `github-signature-verifier.json` was unpinned, and its `GT-F02`
+  named `terraform/main.tf`, which does not exist. It is now pinned to `1239b2c3`, with the trap at
+  `terraform/lambda.tf:14`, where the runtime is declared. `aspnetcore-realworld.json` recorded an
+  abbreviated commit, now expanded to the full SHA it resolves to. Both are recorded as annotation
+  version 2. No mechanism, verdict, or severity changed. The fifth comparison adjudicated these
+  traps by meaning, so its results are unaffected.
+
 - **The URLshortener answer key pointed at files that do not exist.** It was annotated against an
   unpinned clone, and three of its locations named `healthCheck.go`, `token.go`, and the Redis
   client under `service.go`, none of which exist at any pinned state. The key is now pinned to

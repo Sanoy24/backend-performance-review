@@ -1,7 +1,7 @@
 {
   "repository": {
     "name": "gothinkster/aspnetcore-realworld-example-app",
-    "commit": "a397d119",
+    "commit": "a397d1197b22edeffa4d2563fa5f4f7f11d0b254",
     "url": "https://github.com/gothinkster/aspnetcore-realworld-example-app",
     "language": "C#",
     "framework": "ASP.NET Core 10 / Mediator / EF Core",
