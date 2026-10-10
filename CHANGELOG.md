@@ -50,6 +50,11 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **Reference-ablation packages lacked the stack detector.** Phase 1 of `SKILL.md` runs
+  `detect_stack.py`, which reads `registry.yaml`, but exported slots shipped neither. In the first
+  ablation every reviewer, in every arm, identified the stack by hand. Each slot now carries both,
+  identically across arms, and a test runs the detector from inside a slot.
+
 - **Reference-ablation packages lacked the validator the skill tells agents to run.** Since #106,
   `SKILL.md` tells the agent to run the bundled validator before finishing, but exported ablation
   slots shipped without it. Every arm would have been pushed into writing its own weaker checker,
