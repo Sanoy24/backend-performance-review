@@ -1,0 +1,912 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-10-10T12:00:00Z",
+    "skill_version": "2.2.0",
+    "spec": "backend-performance-review/2.0",
+    "registry_version": "1",
+    "detector_version": "detect_stack.py (bundled)",
+    "model": "claude-sonnet-5-5",
+    "repository": {
+      "name": "gothinkster/aspnetcore-realworld-example-app",
+      "commit": "a397d1197b22edeffa4d2563fa5f4f7f11d0b254"
+    }
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "What are the production table sizes (articles, persons, comments) and request mix?",
+        "answer": "Not supplied; no deployment or load-test artifacts in the repository.",
+        "source": "unanswered",
+        "asked": true,
+        "evidence_checked": [
+          "src/Conduit/Program.cs",
+          "Dockerfile",
+          "docker-compose.yml",
+          "Makefile"
+        ],
+        "decision_dimensions": [
+          "severity",
+          "confidence"
+        ],
+        "expected_decision_value": "highest"
+      },
+      {
+        "question": "Which database provider runs in production?",
+        "answer": "Code hard-codes the sqlite provider and a local file connection string; SQL Server is selectable only by editing code.",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": [
+          "src/Conduit/Program.cs"
+        ]
+      }
+    ],
+    "scenarios": [
+      "normal",
+      "large-dataset",
+      "high-concurrency"
+    ]
+  },
+  "runtime_evidence": [],
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "All handlers under src/Conduit/Features, Infrastructure, Domain, Program.cs and ServicesExtensions.cs were read; tests, build project and CI files were not analysed for performance.",
+    "critical_paths_identified": 6,
+    "critical_paths_analyzed": 6,
+    "shared_resources_identified": 3,
+    "shared_resources_analyzed": 3,
+    "technology_support": [
+      {
+        "technology": "dotnet",
+        "tier": "deep",
+        "detection_confidence": 0.9
+      },
+      {
+        "technology": "sqlite",
+        "tier": "deep",
+        "detection_confidence": 0.84
+      },
+      {
+        "technology": "sqlserver",
+        "tier": "deep",
+        "detection_confidence": 0.84
+      },
+      {
+        "technology": "rest",
+        "tier": "deep",
+        "detection_confidence": 0.88
+      },
+      {
+        "technology": "docker",
+        "tier": "deep",
+        "detection_confidence": 0.82
+      }
+    ],
+    "unknowns": [
+      {
+        "subject": "Production data volumes and traffic mix",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "Row counts per table and endpoint request rates from production."
+      },
+      {
+        "subject": "Actual SQL generated and query plans",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "EF Core logged SQL and EXPLAIN output on production-sized data."
+      },
+      {
+        "subject": "Effective logging level in deployment",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "Deployed logging configuration."
+      }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Default provider is SQLite with a hard-coded local file connection string (src/Conduit/Program.cs:15-16).",
+      "No indexes are declared in the EF model (src/Conduit/Infrastructure/ConduitContext.cs).",
+      "Schema created by EnsureCreated at startup (src/Conduit/Program.cs:120-124).",
+      "Article list default page size is 20 (src/Conduit/Features/Articles/List.cs:125)."
+    ],
+    "unknown": [
+      "Table sizes",
+      "Request rate and endpoint mix",
+      "Favorites/tags/comments per article distribution",
+      "Follow-list size distribution",
+      "Deployed logging level"
+    ],
+    "assumed": [
+      "Tables grow beyond tens of thousands of rows in production - affects PERF-001, PERF-002",
+      "Heavy-tailed favorites, comments and follows per entity - affects PERF-002, PERF-003, PERF-004"
+    ],
+    "derived": [
+      "Joined rows per article = favorites x tags (EF single query over two collection Includes) - from ArticleExtensions.cs:9-14"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Approximate row counts of Articles and Persons in production, and which database provider is used?",
+      "what_it_would_change": "Whether PERF-001/002 are High P1 or negligible.",
+      "decision_dimensions": [
+        "severity",
+        "confidence"
+      ],
+      "expected_decision_value": "highest",
+      "affects": [
+        "PERF-001",
+        "PERF-002"
+      ]
+    },
+    {
+      "question": "Typical and maximum favorites, tags, comments and follows per entity?",
+      "what_it_would_change": "Severity of PERF-002, PERF-003, PERF-004.",
+      "decision_dimensions": [
+        "severity"
+      ],
+      "expected_decision_value": "high",
+      "affects": [
+        "PERF-002",
+        "PERF-003",
+        "PERF-004"
+      ]
+    }
+  ],
+  "root_causes": [
+    {
+      "id": "ROOT-001",
+      "description": "No indexes on the columns every request filters by (Article.Slug, Person.Username, Person.Email, Article.CreatedAt)",
+      "findings": [
+        "PERF-001"
+      ]
+    },
+    {
+      "id": "ROOT-002",
+      "description": "Article list/detail load Author + Favorites + Tags as joined collections (row multiplication) and fetch the full Body that list responses discard",
+      "findings": [
+        "PERF-002"
+      ]
+    },
+    {
+      "id": "ROOT-003",
+      "description": "Whole follow lists are loaded into memory to answer a single membership check",
+      "findings": [
+        "PERF-003"
+      ]
+    },
+    {
+      "id": "ROOT-004",
+      "description": "Comment endpoints load and track every comment of an article, unbounded; create/delete load them just to modify one",
+      "findings": [
+        "PERF-004"
+      ]
+    },
+    {
+      "id": "ROOT-005",
+      "description": "Article list issues a second, synchronous COUNT query on the request thread",
+      "findings": [
+        "PERF-005"
+      ]
+    },
+    {
+      "id": "ROOT-006",
+      "description": "Every request, including pure reads, opens a synchronous ReadCommitted transaction",
+      "findings": [
+        "PERF-006"
+      ]
+    },
+    {
+      "id": "ROOT-007",
+      "description": "Article create does per-tag FindAsync/SaveChanges and a slug-uniqueness probe loop with one query per collision",
+      "findings": [
+        "PERF-007"
+      ]
+    },
+    {
+      "id": "ROOT-008",
+      "description": "Serilog is configured at Verbose to a synchronous console sink and there are no metrics or traces",
+      "findings": [
+        "PERF-008"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "dda4ebfc314af78f",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": {
+        "file": "src/Conduit/Infrastructure/ConduitContext.cs",
+        "line": 87,
+        "symbol": "OnModelCreating"
+      },
+      "problem": "The EF model declares no index on the lookup columns used by nearly every endpoint, so those lookups are table scans that grow with row count.",
+      "performance_principle": "Selective lookups should cost proportional to the result size, not the table size; access paths must exist for the predicates and sort orders the hot paths use.",
+      "evidence": [
+        {
+          "statement": "OnModelCreating configures only composite keys/FKs for ArticleTag, ArticleFavorite, FollowedPeople and DateTime conversions; no HasIndex anywhere.",
+          "kind": "static",
+          "file": "src/Conduit/Infrastructure/ConduitContext.cs",
+          "line": 87
+        },
+        {
+          "statement": "grep for HasIndex/[Index] across src/Conduit returns nothing; Slug and Username/Email are plain string properties.",
+          "kind": "static",
+          "file": "src/Conduit/Domain/Article.cs",
+          "line": 14
+        },
+        {
+          "statement": "Slug equality lookup is the entry of Details, Edit, Delete, Favorites, Comments list/create/delete (e.g. Details.cs:43-45, Comments/Create.cs:36-38).",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/Details.cs",
+          "line": 43
+        },
+        {
+          "statement": "Username equality lookup runs for the current user on feed, create, favorite, profile paths (e.g. Articles/Create.cs:42-45); Email lookup on every login and registration.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Users/Login.cs",
+          "line": 41
+        },
+        {
+          "statement": "Article list orders by CreatedAt DESC, ArticleId DESC with Skip/Take and no index on CreatedAt.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/List.cs",
+          "line": 121
+        },
+        {
+          "statement": "Schema is created by EnsureCreated at startup; no migrations that could add indexes elsewhere.",
+          "kind": "static",
+          "file": "src/Conduit/Program.cs",
+          "line": 120
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters once Articles/Persons tables are large enough that a scan is not cheap; no table-size or traffic figure is supplied, so assumed: tables grow beyond tens of thousands of rows in production. Negligible for small demo datasets.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for HasIndex, [Index], unique constraints, and migrations; none found.",
+          "effect": "no-effect"
+        },
+        {
+          "statement": "Table sizes are unknown and the shipped default is a local SQLite file, so scan cost may be negligible in practice; this caps confidence at Medium.",
+          "effect": "lowers-confidence",
+          "file": "src/Conduit/Program.cs",
+          "line": 15
+        }
+      ],
+      "recommendation": "Add indexes (unique where the domain demands: Person.Username, Person.Email, Article.Slug) and an index on Article(CreatedAt, ArticleId) via OnModelCreating, so lookups and the list ordering use an access path. Unique indexes also close the check-then-insert race (see COR-001).",
+      "trade_offs": "Extra write cost and storage per insert; EnsureCreated will not alter an existing database, so existing deployments need a manual migration/script. Unique indexes can fail to apply if duplicates already exist.",
+      "validation": {
+        "metric": "Query plan for SELECT by Slug / Username / Email and for the article-list ORDER BY; rows examined",
+        "expectation": "Plans change from table scan to index seek; rows examined per lookup drops from table size to about 1.",
+        "falsifier": "Plans already show index use, or lookups on production-sized data are already sub-millisecond.",
+        "safety": "safe-on-production",
+        "guard": "A test or migration check asserting the indexes exist.",
+        "commands": [
+          {
+            "command": "sqlite3 realworld.db \"EXPLAIN QUERY PLAN SELECT * FROM Articles WHERE Slug='x';\"",
+            "purpose": "Show whether the Slug lookup scans the table (run against a copy of the data).",
+            "safety": "safe-on-production"
+          }
+        ]
+      },
+      "tags": [
+        "scalability-risk",
+        "quick-win"
+      ],
+      "why_this_might_not_matter": "If the deployment is a demo/benchmark with a few hundred rows, scans on SQLite are microseconds and nothing here is observable.",
+      "alternatives": [
+        {
+          "option": "Add HasIndex/HasIndex().IsUnique() in the model",
+          "preferred": true,
+          "why": "Removes the scan at the source and enforces uniqueness at no extra request cost."
+        },
+        {
+          "option": "Cache slug/username lookups in memory",
+          "preferred": false,
+          "why": "Adds invalidation complexity and does not fix the list sort."
+        }
+      ]
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "e564548e06f32135",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": {
+        "file": "src/Conduit/Features/Articles/ArticleExtensions.cs",
+        "line": 9,
+        "symbol": "GetAllData"
+      },
+      "problem": "GetAllData includes two collection navigations (ArticleFavorites, ArticleTags) in one query, so each article returns favorites x tags joined rows; the list handler also loads every article body only to set it to null.",
+      "performance_principle": "Fetch only the data the response needs, and avoid joining independent one-to-many relations in one result set, which multiplies rows instead of adding them.",
+      "evidence": [
+        {
+          "statement": "GetAllData includes Author, ArticleFavorites and ArticleTags with no AsSplitQuery.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/ArticleExtensions.cs",
+          "line": 9
+        },
+        {
+          "statement": "List handler uses GetAllData, then sets article.Body = null for every row after materialisation.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/List.cs",
+          "line": 31
+        },
+        {
+          "statement": "Favorites are fetched as full rows only so Favorited/FavoritesCount can use List.Count.",
+          "kind": "static",
+          "file": "src/Conduit/Domain/Article.cs",
+          "line": 28
+        },
+        {
+          "statement": "Derivation: rows per article returned by the join = max(1,favorites) x max(1,tags); e.g. an article with 3 tags and 50 favorites yields 150 rows (illustrative inputs, not measured).",
+          "kind": "derived"
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters for the main list/feed endpoints when popular articles accumulate many favorites and several tags and the page size is the caller-supplied Limit (default 20). Assumed workload is read-heavy list traffic; unknown.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for AsSplitQuery/QuerySplittingBehavior configuration or projections; none found (UseSqlite(connectionString) without options).",
+          "effect": "no-effect",
+          "file": "src/Conduit/Program.cs",
+          "line": 30
+        },
+        {
+          "statement": "Page is capped per request by Take(Limit ?? 20), but Limit has no upper bound in the handler.",
+          "effect": "bounds-impact",
+          "file": "src/Conduit/Features/Articles/List.cs",
+          "line": 125
+        }
+      ],
+      "recommendation": "Project to a response DTO in SQL (author fields, tag names, favorites count via correlated count, favorited flag via Any, no Body for list) instead of materialising entities with Includes; if entities are kept, use AsSplitQuery. Clamp Limit.",
+      "trade_offs": "DTO projection duplicates part of the Article JSON shape and changes serialization wiring; split query adds round trips.",
+      "validation": {
+        "metric": "Rows returned and bytes transferred by the GET /api/articles query; EF Core logged SQL",
+        "expectation": "Rows per page drop to the page size (<= Limit) and Body bytes disappear from list queries.",
+        "falsifier": "Measured row count per page already equals page size on representative data.",
+        "safety": "safe-on-production",
+        "guard": "An integration test asserting query shape/row count for the list endpoint.",
+        "commands": [
+          {
+            "command": "dotnet test tests/Conduit.IntegrationTests --filter FullyQualifiedName~Articles",
+            "purpose": "Run existing article tests as a functional baseline before changing the query.",
+            "safety": "not-safe-on-production"
+          }
+        ]
+      },
+      "tags": [
+        "scalability-risk"
+      ],
+      "why_this_might_not_matter": "With small favorite/tag counts per article the product is tiny and EF's page subquery keeps it bounded; the Body column is usually modest in size.",
+      "alternatives": [
+        {
+          "option": "Select-projection with counts computed in the database",
+          "preferred": true,
+          "why": "Removes both the row multiplication and unused columns."
+        },
+        {
+          "option": "AsSplitQuery",
+          "preferred": false,
+          "why": "Removes the cartesian product but still transfers full favorite rows and Body."
+        },
+        {
+          "option": "Cache list pages",
+          "preferred": false,
+          "why": "Hides cost, adds invalidation on favorite/edit."
+        }
+      ]
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "9302f8924092aa61",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "data-access",
+      "location": {
+        "file": "src/Conduit/Features/Profiles/ProfileReader.cs",
+        "line": 37,
+        "symbol": "ProfileReader.ReadProfile"
+      },
+      "problem": "ProfileReader loads the current user with both Following and Followers collections tracked, then calls Any on one of them; the feed path loads all Followers rows too and passes them to a Contains subquery.",
+      "performance_principle": "Membership questions should be answered by the datastore with a keyed existence check, not by materialising a whole relationship.",
+      "evidence": [
+        {
+          "statement": "Persons.Include(Following).Include(Followers) for the current user, then currentPerson.Followers.Any(TargetId == ...); Following is never read.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Profiles/ProfileReader.cs",
+          "line": 37
+        },
+        {
+          "statement": "Feed: Persons.Include(Followers) is materialised, then a Contains over its TargetIds is embedded in the article query.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/List.cs",
+          "line": 37
+        },
+        {
+          "statement": "The same two Includes also create a followers x following row product in one query.",
+          "kind": "derived"
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint"
+      },
+      "conditions": "Matters for users with large follow lists hitting profile and feed endpoints; follow-count distribution unknown, assumed to have a heavy tail.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for a follow-count limit; none exists in Followers/Add.cs.",
+          "effect": "no-effect"
+        },
+        {
+          "statement": "Average users likely follow few people, bounding typical cost.",
+          "effect": "lowers-confidence"
+        }
+      ],
+      "recommendation": "Replace with FollowedPeople.AnyAsync(f => f.Observer.Username == name && f.TargetId == id) and, for the feed, express the follow set as a subquery in SQL rather than loading it.",
+      "trade_offs": "Slightly more verbose queries; none otherwise.",
+      "validation": {
+        "metric": "Rows read per GET /api/profiles/{u} and feed request",
+        "expectation": "Rows drop from follow-list size to 1.",
+        "falsifier": "Follow lists in production are uniformly tiny.",
+        "safety": "safe-on-production",
+        "guard": "Test with a user following many accounts asserting bounded queries."
+      },
+      "tags": [
+        "scalability-risk"
+      ],
+      "why_this_might_not_matter": "For typical accounts the loaded lists are small and the request is dominated by other work.",
+      "alternatives": [
+        {
+          "option": "Keyed Any/subquery in SQL",
+          "preferred": true,
+          "why": "Constant-size transfer."
+        },
+        {
+          "option": "Cache follow sets per user",
+          "preferred": false,
+          "why": "Needs invalidation on follow/unfollow."
+        }
+      ]
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "059758258aca7b7e",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "memory",
+      "location": {
+        "file": "src/Conduit/Features/Comments/List.cs",
+        "line": 22,
+        "symbol": "QueryHandler.Handle"
+      },
+      "problem": "Comments list has no paging and is tracked, and Comments/Create and Delete load the article's full Comments collection to add or remove a single comment.",
+      "performance_principle": "Per-request work and memory must be bounded by what the caller needs, not by the total size of a growing collection.",
+      "evidence": [
+        {
+          "statement": "List: Articles.Include(Comments).ThenInclude(Author) with no limit or AsNoTracking.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Comments/List.cs",
+          "line": 22
+        },
+        {
+          "statement": "Create: Articles.Include(Comments) then article.Comments.Add(comment).",
+          "kind": "static",
+          "file": "src/Conduit/Features/Comments/Create.cs",
+          "line": 36
+        },
+        {
+          "statement": "Delete: Articles.Include(Comments).ThenInclude(Author).",
+          "kind": "static",
+          "file": "src/Conduit/Features/Comments/Delete.cs",
+          "line": 29
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint"
+      },
+      "conditions": "Matters on articles with large comment threads (hot articles); the RealWorld API returns all comments, so listing cannot be fully bounded without a contract change. Thread sizes unknown.",
+      "counter_evidence": [
+        {
+          "statement": "The API contract returns the full comment list, which bounds how much list can be reduced.",
+          "effect": "bounds-impact"
+        },
+        {
+          "statement": "No comment cap or paging found.",
+          "effect": "no-effect"
+        }
+      ],
+      "recommendation": "Make list AsNoTracking with a projection; in Create/Delete query the article id (AnyAsync/Select) and add or delete the comment by key without loading the collection.",
+      "trade_offs": "Slightly different EF patterns; list still returns all comments.",
+      "validation": {
+        "metric": "Rows loaded and allocations for POST /api/articles/{slug}/comments on an article with many comments",
+        "expectation": "Write cost becomes independent of existing comment count.",
+        "falsifier": "Comment counts are always tiny.",
+        "safety": "safe-on-production",
+        "guard": "Test creating a comment on an article with many comments, asserting query count/rows."
+      },
+      "tags": [
+        "scalability-risk"
+      ],
+      "why_this_might_not_matter": "Typical article comment counts are small; only list is constrained by the API contract.",
+      "alternatives": [
+        {
+          "option": "Key-based add/delete, no-tracking projected list",
+          "preferred": true,
+          "why": "Removes load of unrelated comments on writes."
+        },
+        {
+          "option": "Paginate list",
+          "preferred": false,
+          "why": "Breaks the expected response shape unless negotiated."
+        }
+      ]
+    },
+    {
+      "id": "PERF-005",
+      "stable_id": "2b4d933538e7ca10",
+      "root_cause_id": "ROOT-005",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "concurrency",
+      "location": {
+        "file": "src/Conduit/Features/Articles/List.cs",
+        "line": 133,
+        "symbol": "QueryHandler.Handle"
+      },
+      "problem": "queryable.Count() is the sync API called inside an async handler, blocking a thread-pool thread for the duration of a second round trip.",
+      "performance_principle": "Do not block threads on I/O in an async path; blocked threads reduce capacity under concurrency.",
+      "evidence": [
+        {
+          "statement": "ArticlesCount = queryable.Count() after the awaited page query.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/List.cs",
+          "line": 133
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint"
+      },
+      "conditions": "Matters only under high concurrency on a networked database (SQL Server); with local SQLite the I/O is in-process anyway. The count also scans because filters are unindexed (PERF-001).",
+      "counter_evidence": [
+        {
+          "statement": "Default provider is in-process SQLite where blocking is cheap.",
+          "effect": "bounds-impact",
+          "file": "src/Conduit/Program.cs",
+          "line": 16
+        }
+      ],
+      "recommendation": "Use await CountAsync(cancellationToken).",
+      "trade_offs": "None.",
+      "validation": {
+        "metric": "Thread-pool queue length / request latency under concurrent list load",
+        "expectation": "No blocked threads on the count call.",
+        "falsifier": "Thread pool never saturates under target load.",
+        "safety": "safe-on-production"
+      },
+      "tags": [
+        "quick-win"
+      ]
+    },
+    {
+      "id": "PERF-006",
+      "stable_id": "bbe0ddb0a100b417",
+      "root_cause_id": "ROOT-006",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "concurrency",
+      "location": {
+        "file": "src/Conduit/Infrastructure/ConduitContext.cs",
+        "line": 160,
+        "symbol": "BeginTransaction"
+      },
+      "problem": "The mediator pipeline wraps every handler in BeginTransaction/Commit, using the synchronous Database.BeginTransaction.",
+      "performance_principle": "Hold connections and locks only for work that needs them; avoid blocking calls on async paths.",
+      "evidence": [
+        {
+          "statement": "DBContextTransactionPipelineBehavior calls context.BeginTransaction()/CommitTransaction() for all requests.",
+          "kind": "static",
+          "file": "src/Conduit/Infrastructure/DBContextTransactionPipelineBehavior.cs",
+          "line": 27
+        },
+        {
+          "statement": "BeginTransaction uses sync Database.BeginTransaction(IsolationLevel.ReadCommitted).",
+          "kind": "static",
+          "file": "src/Conduit/Infrastructure/ConduitContext.cs",
+          "line": 169
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(1)",
+        "blast_radius": "service"
+      },
+      "conditions": "Matters mainly with SQLite writers (single-writer lock) or a small SQL Server pool under high concurrency; unmeasured and assumed small otherwise.",
+      "counter_evidence": [
+        {
+          "statement": "Transaction ends with the handler, so hold time equals handler time; per-request O(1) overhead only.",
+          "effect": "bounds-impact"
+        }
+      ],
+      "recommendation": "Skip the transaction for query handlers (e.g. via a marker interface) and keep it for commands.",
+      "trade_offs": "Reads lose transactional grouping across multiple statements in one handler.",
+      "validation": {
+        "metric": "Connection hold time and DB lock wait for read endpoints",
+        "expectation": "Read requests stop acquiring transactions.",
+        "falsifier": "No measurable difference at target concurrency.",
+        "safety": "safe-on-production"
+      },
+      "tags": [
+        "needs-measurement"
+      ]
+    },
+    {
+      "id": "PERF-007",
+      "stable_id": "f30028006798dcd9",
+      "root_cause_id": "ROOT-007",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "io",
+      "location": {
+        "file": "src/Conduit/Features/Articles/Create.cs",
+        "line": 51,
+        "symbol": "Handler.Handle"
+      },
+      "problem": "Each new tag is saved immediately in a loop (one round trip per tag, plus FindAsync each), and the slug loop issues one AnyAsync per suffix attempt.",
+      "performance_principle": "Batch round trips instead of paying one per item.",
+      "evidence": [
+        {
+          "statement": "foreach tag: FindAsync, then AddAsync + SaveChangesAsync inside the loop.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/Create.cs",
+          "line": 51
+        },
+        {
+          "statement": "for-loop AnyAsync(Slug == uniqueSlug) increments the suffix until free; same pattern in Edit.cs.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Articles/Create.cs",
+          "line": 65
+        },
+        {
+          "statement": "No runtime evidence exists in the repository (no benchmarks, query plans, traces, or metrics).",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "endpoint"
+      },
+      "conditions": "Matters for creates with many new tags or many same-titled articles (slug probes grow with number of collisions); expected to be small per request.",
+      "counter_evidence": [
+        {
+          "statement": "Tag list per article is typically a handful; slug collisions require identical titles.",
+          "effect": "bounds-impact"
+        }
+      ],
+      "recommendation": "Load all existing tags with one Contains query and add new Tag rows in one SaveChanges; fetch existing slugs with StartsWith(slug) once and pick the next suffix in memory.",
+      "trade_offs": "Race window on concurrent same-title/tag creates needs the unique indexes from PERF-001.",
+      "validation": {
+        "metric": "Statement count for POST /api/articles with N new tags",
+        "expectation": "Statement count independent of N.",
+        "falsifier": "Tag lists are always 0-2.",
+        "safety": "safe-on-production"
+      }
+    },
+    {
+      "id": "PERF-008",
+      "stable_id": "0c7d8d690f8d43ae",
+      "root_cause_id": "ROOT-008",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Low",
+      "priority": "P3",
+      "category": "observability",
+      "location": {
+        "file": "src/Conduit/ServicesExtensions.cs",
+        "line": 314,
+        "symbol": "AddSerilogLogging"
+      },
+      "problem": "MinimumLevel.Verbose with a console sink may emit every EF Core SQL statement per request synchronously; no metrics, tracing or benchmarks exist to measure any other finding.",
+      "performance_principle": "Instrumentation overhead should be bounded and the system must be measurable.",
+      "evidence": [
+        {
+          "statement": "MinimumLevel.Verbose() and WriteTo.Console, commented 'just for local debug', but unconditional.",
+          "kind": "static",
+          "file": "src/Conduit/ServicesExtensions.cs",
+          "line": 317
+        },
+        {
+          "statement": "No OpenTelemetry, metrics or load-test artifacts found in the repository.",
+          "kind": "static"
+        },
+        {
+          "statement": "No logging configuration file exists (no appsettings*.json), so framework filters are unverified.",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(1)",
+        "blast_radius": "service"
+      },
+      "conditions": "Matters if the effective level lets EF command logging through at Information/Debug in production; whether it does depends on logging filters not visible in the repo.",
+      "counter_evidence": [
+        {
+          "statement": "Microsoft logging filter defaults may suppress Debug/Verbose categories before reaching Serilog; unverified.",
+          "effect": "lowers-confidence"
+        }
+      ],
+      "recommendation": "Make level and sink configuration-driven (Information or above in production); add basic request metrics/tracing so the other findings can be validated.",
+      "trade_offs": "Less verbose production logs.",
+      "validation": {
+        "metric": "Log lines per request and console write time",
+        "expectation": "Fewer log lines per request.",
+        "falsifier": "Effective level already Warning+ in deployment.",
+        "safety": "safe-on-production"
+      },
+      "tags": [
+        "needs-measurement"
+      ]
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Password hashing (single HMAC pass) is cheap, so login is not a CPU bottleneck; it is a security weakness instead (SEC-001).",
+      "why_discarded": "Cheap and bounded per login; no performance impact.",
+      "location": "src/Conduit/Infrastructure/Security/PasswordHasher.cs:52",
+      "evidence_checked": [
+        "PasswordHasher.cs",
+        "Users/Login.cs"
+      ],
+      "revisit_when": "The hash is replaced with a proper KDF."
+    },
+    {
+      "observation": "SQLite single-writer locking as default provider.",
+      "why_discarded": "Provider is a hard-coded local default; no evidence of production use or write concurrency.",
+      "location": "src/Conduit/Program.cs:15",
+      "path": "primary database",
+      "evidence_checked": [
+        "src/Conduit/Program.cs",
+        "docker-compose.yml"
+      ],
+      "revisit_when": "Production provider and write rate are known."
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "SEC-001",
+      "kind": "security",
+      "confidence": "High",
+      "risk": "High",
+      "problem": "Passwords are hashed with a single HMAC-SHA512 pass keyed with the hard-coded string 'realworld' and a per-user salt; the JWT signing key is also a hard-coded literal. Hash comparison uses SequenceEqual (not constant time).",
+      "evidence": [
+        {
+          "statement": "HMACSHA512 constructed from a literal key; single ComputeHashAsync, no iterations or memory-hard KDF.",
+          "kind": "static",
+          "file": "src/Conduit/Infrastructure/Security/PasswordHasher.cs",
+          "line": 52
+        },
+        {
+          "statement": "Signing key is a literal in source.",
+          "kind": "static",
+          "file": "src/Conduit/ServicesExtensions.cs",
+          "line": 252
+        },
+        {
+          "statement": "Login compares hashes with SequenceEqual.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Users/Login.cs",
+          "line": 57
+        }
+      ],
+      "recommendation": "Use a standard password hashing API (PBKDF2/Argon2/bcrypt via ASP.NET Identity's hasher), load the JWT key from secret configuration, and compare in constant time. The cheap hash is also why login is not a CPU hotspot; a proper KDF will make login CPU-heavy by design and should be capacity-tested.",
+      "location": "src/Conduit/Infrastructure/Security/PasswordHasher.cs:52",
+      "assessed_properly_by": "A dedicated security review / threat model; dependency and secrets scanning."
+    },
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "Medium",
+      "risk": "Medium",
+      "problem": "Username, email and slug uniqueness is enforced only by check-then-insert queries with no unique constraint, so concurrent requests can create duplicates.",
+      "evidence": [
+        {
+          "statement": "Registration checks Any(Username) and Any(Email) then inserts.",
+          "kind": "static",
+          "file": "src/Conduit/Features/Users/Create.cs",
+          "line": 47
+        },
+        {
+          "statement": "No unique indexes in the model.",
+          "kind": "static",
+          "file": "src/Conduit/Infrastructure/ConduitContext.cs",
+          "line": 87
+        }
+      ],
+      "recommendation": "Add unique indexes (see PERF-001) and handle the constraint violation as a 409.",
+      "location": "src/Conduit/Features/Users/Create.cs:47",
+      "assessed_properly_by": "Concurrency-focused correctness tests against a real database."
+    }
+  ]
+}

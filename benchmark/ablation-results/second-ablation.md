@@ -1,8 +1,8 @@
 # Second reference ablation — does `dotnet.md` earn its place?
 
-**Status: pre-registered, not yet run.** This design was committed before any run started.
-Results will be appended below the line at the end, without editing anything above it except
-this status line.
+**Status: run on 2026-10-10; results below.** This design was committed before any run started.
+Results are appended below the line at the end, without editing anything above it except this
+status line.
 
 ## Why this run exists
 
@@ -92,4 +92,111 @@ n = 3 per arm, one case, one model. Directional, not a general result.
 
 ## Results
 
-*Not yet run.*
+**Answer: on this case, `dotnet.md` made no measurable difference.** Both blocking-in-async issues
+were found as often with it as without it: `GT-001` in 2 of 3 runs in each arm, and `GT-003` in
+3 of 3 in each. The mean count of distinct real issues was 8.67 with it and 8.33 without, a
+difference of 0.33, under the 1.0 threshold. Neither "earns its place" rule is met, and the arm
+without `dotnet.md` did not do better either. As pre-registered, this justifies reviewing
+`dotnet.md` for overlap with `application/async-and-blocking.md`. It does not by itself justify
+removing or shortening the file.
+
+### Runs
+
+All six runs used `claude-sonnet-5-5` on every model call, read from each run's transcript
+metadata. Every `review.json` passed the bundled validator. Each transcript was checked for reads
+and writes outside the run's slot, its two output files and the target: none were found. The
+reports are in [`raw-second/`](raw-second/). `category_only` was exported and not run, as
+pre-registered.
+
+| Repeat | Without `dotnet.md` | With `dotnet.md` |
+|:--|:--|:--|
+| 1 | `r1-s2` | `r1-s3` |
+| 2 | `r2-s3` | `r2-s1` |
+| 3 | `r3-s1` | `r3-s2` |
+
+### Summary by arm
+
+| | Without `dotnet.md` | With `dotnet.md` |
+|:--|:--|:--|
+| `GT-001` synchronous transaction on every request | 2 of 3 | 2 of 3 |
+| `GT-002` every favorite row loaded to count it | 3 of 3 | 3 of 3 |
+| `GT-003` synchronous `Count()` in an async handler | 3 of 3 | 3 of 3 |
+| `GT-004` a round-trip pair per new tag | 2 of 3 | 3 of 3 |
+| Expected issues per run | 4, 4, 2 (mean 3.33) | 3, 4, 4 (mean 3.67) |
+| Distinct real issues per run | 8, 10, 7 (mean 8.33) | 8, 9, 9 (mean 8.67) |
+| Findings reported per run | 8, 9, 5 | 7, 8, 7 |
+| Unsourced performance estimates | 0 | 0 |
+| Async findings that name thread-pool starvation or slow thread injection | 1 of 3 runs | 1 of 3 runs |
+| Validator passed | 3 of 3 | 3 of 3 |
+| Total tokens per run | 134,339; 139,385; 114,417 (mean 129,380) | 125,902; 121,842; 139,556 (mean 129,100) |
+| Elapsed per run | 6.8, 5.2, 3.9 min (mean 5.3) | 4.5, 4.5, 4.5 min (mean 4.5) |
+
+Runs are listed in repeat order. Tokens are the agent runtime's total per run. Cost from billing
+was not available, so the official reference-quality score stays **withheld**, as pre-registered.
+
+### The distinct real issues
+
+Each was checked against the source at `a397d11`. A mechanism counts as a distinct issue when at
+least one run reports it as the subject of its own finding; it is then credited in any run whose
+finding names it, in either arm. Sub-points that no run reported on their own (offset paging, the
+article body loaded and then nulled, the slug probe loop, comment creation loading every comment)
+are credited as part of the issue they appeared under, not separately.
+
+| Issue | Source fact | Without | With |
+|:--|:--|:-:|:-:|
+| No index on `Slug`, `Username`, `Email` | No `HasIndex` anywhere; `Program.cs:124` uses `EnsureCreated`, which indexes keys only | 3 | 3 |
+| `GT-002` favorites loaded to count | `GetAllData` includes `ArticleFavorites` and `ArticleTags` in one query | 3 | 3 |
+| Follow collections loaded for a membership check | `ProfileReader.cs` includes `Following` and `Followers`, then calls `Any` | 3 | 1 |
+| Comments list unbounded | `Comments/List.cs` loads the article with every comment and author, tracked | 3 | 3 |
+| Article `limit` uncapped | `Articles/List.cs:109` passes `Take(message.Limit ?? 20)` with no maximum | 2 | 3 |
+| `GT-003` synchronous `Count()` | `Articles/List.cs:133` | 3 | 3 |
+| `GT-001` synchronous transaction per request | `DBContextTransactionPipelineBehavior` calls synchronous `BeginTransaction`/`Commit` | 2 | 2 |
+| Verbose logging to a synchronous console sink | `ServicesExtensions.cs:114` sets `MinimumLevel.Verbose()` unconditionally | 2 | 3 |
+| `GT-004` per-tag round trips | `Articles/Create.cs`: `FindAsync` plus `SaveChangesAsync` per new tag | 2 | 3 |
+| Tags list unbounded | `Tags/List.cs` reads every tag on each call | 2 | 2 |
+
+No claim was rejected. No run attributed the backend to anything but .NET.
+
+### What the runs did with `GT-001`
+
+Each arm missed `GT-001` once, and in the same way: `r3-s1` (without) and `r1-s3` (with) both saw the
+per-request transaction and listed it under `considered_not_reported`. Every run that did report it
+rated it Low and P3. The answer key rates it Critical; that key is blind-pass-derived, which
+`benchmark/README.md` calls weaker evidence. `GT-003` was always reported, at Low to Medium
+severity against the key's High. `dotnet.md` describes how blocked threads starve the pool under
+load, but runs with it rated these issues no higher than runs without it. Whether the skill
+under-rates blocking calls in async code, or the key over-rates them, is a separate question this
+run cannot settle.
+
+### Where the starvation framing came from
+
+One run in each arm named the thread-pool consequence: "starvation" without `dotnet.md`, "thread-pool
+injection" with it. Without `dotnet.md`, it came from a falsifier line, and `application/async-and-blocking.md`, present in both arms, also mentions
+starvation. So the one idea `dotnet.md` was expected to add appeared equally often without it.
+
+### Cost
+
+Mean tokens per run were within 0.3k of each other. `dotnet.md` adds about 3.2k tokens to the
+bundle (characters ÷ 4) but did not raise the runtime total, consistent with the first ablation:
+reviewers read references as they need them.
+
+### Deviations and notes
+
+- **Directory listing.** One reviewer (`r1-s3`) ran `ls` on the shared output directory while
+  checking that it existed, which showed one other run's file names. The names do not reveal arms,
+  and it opened none of them.
+- **A false alarm in the scope check.** The transcript check flagged the word "coordinator" in one
+  run's own report text. It was not a read of the coordinator file.
+- **Adjudication was not blind.** As pre-registered, the adjudicator knew the mapping. Findings were
+  read from each `review.json`, and the counting rule above was applied to both arms alike.
+
+### What this does and does not show
+
+On the one pinned case where a technology reference had the most to add, with one model and three
+runs per arm, `dotnet.md` did not change which real issues were found, nor how they were rated.
+The generic async reference was enough for the reviewer to spot the blocking calls. This is
+evidence for reviewing `dotnet.md` for overlap with `application/async-and-blocking.md`, and for
+checking whether its distinct content (thread-pool starvation, the `.Result` deadlock, GC and
+container settings) is reaching reviews at all. It is not evidence that technology references are
+useless in general: a case whose issues lie in runtime configuration rather than in visible code
+could still show a difference.
