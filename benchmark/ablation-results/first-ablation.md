@@ -1,7 +1,7 @@
 # First reference ablation — do the technology references earn their tokens?
 
-**Status: pre-registered, amended once before any result was scored (see Amendment), not
-yet run.** This design was committed before any run started. Results will be appended below the
+**Status: run on 2026-10-10; results below. Pre-registered, and amended once before any result
+was scored (see Amendment).** This design was committed before any run started. Results will be appended below the
 line at the end, without editing anything above it except this status line.
 
 ## Why this run exists
@@ -96,4 +96,119 @@ the references and prompt are unchanged. Nothing else in the design changed.
 
 ## Results
 
-*Not yet run.*
+**Answer: on this case, neither added tier changed what the review found.** Every run, in every
+arm, reported the same four real issues. Neither tier meets either "earns its cost" rule. That
+is *no measurable benefit on this case at n = 3*, not a decision to remove any file (see the
+decision rules above).
+
+### Runs
+
+All nine runs used `claude-sonnet-5-5` on every model call, read from each run's transcript
+metadata. Every `review.json` passed the bundled validator. The reports are in
+[`raw-first/`](raw-first/). Slots were opaque to the reviewers; the mapping, from the export's
+coordinator file, is:
+
+| Repeat | Slot 1 | Slot 2 | Slot 3 |
+|:--|:--|:--|:--|
+| 1 | `category_only` | `category_technology` | `full_routed` |
+| 2 | `full_routed` | `category_only` | `category_technology` |
+| 3 | `category_technology` | `full_routed` | `category_only` |
+
+### Summary by arm
+
+| | `category_only` | `category_technology` | `full_routed` |
+|:--|:--|:--|:--|
+| Distinct real issues per run | 4, 4, 4 (mean 4.0) | 4, 4, 4 (mean 4.0) | 4, 4, 4 (mean 4.0) |
+| Findings reported per run | 3, 4, 4 | 4, 3, 4 | 4, 4, 4 |
+| Technology-specific real issues | both, in 3 of 3 runs | both, in 3 of 3 runs | both, in 3 of 3 runs |
+| Unsourced performance estimates | 0 | 0 | 0 |
+| Trap hits (`GT-F01`, `GT-F02`) | 0 | 0 | 0 |
+| Validator passed | 3 of 3 | 3 of 3 | 3 of 3 |
+| Total tokens per run | 113,875; 110,896; 105,409 (mean 110,060) | 114,355; 107,813; 111,572 (mean 111,247) | 115,863; 104,627; 95,025 (mean 105,172) |
+| Elapsed per run | 3.5, 3.9, 3.9 min (mean 3.8) | 3.4, 3.2, 3.5 min (mean 3.4) | 4.4, 4.0, 3.2 min (mean 3.9) |
+
+Runs are listed in repeat order. Tokens are the agent runtime's total per run. Cost from billing
+was not available, so the official reference-quality score stays **withheld**, as pre-registered.
+
+### The four issues
+
+Each was checked against the source at `8063fe5`. All nine runs reported all four.
+
+1. **No index on `item.owner_id`.** `backend/app/models.py:97` declares the foreign key with no
+   index, and no migration creates one. `GET /items/` filters, counts and sorts on it for every
+   non-superuser, and user deletion deletes items by it. *Technology-specific:* PostgreSQL does
+   not create an index for a foreign-key column, unlike MySQL's InnoDB.
+2. **No upper bound on `limit`.** `backend/app/api/routes/items.py:14` takes `limit: int = 100`
+   with no `le=`, and `GET /users/` has the same shape. This is the answer key's `GT-001`; every
+   run matched it. Several runs also named OFFSET pagination and the count query per page.
+   Those were credited as part of this issue, not separately.
+3. **A pooled connection is held across Argon2 verification.** `get_db` yields one session per
+   request. `crud.authenticate` queries the user, which checks out a connection and opens a
+   transaction, and then runs Argon2 verification (a dummy one for unknown emails) before the
+   session closes. *Technology-specific:* it depends on SQLAlchemy's session holding its
+   connection until the session closes, and on FastAPI running `def` handlers on a shared thread
+   pool.
+4. **SMTP is sent inline while the session is open.** `recover_password` and `create_user` call
+   `send_email`, which sends synchronously, after a database query and before the session closes.
+
+Two runs, `category_only` repeat 1 and `category_technology` repeat 2, combined issues 3 and 4 in
+one finding. That finding names both mechanisms, so both were credited, and the rule was applied
+alike to every arm. Counting such a finding once instead would give means of 3.67, 3.67 and 4.0,
+a largest difference of 0.33, still under the 1.0 threshold.
+
+### What was checked and not rejected
+
+- **"No SMTP timeout."** Every run said the app sets no timeout in `smtp_options`. That is true
+  of the repository. The pinned library, `emails` 1.1.2, applies a 5-second socket timeout by
+  default (`DEFAULT_SOCKET_TIMEOUT = 5` in `emails/backend/smtp/backend.py`), so the wait is
+  bounded. Two runs, one `category_only` and one `full_routed`, said the library default was
+  unverified. The statement was not rejected for any arm, because it describes the repository
+  accurately, and issue 4 does not depend on it.
+- **Numbers.** `score.py`'s pattern found unit-bearing numbers in five runs. Every one is from the
+  code or a shown derivation: `65536 KiB = 64 MiB` from the Argon2 parameters in `DUMMY_HASH`,
+  and "2x" for the two statements (count and page) per request. None is unsourced.
+- **Traps.** No run attributed the backend to Node.js, Gin or Echo. The only matches for "node"
+  were query-plan node types.
+
+### One secondary difference, outside the decision rules
+
+The full tier stated the PostgreSQL-specific reason for issue 1 (foreign keys are not indexed
+automatically) in 3 of 3 runs. Each lower tier stated it in 1 of 3. Every run found issue 1, so
+this does not change breadth. It is also unlikely to come from the full tier's extra files: those
+are `infrastructure/resources.md` and `technology/docker.md`, and `technology/postgres.md` is in
+both upper tiers. At n = 3 this is noise until shown otherwise.
+
+### Why cost barely changed
+
+The bundles differ by about 15k tokens (48.5k to 63.4k, characters ÷ 4), but mean tokens per run
+differ by under 6.1k, and the largest bundle had the lowest mean. Reviewers read references as
+they need them, not all at once, so bundle size is a ceiling on context cost, not the cost itself.
+
+### Deviations and notes
+
+- **Model amended before scoring.** See the Amendment. The two Opus runs are set aside unscored.
+- **Extraction error.** The separate model (`claude-haiku-4-5`) that listed findings duplicated
+  one finding in `category_technology` repeat 2 under a new ID. Scoring used each run's
+  `review.json`, which is authoritative, and every listed finding was checked against it.
+- **Directory listings.** Some reviewers ran `ls` on the shared output directory, which shows
+  other runs' file names (`r1-s1.md` and so on). The names do not reveal arms. Each run's
+  transcript was checked: none opened another run's output, another slot, the coordinator file,
+  or this repository.
+- **`detect_stack.py` is not in the slots.** The export does not ship the stack detector that
+  `SKILL.md` mentions, in any arm, so every reviewer identified the stack by reading the
+  repository. It affects all arms alike. It is a gap in the harness.
+- **The validator caught a mistake.** One reviewer first wrote `schema_version` "2.0"; the bundled
+  validator rejected it and the reviewer corrected it, as #120 intended.
+- **Adjudication was not blind.** As pre-registered, the adjudicator knew the mapping. All four
+  issues were found by all nine runs, so no judgement call separated the arms.
+
+### What this does and does not show
+
+On one Python, FastAPI and Postgres template, with one model, the Python, Postgres and REST
+references, and the routed infrastructure and Docker references, did not change which real issues
+were found. The category references alone were enough for all four, including the two whose
+mechanisms depend on Postgres or Python. This case is small, and its issues are visible in the
+code. Technology references may matter more where the problem lies in engine or runtime behaviour
+that the code does not show. Before shortening or removing any file, the harness asks for a
+targeted leave-one-out comparison, on a case chosen because a technology reference should matter
+there.

@@ -38,6 +38,16 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- **The first reference ablation, run and scored.** Three reference tiers (category only, plus
+  technology references, plus the remaining routed references), three repeats each, on the
+  FastAPI full-stack template, all on one model. Every run in every arm found the same four real
+  issues, with no unsourced estimates and no trap hits, so neither added tier showed a
+  measurable benefit on this case. That is not a reason to remove any file. Mean tokens per run
+  barely moved with bundle size, because reviewers read references as they need them. Results,
+  deviations and the nine reports are in `benchmark/ablation-results/`.
+
 ### Fixed
 
 - **Reference-ablation packages lacked the validator the skill tells agents to run.** Since #106,

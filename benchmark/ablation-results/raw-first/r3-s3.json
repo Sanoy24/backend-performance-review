@@ -1,0 +1,629 @@
+{
+ "schema_version": "1.0",
+ "mode": "full",
+ "reproducibility": {
+  "generated_at": "2026-10-10T00:00:00Z",
+  "skill_version": "2.2.0",
+  "spec": "backend-performance-review/2.0",
+  "model": "claude-sonnet-5-5",
+  "repository": {
+   "name": "fastapi/full-stack-fastapi-template",
+   "commit": "8063fe54f17d19f01720e055103af9cad3d8f55d"
+  }
+ },
+ "services": [
+  {
+   "name": "backend",
+   "path": "backend",
+   "runtime": [
+    "python",
+    "fastapi"
+   ],
+   "datastores": [
+    "postgresql"
+   ],
+   "caches": [],
+   "brokers": []
+  }
+ ],
+ "workload": {
+  "answered": false,
+  "inputs": [
+   {
+    "question": "What are peak request rates and login rates?",
+    "answer": "unanswered",
+    "source": "unanswered",
+    "asked": true,
+    "evidence_checked": [
+     "compose.yml",
+     "backend/Dockerfile",
+     "backend/app/core/config.py"
+    ],
+    "decision_dimensions": [
+     "severity",
+     "confidence"
+    ],
+    "expected_decision_value": "highest"
+   },
+   {
+    "question": "Expected row counts for item and user tables?",
+    "answer": "unanswered",
+    "source": "unanswered",
+    "asked": true,
+    "evidence_checked": [
+     "backend/app/alembic/versions",
+     "backend/app/models.py"
+    ],
+    "decision_dimensions": [
+     "severity",
+     "confidence"
+    ],
+    "expected_decision_value": "highest"
+   },
+   {
+    "question": "Is SMTP enabled and what is the mail server latency?",
+    "answer": "unanswered",
+    "source": "unanswered",
+    "asked": true,
+    "evidence_checked": [
+     "backend/app/core/config.py",
+     "backend/app/utils.py"
+    ],
+    "decision_dimensions": [
+     "severity"
+    ],
+    "expected_decision_value": "medium"
+   }
+  ],
+  "scenarios": [
+   "normal",
+   "burst",
+   "large-dataset",
+   "degraded-dependency"
+  ]
+ },
+ "completeness": {
+  "review_confidence": "Medium",
+  "evidence_available": "uninstrumented",
+  "ranking_method": "structural-signals-only",
+  "repository_coverage": "All backend Python source, models, migrations, Dockerfile and compose files read; frontend, CI workflows and email templates not examined in depth.",
+  "critical_paths_identified": 4,
+  "critical_paths_analyzed": 4,
+  "shared_resources_identified": 3,
+  "shared_resources_analyzed": 3,
+  "technology_support": [
+   {
+    "technology": "FastAPI",
+    "tier": "generic"
+   },
+   {
+    "technology": "PostgreSQL",
+    "tier": "conceptual"
+   },
+   {
+    "technology": "SQLAlchemy/SQLModel",
+    "tier": "generic"
+   }
+  ],
+  "unknowns": [
+   {
+    "subject": "Table sizes and traffic",
+    "reason": "no-evidence-exists",
+    "what_would_resolve_it": "Row counts and request-rate metrics from the deployment"
+   },
+   {
+    "subject": "Real query plans",
+    "reason": "no-evidence-exists",
+    "what_would_resolve_it": "EXPLAIN ANALYZE on production-sized data"
+   },
+   {
+    "subject": "Reverse proxy and deployment limits",
+    "reason": "not-examined",
+    "what_would_resolve_it": "Proxy configuration and resource limits in the deployment"
+   }
+  ]
+ },
+ "assumptions": {
+  "known": [
+   "Backend runs 4 workers (backend/Dockerfile:52)",
+   "Sync def route handlers run in a thread pool",
+   "engine created with default pool settings (backend/app/core/db.py:5)",
+   "No metrics, tracing or load tests are committed"
+  ],
+  "unknown": [
+   "Traffic volume",
+   "Table sizes",
+   "SMTP enabled and latency"
+  ],
+  "assumed": [
+   "Item table grows with user count (PERF-001)",
+   "Login bursts can exceed the default pool size (PERF-002)"
+  ],
+  "derived": [
+   "Pool and thread capacity are per worker process, so 4 workers each have independent pools (from Dockerfile CMD)"
+  ],
+  "measured": []
+ },
+ "decision_changing_questions": [
+  {
+   "question": "What are the expected item row count and per-user item count?",
+   "what_it_would_change": "PERF-001 severity and confidence",
+   "decision_dimensions": [
+    "severity",
+    "confidence"
+   ],
+   "expected_decision_value": "highest",
+   "affects": [
+    "PERF-001"
+   ]
+  },
+  {
+   "question": "What login and password-recovery request rates are expected?",
+   "what_it_would_change": "PERF-002 and PERF-003 severity",
+   "decision_dimensions": [
+    "severity"
+   ],
+   "expected_decision_value": "high",
+   "affects": [
+    "PERF-002",
+    "PERF-003"
+   ]
+  }
+ ],
+ "root_causes": [
+  {
+   "id": "ROOT-001",
+   "description": "Missing index on the foreign key and sort column for the item list path",
+   "findings": [
+    "PERF-001"
+   ]
+  },
+  {
+   "id": "ROOT-002",
+   "description": "Pooled DB connection held across CPU-bound hashing",
+   "findings": [
+    "PERF-002"
+   ]
+  },
+  {
+   "id": "ROOT-003",
+   "description": "Blocking external I/O on the request path",
+   "findings": [
+    "PERF-003"
+   ]
+  },
+  {
+   "id": "ROOT-004",
+   "description": "Client-controlled page size without a cap",
+   "findings": [
+    "PERF-004"
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "id": "PERF-001",
+   "stable_id": "795ae59e394d4c58",
+   "root_cause_id": "ROOT-001",
+   "state": "OPEN",
+   "severity": "High",
+   "confidence": "Medium",
+   "priority": "P1",
+   "category": "data-access",
+   "location": {
+    "file": "backend/app/models.py",
+    "line": 97,
+    "symbol": "Item"
+   },
+   "tags": [
+    "scalability-risk",
+    "needs-measurement"
+   ],
+   "problem": "Item.owner_id is a foreign key with no index, yet GET /items/ filters by it twice per request (COUNT and the page query) and orders by created_at; deleting a user also cascades through it.",
+   "performance_principle": "A lookup that selects a small subset of a growing table must be answered by an access path proportional to the result, not to the table.",
+   "evidence": [
+    {
+     "statement": "Item.owner_id is declared with foreign_key and ondelete only; no index=True.",
+     "kind": "static",
+     "file": "backend/app/models.py",
+     "line": 97
+    },
+    {
+     "statement": "read_items runs COUNT(*) WHERE owner_id = :id, then SELECT ... WHERE owner_id = :id ORDER BY created_at DESC OFFSET/LIMIT, on every list call for non-superusers.",
+     "kind": "static",
+     "file": "backend/app/api/routes/items.py",
+     "line": 29
+    },
+    {
+     "statement": "The only create_index in migrations is ix_user_email; no migration indexes item.owner_id or item.created_at.",
+     "kind": "static",
+     "file": "backend/app/alembic/versions/e2412789c190_initialize_models.py",
+     "line": 33
+    },
+    {
+     "statement": "Superuser path has no WHERE and orders by created_at with no index on that column.",
+     "kind": "static",
+     "file": "backend/app/api/routes/items.py",
+     "line": 21
+    },
+    {
+     "statement": "No runtime evidence (EXPLAIN, slow-query log) is committed. Planner behaviour is inferred from the absence of an index; PostgreSQL does not create indexes for FK columns automatically.",
+     "kind": "derived"
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-request",
+    "growth": "O(n)",
+    "blast_radius": "endpoint"
+   },
+   "conditions": "Matters once the item table is large relative to a single owner's items (sequential-scan cost scales with total rows, not the owner's rows). Row counts are unknown; assumed the item table grows with user count. Negligible for a small table.",
+   "counter_evidence": [
+    {
+     "statement": "Looked for an index on item.owner_id in models and all five migrations; none found.",
+     "effect": "no-effect",
+     "file": "backend/app/models.py",
+     "line": 97
+    },
+    {
+     "statement": "Table size is unknown; a small table makes a seq scan cheap. Confidence capped at Medium for that reason.",
+     "effect": "lowers-confidence"
+    }
+   ],
+   "why_this_might_not_matter": "If the item table stays in the low thousands of rows, a sequential scan is cheap and the index adds write cost for little read gain. This is a template; many deployments never reach the scale where it matters.",
+   "recommendation": "Add a composite index on item (owner_id, created_at) via an Alembic migration (Field(index=True) on owner_id at minimum). It serves the filter, the COUNT, the ordered page, and the FK cascade lookup on user delete.",
+   "alternatives": [
+    {
+     "option": "Composite index (owner_id, created_at)",
+     "preferred": true,
+     "why": "One structure serves filter and sort; avoids a sort step."
+    },
+    {
+     "option": "Single-column index on owner_id",
+     "preferred": false,
+     "why": "Fixes the filter but leaves a sort of the owner's rows."
+    },
+    {
+     "option": "Cache list responses",
+     "preferred": false,
+     "why": "Masks the scan, adds invalidation; not justified without a measured hit rate."
+    }
+   ],
+   "trade_offs": "Extra write cost and storage on item inserts/updates; building the index on a large table needs CREATE INDEX CONCURRENTLY outside a transaction to avoid blocking writes.",
+   "validation": {
+    "metric": "EXPLAIN (ANALYZE, BUFFERS) plan node type and time for the items list query for a user with few items in a large item table",
+    "expectation": "Seq Scan on item replaced by an index scan; time depends on the owner's item count rather than table size.",
+    "falsifier": "Plan already uses an index or the table is small enough that scan time is negligible.",
+    "safety": "not-safe-on-production",
+    "guard": "Migration test; monitor p95 of GET /items/ once metrics exist.",
+    "commands": [
+     {
+      "command": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM item WHERE owner_id = '<uuid>' ORDER BY created_at DESC LIMIT 100;",
+      "purpose": "Show the access path on a staging copy of the data.",
+      "safety": "not-safe-on-production"
+     },
+     {
+      "command": "SELECT relname, n_live_tup FROM pg_stat_user_tables WHERE relname IN ('item','user');",
+      "purpose": "Get actual row counts to resolve the table-size unknown.",
+      "safety": "safe-on-production"
+     }
+    ]
+   }
+  },
+  {
+   "id": "PERF-002",
+   "stable_id": "faa9da96db220772",
+   "root_cause_id": "ROOT-002",
+   "state": "OPEN",
+   "severity": "Medium",
+   "confidence": "Medium",
+   "priority": "P2",
+   "category": "concurrency",
+   "location": {
+    "file": "backend/app/api/routes/login.py",
+    "line": 24,
+    "symbol": "login_access_token"
+   },
+   "tags": [
+    "scalability-risk",
+    "needs-measurement"
+   ],
+   "problem": "login_access_token (sync def) looks up the user, which opens a transaction on a pooled connection, then runs an Argon2 verify (and a dummy verify for unknown emails) before the session closes. The connection and a worker thread are held across CPU-heavy hashing; no pool or concurrency configuration exists.",
+   "performance_principle": "Do not hold a scarce shared resource (pooled connection) across CPU-bound work that does not need it, and bound concurrency of expensive work.",
+   "evidence": [
+    {
+     "statement": "authenticate queries by email then calls verify_password before returning; the session from get_db stays open for the whole request.",
+     "kind": "static",
+     "file": "backend/app/crud.py",
+     "line": 45
+    },
+    {
+     "statement": "DUMMY_HASH is an Argon2id hash encoding m=65536,t=3,p=4 (64 MiB memory parameter), so unknown-email attempts cost the same as real ones.",
+     "kind": "static",
+     "file": "backend/app/crud.py",
+     "line": 43
+    },
+    {
+     "statement": "create_engine is called with only the URL; no pool_size, max_overflow or pool_timeout are set, so library defaults apply.",
+     "kind": "static",
+     "file": "backend/app/core/db.py",
+     "line": 5
+    },
+    {
+     "statement": "The container runs 4 workers; each has its own pool and thread pool.",
+     "kind": "static",
+     "file": "backend/Dockerfile",
+     "line": 52
+    },
+    {
+     "statement": "get_db yields a Session for the whole request.",
+     "kind": "static",
+     "file": "backend/app/api/deps.py",
+     "line": 20
+    },
+    {
+     "statement": "No rate limit or concurrency cap on /login/access-token; no runtime measurements committed.",
+     "kind": "static"
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-request",
+    "growth": "O(n)",
+    "blast_radius": "service"
+   },
+   "conditions": "A burst of concurrent logins (or failed-login attempts) larger than the per-worker connection pool default; each in-flight verify holds a connection for its CPU time, so other endpoints can queue on the pool. Login rate and hash cost on the deployed CPU are unknown.",
+   "counter_evidence": [
+    {
+     "statement": "Checked whether the session is released before hashing; it is not, as get_db wraps the whole request.",
+     "effect": "no-effect",
+     "file": "backend/app/api/deps.py",
+     "line": 20
+    },
+    {
+     "statement": "Argon2 verify latency is unmeasured, so impact is a risk, not a measurement.",
+     "effect": "lowers-confidence"
+    }
+   ],
+   "why_this_might_not_matter": "Most deployments see low login rates, and Argon2 cost is intentional for security. If logins are rare the pool is never contended.",
+   "recommendation": "Release the DB connection before hashing: fetch the user, copy hashed_password, end the transaction, verify, then write the rehash only when needed. Consider a bounded concurrency limit on hashing and set pool_size/pool_timeout explicitly from worker and thread counts.",
+   "alternatives": [
+    {
+     "option": "Release connection before verify; bound hash concurrency",
+     "preferred": true,
+     "why": "Removes the shared-resource hold without weakening hashing."
+    },
+    {
+     "option": "Lower Argon2 cost",
+     "preferred": false,
+     "why": "Weakens security; trades away the intended property."
+    },
+    {
+     "option": "Enlarge the pool",
+     "preferred": false,
+     "why": "Raises database connection load and masks the hold."
+    }
+   ],
+   "trade_offs": "Slightly more code in authenticate; a concurrency cap adds queueing latency at login under bursts.",
+   "validation": {
+    "metric": "SQLAlchemy pool checked-out count and p95 latency of a concurrent endpoint (e.g. GET /items/) while a login burst runs",
+    "expectation": "Pool checkout wait during login bursts drops after the connection is released before hashing.",
+    "falsifier": "Pool never nears exhaustion in a burst test at the expected login rate.",
+    "safety": "not-safe-on-production",
+    "guard": "Load-test scenario mixing login and read traffic; alert on pool wait time."
+   }
+  },
+  {
+   "id": "PERF-003",
+   "stable_id": "e0988ce8f79aba18",
+   "root_cause_id": "ROOT-003",
+   "state": "OPEN",
+   "severity": "Medium",
+   "confidence": "Medium",
+   "priority": "P2",
+   "category": "io",
+   "location": {
+    "file": "backend/app/utils.py",
+    "line": 33,
+    "symbol": "send_email"
+   },
+   "tags": [
+    "scalability-risk"
+   ],
+   "problem": "send_email performs a blocking SMTP exchange (emails library message.send) inline in POST /password-recovery/{email} and POST /users/. The request, its worker thread and its session wait for the mail server.",
+   "performance_principle": "Keep slow, failure-prone external I/O off the user-blocking path or bound it with a deadline.",
+   "evidence": [
+    {
+     "statement": "message.send is called synchronously; smtp_options holds host, port, tls/ssl and credentials only; no timeout key is set.",
+     "kind": "static",
+     "file": "backend/app/utils.py",
+     "line": 46
+    },
+    {
+     "statement": "recover_password calls send_email directly after a DB lookup, so the session stays open during delivery. The endpoint is unauthenticated and sends only for existing users.",
+     "kind": "static",
+     "file": "backend/app/api/routes/login.py",
+     "line": 54
+    },
+    {
+     "statement": "create_user also sends inline.",
+     "kind": "static",
+     "file": "backend/app/api/routes/users.py",
+     "line": 69
+    },
+    {
+     "statement": "No background task, queue or worker exists in the repository.",
+     "kind": "static"
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-request",
+    "growth": "O(1)",
+    "blast_radius": "service"
+   },
+   "conditions": "Applies only when emails are enabled and the SMTP server is slow or unreachable; a degraded mail server then ties up worker threads and pooled connections in proportion to concurrent recovery requests. Whether the emails library applies a default socket timeout is not verified here.",
+   "counter_evidence": [
+    {
+     "statement": "Looked for BackgroundTasks, queues or timeouts; none found.",
+     "effect": "no-effect"
+    },
+    {
+     "statement": "Volume on these endpoints is expected to be low; impact depends on unmeasured mail-server health.",
+     "effect": "bounds-impact"
+    }
+   ],
+   "why_this_might_not_matter": "These endpoints are low-volume and mail is usually fast; a template deployment may never degrade. Moving to async delivery changes error semantics.",
+   "recommendation": "Run delivery via FastAPI BackgroundTasks (or an external queue if durability matters) after the response, and set an explicit SMTP timeout.",
+   "alternatives": [
+    {
+     "option": "BackgroundTasks plus explicit SMTP timeout",
+     "preferred": true,
+     "why": "Smallest change that takes mail off the response path."
+    },
+    {
+     "option": "Durable queue and worker",
+     "preferred": false,
+     "why": "Heavier; only justified if delivery loss is unacceptable."
+    }
+   ],
+   "trade_offs": "Failures are no longer returned to the caller; background tasks are lost on process restart.",
+   "validation": {
+    "metric": "Latency of POST /password-recovery/{email} against an SMTP sink with injected delay",
+    "expectation": "Response latency independent of SMTP latency after the change.",
+    "falsifier": "Latency is already independent of SMTP delay, e.g. the library imposes a short timeout.",
+    "safety": "not-safe-on-production",
+    "guard": "Test with a delayed fake SMTP server."
+   }
+  },
+  {
+   "id": "PERF-004",
+   "stable_id": "1654d608a297e31c",
+   "root_cause_id": "ROOT-004",
+   "state": "OPEN",
+   "severity": "Medium",
+   "confidence": "High",
+   "priority": "P2",
+   "category": "serialization",
+   "location": {
+    "file": "backend/app/api/routes/items.py",
+    "line": 15,
+    "symbol": "read_items"
+   },
+   "tags": [
+    "quick-win"
+   ],
+   "problem": "skip and limit are plain int parameters with no upper bound on /items/ and /users/. A caller can request an arbitrarily large page, materialised as ORM objects, revalidated into Pydantic models and serialised in one response. Every page also issues a separate COUNT(*).",
+   "performance_principle": "Bound the work and memory any single request can demand.",
+   "evidence": [
+    {
+     "statement": "limit: int = 100 with no le= constraint; no maximum is enforced.",
+     "kind": "static",
+     "file": "backend/app/api/routes/items.py",
+     "line": 15
+    },
+    {
+     "statement": "Same signature on read_users.",
+     "kind": "static",
+     "file": "backend/app/api/routes/users.py",
+     "line": 37
+    },
+    {
+     "statement": "session.exec(statement).all() then a list comprehension of ItemPublic.model_validate builds the whole page in memory.",
+     "kind": "static",
+     "file": "backend/app/api/routes/items.py",
+     "line": 44
+    },
+    {
+     "statement": "Each call issues COUNT(*) plus the OFFSET query (two statements).",
+     "kind": "static",
+     "file": "backend/app/api/routes/items.py",
+     "line": 23
+    }
+   ],
+   "evidence_quality": "Strong",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-item",
+    "growth": "O(n)",
+    "blast_radius": "service"
+   },
+   "conditions": "A single authenticated caller with a large owned dataset (a superuser sees all items) requesting a very large limit; memory and CPU scale with the page size the client chooses. Request frequency and data volume are unknown.",
+   "counter_evidence": [
+    {
+     "statement": "Searched for a Query(le=...) cap or middleware limit; none in the repository (reverse proxy config not examined for body limits).",
+     "effect": "no-effect"
+    }
+   ],
+   "why_this_might_not_matter": "Only authenticated users can call it and the default is 100; abuse needs a legitimate account holding many rows.",
+   "recommendation": "Constrain with Query(100, ge=1, le=<chosen max>) and ge=0 on skip; consider keyset pagination on (created_at, id) if deep paging is expected.",
+   "alternatives": [
+    {
+     "option": "Cap limit with Query validation",
+     "preferred": true,
+     "why": "One-line fix addressing the unbounded work."
+    },
+    {
+     "option": "Keyset pagination",
+     "preferred": false,
+     "why": "Removes OFFSET cost but changes the API contract."
+    }
+   ],
+   "trade_offs": "Clients requesting larger pages receive a 422 and must page.",
+   "validation": {
+    "metric": "Peak process memory and response time for GET /items/?limit=<large> against a seeded dataset",
+    "expectation": "Requests above the cap are rejected before touching the database.",
+    "falsifier": "Large-limit requests are already rejected or memory use is flat.",
+    "safety": "not-safe-on-production",
+    "guard": "Test asserting 422 for limit above the cap."
+   }
+  }
+ ],
+ "considered_not_reported": [
+  {
+   "observation": "Per-request user lookup in get_current_user (session.get by primary key)",
+   "why_discarded": "One primary-key query per authenticated request; bounded and indexed, no evidence of cost beyond baseline.",
+   "location": "backend/app/api/deps.py:29",
+   "path": "backend/app/api/deps.py",
+   "evidence_checked": [
+    "deps.py get_current_user",
+    "User primary key declaration"
+   ],
+   "revisit_when": "Profiling shows the user lookup dominating authenticated request latency."
+  },
+  {
+   "observation": "ORM cascade delete of items on user self-delete",
+   "why_discarded": "Rare operation bounded by one user's item count; ondelete CASCADE also exists in the database.",
+   "location": "backend/app/api/routes/users.py",
+   "path": "backend/app/api/routes/users.py",
+   "evidence_checked": [
+    "delete_user_me",
+    "Relationship(cascade_delete=True) in models.py"
+   ],
+   "revisit_when": "Users with very large item counts are deleted frequently."
+  }
+ ],
+ "adjacent_findings": [
+  {
+   "id": "SEC-001",
+   "kind": "security",
+   "confidence": "Medium",
+   "risk": "Medium",
+   "problem": "The unauthenticated /login/access-token endpoint has no rate limit or lockout, so repeated password attempts are limited only by hashing cost.",
+   "evidence": [
+    {
+     "statement": "No rate-limiting dependency or middleware in app/main.py or the routes; the login handler is open.",
+     "kind": "static",
+     "file": "backend/app/api/routes/login.py",
+     "line": 24
+    }
+   ],
+   "recommendation": "Add rate limiting at the proxy or application layer.",
+   "location": "backend/app/api/routes/login.py:24",
+   "assessed_properly_by": "A dedicated security review of authentication and abuse controls"
+  }
+ ]
+}
