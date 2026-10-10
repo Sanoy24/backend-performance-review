@@ -194,6 +194,11 @@ they need them, not all at once, so bundle size is a ceiling on context cost, no
   other runs' file names (`r1-s1.md` and so on). The names do not reveal arms. Each run's
   transcript was checked: none opened another run's output, another slot, the coordinator file,
   or this repository.
+- **Writes outside a slot.** Found after the results were merged, while preparing the second
+  ablation: the `full_routed` reviewer in repeat 1 wrote its four report-generator files (its own
+  code, named for its run) to the coordinator's scratch directory instead of its slot, and ran
+  them there. It read nothing outside its slot, its output files and the target, so no other
+  run's material reached it. The transcript check now covers writes as well as reads.
 - **`detect_stack.py` is not in the slots.** The export does not ship the stack detector that
   `SKILL.md` mentions, in any arm, so every reviewer identified the stack by reading the
   repository. It affects all arms alike. It is a gap in the harness.
