@@ -225,9 +225,13 @@ def export_run_packs(manifest, destination, root=ROOT):
     if hashlib.sha256(prompt).hexdigest() != plan["prompt_sha256"]:
         raise AblationError("common prompt changed during export")
     # The bundled validator, its schema reader, and its schemas are part of the skill (#106):
-    # SKILL.md tells the agent to run it, so every arm gets the same copy.
+    # SKILL.md tells the agent to run it, so every arm gets the same copy. The same goes for the
+    # stack detector Phase 1 runs and the registry it reads; the first ablation's slots lacked
+    # both, so every reviewer inferred the stack by hand.
     helpers = ("schemas/review.schema.json", "schemas/finding.schema.json",
                "skills/backend-performance-review/templates/review-report.md",
+               "skills/backend-performance-review/scripts/detect_stack.py",
+               "skills/backend-performance-review/registry.yaml",
                "skills/backend-performance-review/scripts/compute_stable_id.py",
                "skills/backend-performance-review/scripts/validate_review.py",
                "skills/backend-performance-review/scripts/json_schema_lite.py",

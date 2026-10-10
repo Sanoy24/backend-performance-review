@@ -41,7 +41,8 @@ class ReferenceAblationTests(unittest.TestCase):
                    / "review-report.md")
         bundled = ROOT / "skills" / "backend-performance-review"
         for relative in ("scripts/validate_review.py", "scripts/json_schema_lite.py",
-                         "schemas/review.schema.json", "schemas/finding.schema.json"):
+                         "schemas/review.schema.json", "schemas/finding.schema.json",
+                         "scripts/detect_stack.py", "registry.yaml"):
             self._copy(bundled / relative,
                        self.root / "skills" / "backend-performance-review" / relative)
 
@@ -278,6 +279,30 @@ class ReferenceAblationTests(unittest.TestCase):
                 [sys.executable, str(skill / "scripts" / "validate_review.py"),
                  "--review", str(example)], capture_output=True, text=True)
             self.assertIn("is a valid review", run.stdout + run.stderr)
+
+    def test_every_slot_carries_the_stack_detector_and_it_reads_its_registry(self):
+        # SKILL.md's Phase 1 runs detect_stack.py, which reads registry.yaml beside the scripts
+        # directory. The first ablation's slots shipped neither, so every reviewer had to infer
+        # the stack by hand. Each slot now ships both, identically, whatever its arm.
+        destination = self.root / "run-packs"
+        ablation.export_run_packs(self.manifest, destination, self.root)
+        target = self.root / "tiny-target"
+        target.mkdir()
+        (target / "requirements.txt").write_text("fastapi\npsycopg\n", encoding="utf-8")
+        for slot in ("slot-1", "slot-2", "slot-3"):
+            skill = destination / "orders-fixture" / "first" / slot / "skills" / "backend-performance-review"
+            with self.subTest(slot=slot):
+                self.assertTrue((skill / "scripts" / "detect_stack.py").is_file())
+                self.assertTrue((skill / "registry.yaml").is_file())
+                run = subprocess.run(
+                    [sys.executable, str(skill / "scripts" / "detect_stack.py"), str(target)],
+                    capture_output=True, text=True, check=False)
+                self.assertEqual(run.returncode, 0, run.stderr)
+                report = json.loads(run.stdout)
+                self.assertFalse([w for w in report["warnings"] if "registry" in w],
+                                 report["warnings"])
+                runtimes = [entry["signal"] for entry in report["detected"].get("runtime", [])]
+                self.assertIn("python", runtimes)
 
     def test_export_does_not_overwrite_an_existing_directory(self):
         destination = self.root / "existing"

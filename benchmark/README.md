@@ -318,7 +318,8 @@ Before exporting, give each case one or more trials with an `id` and an `order` 
 across repeats. Export writes a new directory of `case/trial/slot-N` packages. Hand a fresh
 reviewer **only their slot directory** and a separate checkout of the target repository at
 the pinned commit. Each slot contains the common prompt, its allowed reference bundle, the
-review template and schemas, and the stable-ID helper. Include `SKILL.md`, shared
+review template and schemas, the stable-ID helper, the bundled validator, and the stack
+detector with the registry it reads. Every arm gets identical copies of these. Include `SKILL.md`, shared
 methodology, and rubrics in the manifest's `common` tier; assign only relevant category,
 technology, and remaining routed files to the other tiers. Keep `coordinator.json` private: it maps opaque
 slots back to arms. No package contains the ground truth or the other arms' references.
