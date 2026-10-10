@@ -48,6 +48,14 @@ value and `[Unreleased]` accumulates.
   barely moved with bundle size, because reviewers read references as they need them. Results,
   deviations and the nine reports are in `benchmark/ablation-results/`.
 
+- **A leave-one-out ablation of `technology/dotnet.md`.** On the ASP.NET Core RealWorld app, where
+  two expected issues are synchronous EF Core calls in async handlers, the router's full reference
+  set was run with and without `dotnet.md`, three times each. Both issues were found as often
+  without it as with it, and distinct real issues differed by 0.33 per run on average, under the
+  pre-registered threshold. The result calls for reviewing `dotnet.md` for overlap with
+  `application/async-and-blocking.md`, not for removing it. In both arms, the per-request
+  synchronous transaction was rated Low or left unreported, against the answer key's Critical.
+
 ### Fixed
 
 - **Reference-ablation packages lacked the stack detector.** Phase 1 of `SKILL.md` runs
