@@ -1,5 +1,5 @@
 {
-  "model": "claude-opus-5-5",
+  "model": "claude-sonnet-5-5",
   "prompt": "benchmark/ablation-results/first-ablation-prompt.txt",
   "prompt_sha256": "efdd77aacd05c600a113220c8ac1ac32b892068b56a7df07f63ebfa13a2d5f5f",
   "cases": [

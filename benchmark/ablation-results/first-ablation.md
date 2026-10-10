@@ -1,8 +1,8 @@
 # First reference ablation — do the technology references earn their tokens?
 
-**Status: pre-registered, not yet run.** This design was committed before any run started.
-Results will be appended below the line at the end, without editing anything above it except
-this status line.
+**Status: pre-registered, amended once before any result was scored (see Amendment), not
+yet run.** This design was committed before any run started. Results will be appended below the
+line at the end, without editing anything above it except this status line.
 
 ## Why this run exists
 
@@ -27,7 +27,7 @@ model. This is its first empirical use, on one case, to answer it directionally:
 | Bundles | Frozen by SHA-256 before any run, as printed by `--plan-only`:<br>`category_only` `41bb4fd5c29afa7a68bb2538358ddd286b843812dc337683d0c7e0a85f4b03e5`<br>`category_technology` `cbb9b0e88c2c46da6ead16516d1ab9e8fe7655b25428c04681755216f5eb9708`<br>`full_routed` `07289a82e30ff4fdf934d2516fab2e19e60649b89b2b9c9465592750ebc4b172`<br>prompt `efdd77aacd05c600a113220c8ac1ac32b892068b56a7df07f63ebfa13a2d5f5f` |
 | Manifest | [`first-ablation-manifest.json`](first-ablation-manifest.json), with the prompt in [`first-ablation-prompt.txt`](first-ablation-prompt.txt). Tiers were curated for an earlier pilot that was never run, before any output existed |
 | Trials | Three repeats, execution order rotated: (C, CT, F), (F, C, CT), (CT, F, C) |
-| Model | Every arm pinned explicitly; the model actually used is read from each run's transcript metadata. If the nine runs did not all use one model, the ablation is void |
+| Model | `claude-sonnet-5-5` (amended from `claude-opus-5-5`; see Amendment). Every arm pinned explicitly; the model actually used is read from each run's transcript metadata. If the nine runs did not all use one model, the ablation is void |
 | Skill | `main` at `4bcd905`, exported by `reference_ablation.py --export-dir`. Each opaque slot holds only its arm's references plus the shared helpers, including the bundled validator (#120) |
 | Isolation | Each reviewer receives only its slot directory and a separate read-only checkout of the target. No slot contains ground truth, another arm's references, or the mapping from slots to arms |
 | Order | Sequential, in slot order within each repeat |
@@ -80,6 +80,17 @@ For each added tier, compared with the tier below it:
 
 n = 3 per arm, one case, one model. Directional, not a general result. Reported with the same
 prominence either way.
+
+## Amendment, before any result was scored
+
+The design first pinned every arm to `claude-opus-5-5`. Two runs (repeat 1, slots 1 and 2)
+completed on that model, and a third was stopped part-way. To keep the cost of the experiment
+down, the model was changed to `claude-sonnet-5-5` for all nine runs. The two completed runs
+are set aside and not scored. The coordinator saw each run's short completion summary (its
+finding count and titles) but did not adjudicate either report, and they are not mixed with
+the Sonnet runs, so the one-model rule above still holds. The slots were re-exported with the
+new model named in each `TASK.md`. The bundle and prompt hashes above are unchanged, because
+the references and prompt are unchanged. Nothing else in the design changed.
 
 ---
 
