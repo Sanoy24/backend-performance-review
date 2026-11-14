@@ -168,6 +168,23 @@ class Verify(unittest.TestCase):
         self.assertIn("no web framework", records[0]["excluded"])
         self.assertEqual(records[1]["review_files"], 1)
 
+    def test_an_unfetchable_base_commit_is_recorded_not_fatal(self):
+        candidates = [{"repo": "o/gone", "base_commit": "c" * 40},
+                      {"repo": "o/ok", "base_commit": "c" * 40}]
+
+        def fetcher(repo, commit, destination):
+            if repo == "o/gone":
+                raise bft.FetchError("not our ref")
+            destination.mkdir(parents=True)
+            (destination / "main.go").write_text("package main\n")
+            return destination
+
+        with tempfile.TemporaryDirectory() as work:
+            passed, records = bft.verify(candidates, work, 5, detect=lambda p: self.detection(),
+                                         fetcher=fetcher)
+        self.assertEqual([p["repo"] for p in passed], ["o/ok"])
+        self.assertEqual(records[0]["excluded"], "base commit could not be fetched")
+
 
 class ServiceClassification(unittest.TestCase):
 
