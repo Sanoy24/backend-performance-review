@@ -1,0 +1,28 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "group indices built with a pure-Python per-element loop (high)",
+   "location": {
+    "file": "xarray/core/groupby.py",
+    "line": 73
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "eager work not needed to construct the GroupBy (medium)",
+   "location": {
+    "file": "groupers.py",
+    "line": 166
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "virtual-variable and alignment overhead (low/medium)",
+   "location": {
+    "file": "core/dataset.py",
+    "line": 194
+   }
+  }
+ ]
+}

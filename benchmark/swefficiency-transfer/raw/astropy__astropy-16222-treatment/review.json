@@ -1,0 +1,46 @@
+{
+ "schema_version": "1.0",
+ "mode": "full",
+ "reproducibility": {"generated_at": "2026-11-14T00:00:00Z", "skill_version": "2.2.0", "spec": "backend-performance-review/2.0", "model": "claude-sonnet-5-5", "repository": {"name": "astropy"}},
+ "completeness": {"review_confidence": "Medium", "evidence_available": "uninstrumented", "ranking_method": "structural-signals-only", "unknowns": [{"subject": "Magnitude of time/memory saving", "reason": "no-evidence-exists", "what_would_resolve_it": "Profile the workload before and after"}]},
+ "assumptions": {"known": ["Workload constructs SkyCoord from a 1e6-element UnitSphericalRepresentation"], "unknown": ["Share of init time due to the distance array and repeated validation"], "assumed": [], "derived": [], "measured": []},
+ "root_causes": [{"id": "ROOT-001", "description": "Representation branch of SkyCoord parsing does not special-case UnitSpherical input and so inflates it to Spherical with a distance component.", "findings": ["PERF-001"]}],
+ "findings": [{
+  "id": "PERF-001",
+  "stable_id": "db611869968d5095",
+  "root_cause_id": "ROOT-001",
+  "state": "OPEN",
+  "severity": "Medium",
+  "confidence": "High",
+  "priority": "P2",
+  "category": "memory",
+  "location": {"file": "astropy/coordinates/sky_coordinate_parsers.py", "symbol": "_parse_coordinate_arg"},
+  "problem": "SkyCoord(UnitSphericalRepresentation) is converted to SphericalRepresentation with a fabricated distance=1.0 that is materialized into an N-element array and re-validated and re-copied during frame construction; the SkyCoord/frame branch removes distance for UnitSpherical but the representation branch does not.",
+  "performance_principle": "Do not materialize or reprocess data that carries no information; avoid repeated validation and copy passes over the same large array.",
+  "evidence": [
+   {"statement": "Representation branch calls represent_as(frame.representation_type) and reads all components including distance; distance-removal logic exists only in the SkyCoord/frame branch.", "kind": "static", "file": "astropy/coordinates/sky_coordinate_parsers.py"},
+   {"statement": "UnitSphericalRepresentation.represent_as shortcut builds SphericalRepresentation with distance=1.0.", "kind": "static", "file": "astropy/coordinates/representation/spherical.py"},
+   {"statement": "BaseRepresentation.__init__ broadcasts and copies components whose shape changed when copy is true; final frame creation with copy=True copies lon, lat and the broadcast distance.", "kind": "static", "file": "astropy/coordinates/representation/base.py"},
+   {"statement": "Latitude.__new__ validates all N values with np.abs/np.any on each construction.", "kind": "static", "file": "astropy/coordinates/angles/core.py"},
+   {"statement": "_infer_data downgrades to UnitSpherical only when distance is absent from kwargs; the parser always supplies it. No runtime evidence exists.", "kind": "static", "file": "astropy/coordinates/baseframe.py"}
+  ],
+  "evidence_quality": "Moderate",
+  "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint"},
+  "conditions": "Large array inputs (workload uses 1e6 elements) given as a UnitSphericalRepresentation with no frame; negligible for scalars and small arrays.",
+  "counter_evidence": [{"statement": "Necessary lon/lat copies and one validation remain regardless, so the saving may be a fraction of the total; magnitude not measured.", "effect": "bounds-impact"}],
+  "why_this_might_not_matter": "numpy passes are fast and the unavoidable lon/lat copy still takes part of the time; the change also alters the type of .data, which downstream code may depend on.",
+  "recommendation": "In the BaseRepresentation branch of _parse_coordinate_arg, drop distance from the attribute lists when the input is a UnitSphericalRepresentation (as the SkyCoord/frame branch does), so the frame is built via UnitSphericalRepresentation without a distance array or extra validation.",
+  "alternatives": [
+   {"option": "Pass copy=False in final frame creation", "preferred": false, "why": "Aliasing risk, smaller benefit"},
+   {"option": "Drop distance for UnitSpherical input", "preferred": true, "why": "Removes the work rather than masking it"}
+  ],
+  "trade_offs": "Changes the type of SkyCoord.data for these inputs (UnitSpherical instead of Spherical with unit distance); tests may depend on the old type.",
+  "validation": {
+   "metric": "Wall time and peak memory of SkyCoord(array_repr) at N=1e6, and type(sc.data)",
+   "expectation": "Lower time and one fewer N-element float array",
+   "falsifier": "No measurable change in time or memory after the change",
+   "safety": "not-safe-on-production",
+   "commands": [{"command": "python workload.py", "purpose": "Compare mean init time before and after the change", "safety": "not-safe-on-production"}]
+  }
+ }]
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-14T00:00:00Z",
+    "skill_version": "2.2.0",
+    "spec": "backend-performance-review/2.0",
+    "model": "claude-sonnet-5-5",
+    "repository": { "name": "matplotlib" }
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Only the savefig tight-bbox path for SVG output was read: backend_bases.print_figure, Figure.get_tightbbox, Axes.get_tightbbox, Axes.get_default_bbox_extra_artists, Axis.get_tightbbox. The SVG backend draw was not read."
+  },
+  "assumptions": {
+    "known": ["workload.py calls Figure.savefig(format='svg', bbox_inches='tight') on a 10x3 grid of Axes, each with one line plot", "Figure.get_tightbbox is invoked by print_figure when bbox_inches == 'tight'"],
+    "unknown": ["Share of savefig time spent in get_tightbbox versus the draw and SVG serialization", "Whether the renderer text layout cache makes a repeated pass cheap"],
+    "assumed": ["Figure.get_children returns the Axes objects, as for other Artist containers"],
+    "derived": ["Each Axes get_tightbbox runs at least twice per savefig: once through the figure default extra-artist list and once in the explicit per-axes loop"],
+    "measured": []
+  },
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Figure.get_tightbbox collects Axes objects into its extra-artist list and then also iterates self.axes, so each Axes tight bbox (tick and label text layout) is computed twice.", "findings": ["PERF-001"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "e0ba1e1115489b58",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "io",
+      "location": { "file": "lib/matplotlib/figure.py", "line": 1669, "symbol": "FigureBase.get_tightbbox" },
+      "tags": ["quick-win", "needs-measurement"],
+      "problem": "Figure.get_tightbbox computes each Axes tight bbox twice. Figure.get_default_bbox_extra_artists includes the figure children, which include every Axes, and then get_tightbbox separately loops over self.axes calling ax.get_tightbbox again.",
+      "performance_principle": "Do not recompute the same expensive derived value more than once per operation; deduplicate work when two collection passes cover the same elements.",
+      "evidence": [
+        { "statement": "get_default_bbox_extra_artists starts from self.get_children() filtered by visible and in_layout. Axes are children of the figure and are not excluded.", "kind": "static", "file": "lib/matplotlib/figure.py", "line": 1673 },
+        { "statement": "The first loop calls a.get_tightbbox(renderer) on every artist in that list, including each Axes.", "kind": "static", "file": "lib/matplotlib/figure.py", "line": 1712 },
+        { "statement": "A second loop then calls ax.get_tightbbox again for every visible Axes.", "kind": "static", "file": "lib/matplotlib/figure.py", "line": 1717 },
+        { "statement": "Axes.get_tightbbox runs apply_aspect, builds tick label bboxes through Axis.get_tightbbox (text extent measurement for every tick label), updates the title position, and iterates the Axes children. This is the costly part per Axes.", "kind": "static", "file": "lib/matplotlib/axes/_base.py", "line": 4367 },
+        { "statement": "print_figure calls Figure.get_tightbbox once for bbox_inches='tight', after a full draw. No result caching was found.", "kind": "static", "file": "lib/matplotlib/backend_bases.py", "line": 2143 },
+        { "statement": "No runtime evidence: the workload was not run and no profile was supplied.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint", "amplification": "2x" },
+      "conditions": "Applies to any savefig(bbox_inches='tight') or Figure.get_tightbbox call. Cost grows linearly with Axes count and tick label count, so it matters most for the many-subplot figure in workload.py (10 rows x 3 columns). The share of total savefig time is unmeasured; the saving is bounded by the get_tightbbox share of that time.",
+      "counter_evidence": [
+        { "statement": "Looked for deduplication or caching of per-Axes tightbbox results in Figure.get_tightbbox and Axes.get_tightbbox. The renderer text layout cache may lower the cost of the second pass. Found no bbox-level cache.", "effect": "lowers-confidence", "file": "lib/matplotlib/axes/_base.py", "line": 4367 },
+        { "statement": "Axes.get_default_bbox_extra_artists excludes the Axis objects, so tick work is not repeated through the child list. The duplication is at the Axes level.", "effect": "bounds-impact", "file": "lib/matplotlib/axes/_base.py", "line": 4345 }
+      ],
+      "why_this_might_not_matter": "Bbox computation is a single pass before the draw. The SVG draw and serialization may dominate, and a text layout cache may make the second pass cheap. Fixing this could save much less than half of savefig time.",
+      "recommendation": "Exclude Axes (which the explicit self.axes loop already handles) from the figure-level default extra-artist pass so each Axes is measured exactly once, or compute the per-Axes bbox once and reuse it.",
+      "alternatives": [
+        { "option": "Exclude Axes from the figure-level default extra-artist list so only the explicit loop measures them", "preferred": true, "why": "Removes the duplicate work with a minimal change and keeps the existing explicit bbox_extra_artists handling." },
+        { "option": "Memoize Axes.get_tightbbox per renderer within one Figure.get_tightbbox call", "preferred": false, "why": "More general but adds cache invalidation and state." }
+      ],
+      "trade_offs": "Must keep behaviour for a user-supplied bbox_extra_artists list that contains Axes, and for subfigures. Changing which artists are measured could alter the resulting bbox if some content is only reached through the figure-level pass.",
+      "validation": {
+        "metric": "Number of Axes.get_tightbbox calls per savefig(bbox_inches='tight'), and wall time of the workload",
+        "expectation": "Call count falls from about 2 per Axes to 1; savefig time falls by up to the duplicated share of get_tightbbox time. Magnitude is not derivable from the source.",
+        "falsifier": "A profile shows get_tightbbox is a small share of savefig time, or that the second pass is already cheap because of caches.",
+        "safety": "safe-on-production",
+        "guard": "A unit test counting Axes.get_tightbbox calls for a figure with N subplots.",
+        "commands": [
+          { "command": "python -m cProfile -s cumtime workload.py", "purpose": "Profile the workload to see the share of Figure.get_tightbbox and Axes.get_tightbbox calls", "safety": "safe-on-production" }
+        ]
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "print_figure performs a full draw (output disabled) before get_tightbbox and then a second draw during SVG output.",
+      "why_discarded": "The first draw is required so layout and artist positions are final; avoiding it needs a design change and no evidence says it is wasteful beyond what is required.",
+      "location": "lib/matplotlib/backend_bases.py:2128",
+      "evidence_checked": ["lib/matplotlib/backend_bases.py print_figure lines 2120-2175"],
+      "revisit_when": "A profile shows the pre-draw dominates savefig time."
+    }
+  ],
+  "adjacent_findings": []
+}

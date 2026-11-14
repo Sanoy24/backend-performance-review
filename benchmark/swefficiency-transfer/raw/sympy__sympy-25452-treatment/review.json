@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {"generated_at": "2026-11-14T00:00:00Z", "skill_version": "2.2.0", "spec": "backend-performance-review/2.0", "repository": {"name": "sympy"}},
+  "workload": {"answered": false, "inputs": [{"question": "What matrix shapes and entries does the workload invert?", "answer": "workload.py inverts a 2x2 matrix with symbolic entries a, b, a+b via Matrix.inv() with default arguments, 100 repeats, clear_cache() before each.", "source": "repository"}], "scenarios": ["normal"]},
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Only the Matrix.inv code path (inverse.py, reductions.py, determinant.py, utilities.py) was read.",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "technology_support": [{"technology": "Python library (CPU-bound symbolic algebra)", "tier": "generic"}],
+    "unknowns": [{"subject": "Share of time spent in simplify() versus equals()/is_zero assumption queries", "reason": "no-evidence-exists", "what_would_resolve_it": "cProfile of Z.inv() on the workload matrix"}]
+  },
+  "assumptions": {
+    "known": ["Workload calls Matrix.inv() with defaults on a 2x2 matrix of symbols (workload.py)", "Default method for dense matrices is GE (inverse.py:446-447)"],
+    "unknown": ["Actual time split between simplify and equals"],
+    "assumed": ["The pivot search finds no entry with is_zero False for plain symbols without assumptions, so the simplify and equals passes run"],
+    "derived": ["Symbolic entries are not ZZ/QQ, so _to_DM_ZZ_QQ returns None and the generic row-reduction path runs"],
+    "measured": []
+  },
+  "root_causes": [{"id": "ROOT-001", "description": "Default symbolic inversion uses generic Expr-based Gauss-Jordan with full simplify() and .equals() in pivot selection instead of a polynomial/fraction-field representation or closed-form formula.", "findings": ["PERF-001"]}],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "bc45835506bd986f",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "io",
+      "location": {"file": "sympy/matrices/inverse.py", "line": 223, "symbol": "_inv_GE"},
+      "tags": ["needs-measurement"],
+      "problem": "Matrix.inv() on a symbolic matrix runs rref on an augmented [M | I] matrix through the generic Expr path, where pivot search calls full simplify() and Expr.equals(0) on entries and every elimination step builds new unsimplified expressions.",
+      "performance_principle": "Do not use a general-purpose, heavyweight algebra procedure (heuristic simplification, randomized equality testing) for work that a canonical-form representation or closed form solves directly; avoid repeated work per element.",
+      "evidence": [
+        {"statement": "Default method for dense matrices is GE.", "kind": "static", "file": "sympy/matrices/inverse.py", "line": 446},
+        {"statement": "_inv_GE builds hstack(M, eye) and calls rref(simplify=True) on it.", "kind": "static", "file": "sympy/matrices/inverse.py", "line": 241},
+        {"statement": "_rref uses the DomainMatrix fast path only if all entries are rational (_to_DM_ZZ_QQ returns None otherwise); symbolic entries fall to the generic _row_reduce with simpfunc=simplify.", "kind": "static", "file": "sympy/matrices/reductions.py", "line": 369},
+        {"statement": "_find_reasonable_pivot: pass 1 checks is_zero; when it is None for all candidates, pass 2 calls simpfunc(x) per entry and pass 3 calls x.equals(0). For a plain Symbol, is_zero is None, so these passes are reachable.", "kind": "static", "file": "sympy/matrices/determinant.py", "line": 79},
+        {"statement": "cross_cancel rebuilds every entry of the row for each other row per pivot, and the final normalize step divides each entry by the pivot; with default dotprodsimp state the isimp is identity, so expressions grow and are only simplified in pivot tests.", "kind": "static", "file": "sympy/matrices/reductions.py", "line": 54},
+        {"statement": "_simplify wraps the full sympy simplify(), the most expensive simplifier.", "kind": "static", "file": "sympy/matrices/utilities.py", "line": 69},
+        {"statement": "workload.py clears the global cache before each timed call, so no memoized simplify/equals results carry across repeats.", "kind": "static", "file": "workload.py", "line": 10}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "unknown", "blast_radius": "endpoint"},
+      "conditions": "Dense Matrix with non-numeric (symbolic) entries inverted via default inv(); here 2x2 with symbols a, b, evaluated with a cold cache every iteration. Cost per call grows with matrix size and expression complexity. Not applicable to purely rational matrices.",
+      "counter_evidence": [
+        {"statement": "For a 2x2 the loop is tiny (2 pivots, 4x2 augmented matrix), so the absolute number of operations is bounded; the cost is dominated by per-call simplify/equals constants rather than loop count.", "effect": "bounds-impact"},
+        {"statement": "No runtime profile was available, so the split between simplify and equals cannot be verified.", "effect": "lowers-confidence"}
+      ],
+      "why_this_might_not_matter": "For one-off interactive symbolic use the cost is a constant overhead and results are exact; a faster path must preserve the zero-detection semantics that GE relies on for symbolic entries.",
+      "recommendation": "Avoid calling simplify()/equals() in the symbolic pivot search when a cheaper exact test suffices: convert symbolic matrices to a DomainMatrix over a polynomial ring/fraction field (ZZ[a,b] / QQ(a,b)) and invert there, or add a closed-form path for 2x2 (and small n) via adjugate/determinant. Either removes the expression-level simplify and equals calls from the default path.",
+      "alternatives": [
+        {"option": "Convert symbolic matrices to DomainMatrix over a polynomial fraction field and use its inv/rref", "preferred": true, "why": "Canonical-form arithmetic makes zero tests exact and cheap, and applies to any size."},
+        {"option": "Closed-form 2x2/3x3 adjugate / determinant shortcut in _inv", "preferred": false, "why": "Cheap and simple but only covers tiny sizes."},
+        {"option": "Change the default simplify argument in _inv_GE to a lighter function", "preferred": false, "why": "Small change but may alter results and zero-detection."}
+      ],
+      "trade_offs": "Domain conversion can fail or change output form for entries not representable in a polynomial ring (functions, non-polynomial expressions); results may differ in form from the current output and need a fallback to the generic path.",
+      "validation": {
+        "metric": "Wall time of Z.inv() for the workload matrix with cold cache, and cProfile cumulative time in simplify and Expr.equals",
+        "expectation": "Cumulative time in simplify and equals falls to near zero on the default path and total time per call decreases.",
+        "falsifier": "A profile showing simplify and equals together account for a small fraction of Z.inv() time, in which case this is not the bottleneck.",
+        "safety": "safe-on-production",
+        "commands": [
+          {"command": "python -m cProfile -s cumtime workload.py", "purpose": "Profile the workload to see the share of simplify and equals in Z.inv()", "safety": "safe-on-production"}
+        ]
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {"observation": "_row_reduce_list copies the matrix to a flat list and uses O(n^2) get_col slicing per pivot.", "why_discarded": "Bounded linear overhead; negligible next to symbolic simplification on this workload.", "location": "sympy/matrices/reductions.py:47"}
+  ]
+}

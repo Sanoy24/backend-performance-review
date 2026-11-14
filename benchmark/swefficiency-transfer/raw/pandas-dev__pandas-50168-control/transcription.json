@@ -1,0 +1,52 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "Per-element Timestamp construction + tz_localize in Python (HIGH, dominant)",
+   "location": {
+    "file": "pandas/core/tools/datetimes.py",
+    "line": 316
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Second Python loop for utc=True (MEDIUM; not hit by this workload but same function)",
+   "location": {
+    "file": "datetimes.py",
+    "line": 319
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "Redundant `any(tz is not None for tz in timezones)` scan (LOW)",
+   "location": {
+    "file": "datetimes.py",
+    "line": 507
+   }
+  },
+  {
+   "id": "C-4",
+   "title": "Repeated parse_timezone_directive / pytz.FixedOffset per row (MEDIUM)",
+   "location": {
+    "file": "pandas/_libs/tslibs/strptime.pyx",
+    "line": 303
+   }
+  },
+  {
+   "id": "C-5",
+   "title": "Other per-row overhead in array_strptime loop (LOW/MEDIUM)",
+   "location": {
+    "file": "strptime.pyx",
+    "line": 219
+   }
+  },
+  {
+   "id": "C-6",
+   "title": "Mixed-offset result is an object Index (informational)",
+   "location": {
+    "file": "datetimes.py",
+    "line": 330
+   }
+  }
+ ]
+}

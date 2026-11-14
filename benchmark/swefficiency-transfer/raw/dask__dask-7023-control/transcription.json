@@ -1,0 +1,28 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "shape builds a full prefix-sum just to read the total (core.py:1240) - medium",
+   "location": {
+    "file": "core.py",
+    "line": 1240
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Cache keyed by identity, bounded at 128 entries, and it keeps chunk tuples alive (slicing.py:1275-1282) - low to medium",
+   "location": {
+    "file": "slicing.py",
+    "line": 1275
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "Non-tuple input is converted and hashed by value (slicing.py:1309-1310) - low",
+   "location": {
+    "file": "slicing.py",
+    "line": 1309
+   }
+  }
+ ]
+}

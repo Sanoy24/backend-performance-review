@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-14T00:00:00Z",
+    "skill_version": "2.2.0",
+    "spec": "backend-performance-review/2.0",
+    "model": "claude-sonnet-5-5",
+    "repository": {"name": "numpy"}
+  },
+  "workload": {
+    "answered": true,
+    "inputs": [
+      {"question": "What operation is exercised?", "answer": "np.core.records.fromarrays with 4000 arrays of length 5 and 4000 explicit field names, repeated 30x per timing sample", "source": "repository", "asked": false, "evidence_checked": ["workload.py"]}
+    ],
+    "scenarios": ["large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "unknowns": [
+      {"subject": "Relative cost of find_duplicate versus dtype construction and the per-field assignment loop", "reason": "no-evidence-exists", "what_would_resolve_it": "cProfile of the workload"}
+    ]
+  },
+  "assumptions": {
+    "known": ["find_duplicate does a list slice plus an 'in' scan for every element", "fromarrays runs a Python loop of one field assignment per array"],
+    "unknown": ["Share of total time spent in find_duplicate"],
+    "assumed": ["Field count is large, as in the workload (4000)"],
+    "derived": ["With n=4000 names, find_duplicate performs at most n(n-1)/2 = 7,998,000 element comparisons and copies the same number of slice elements (derived from the loop structure)"],
+    "measured": []
+  },
+  "root_causes": [
+    {"id": "ROOT-001", "description": "Duplicate-name detection uses an O(n^2) slice-and-scan instead of a hash-based check", "findings": ["PERF-001"]}
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "a1e3e6be65f42f80",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "cost",
+      "location": {"file": "numpy/core/records.py", "line": 76, "symbol": "find_duplicate"},
+      "tags": ["quick-win", "scalability-risk"],
+      "problem": "find_duplicate, called by format_parser._setfieldnames from fromarrays, is quadratic in the number of field names: for each name it copies the tail of the list (list[i+1:]) and linearly scans it.",
+      "performance_principle": "Membership and uniqueness checks over a collection should use hashing (O(n)), not repeated linear scans, and should not allocate a copy per iteration.",
+      "evidence": [
+        {"statement": "find_duplicate loops over i and evaluates 'list[i] in list[i + 1:]', allocating a new slice and scanning it each iteration.", "kind": "static", "file": "numpy/core/records.py", "line": 79},
+        {"statement": "_setfieldnames calls find_duplicate(self._names) on every format_parser construction; fromarrays constructs format_parser whenever dtype is None.", "kind": "static", "file": "numpy/core/records.py", "line": 194},
+        {"statement": "Derived: for n=4000 names (workload.py N), no-duplicate case does n(n-1)/2 = 7,998,000 comparisons and as many slice-element copies per fromarrays call. No runtime measurement is available.", "kind": "derived", "file": "numpy/core/records.py", "line": 608}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n^2)+", "blast_radius": "endpoint"},
+      "conditions": "Matters when fromarrays/format_parser is given many fields (thousands, as in the workload). With a handful of fields the cost is negligible.",
+      "counter_evidence": [
+        {"statement": "Other per-field work in fromarrays (asarray, formats join, per-field validation, per-field setitem on recarray) is O(n) in Python calls; it may have a large constant, so quadratic share is not measured.", "effect": "lowers-confidence", "file": "numpy/core/records.py", "line": 631},
+        {"statement": "Names are strings, so 'in' comparisons are fast C-level identity/equality checks; the constant is small but 8M of them plus slice copies is still substantial.", "effect": "bounds-impact"}
+      ],
+      "why_this_might_not_matter": "Real record arrays rarely have thousands of fields; the cost only dominates at extreme widths, and the per-field Python loops may rival it.",
+      "recommendation": "Replace the nested scan with a single pass using a set (or collections.Counter) that records seen names and collects duplicates in first-seen order, preserving the returned list semantics.",
+      "alternatives": [
+        {"option": "Compare len(set(names)) to len(names) and only compute the duplicate list on mismatch", "preferred": false, "why": "Equivalent complexity; a single pass with a seen set is just as simple and always yields the list."},
+        {"option": "Single-pass seen/dup sets preserving order", "preferred": true, "why": "O(n), no slice copies, identical output."}
+      ],
+      "trade_offs": "Uses O(n) extra memory for the set; names must be hashable (they are strings or coerced strings here).",
+      "validation": {
+        "metric": "Wall time of np.core.records.fromarrays with 4000 arrays and 4000 names, and cProfile cumulative time of find_duplicate",
+        "expectation": "find_duplicate time falls from quadratic to linear in field count; overall call time decreases by that share.",
+        "falsifier": "If a profile shows find_duplicate is a small fraction of fromarrays time at n=4000, the finding is not material.",
+        "safety": "safe-on-production",
+        "commands": [
+          {"command": "python -c \"import cProfile,numpy as np; a=[np.arange(5)]*4000; n=['field_%d'%i for i in range(4000)]; cProfile.run('np.core.records.fromarrays(a,names=n)',sort='cumtime')\"", "purpose": "Profile to attribute time to find_duplicate versus the rest", "safety": "safe-on-production"}
+        ]
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "fromarrays assigns fields one at a time via recarray.__setitem__/field lookup in a Python loop (records.py:631), and builds dtype from a joined format string.",
+      "why_discarded": "Linear in field count; inherent to the design and without evidence it dominates. Worth revisiting after profiling.",
+      "location": "numpy/core/records.py:631",
+      "evidence_checked": ["numpy/core/records.py fromarrays body"],
+      "revisit_when": "A profile shows time outside find_duplicate dominating at large field counts."
+    }
+  ]
+}

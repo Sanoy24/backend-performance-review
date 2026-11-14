@@ -1,0 +1,17 @@
+{
+  "source_files": [
+    "lib/matplotlib/figure.py"
+  ],
+  "window": 20,
+  "findings": 5,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "C-1"
+  ],
+  "hunk_hits": [
+    "C-1"
+  ],
+  "top_finding": "C-1",
+  "top_finding_file_hit": true
+}

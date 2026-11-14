@@ -1,0 +1,13 @@
+{
+  "source_files": [
+    "astropy/coordinates/angles/core.py"
+  ],
+  "window": 20,
+  "findings": 3,
+  "file_hit": false,
+  "hunk_hit": false,
+  "file_hits": [],
+  "hunk_hits": [],
+  "top_finding": "C-1",
+  "top_finding_file_hit": false
+}

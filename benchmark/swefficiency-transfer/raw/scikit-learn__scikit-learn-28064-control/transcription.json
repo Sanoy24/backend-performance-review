@@ -1,0 +1,52 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "Threshold search in fit() is serial, and n_threads is ignored (high)",
+   "location": {
+    "file": "sklearn/ensemble/_hist_gradient_boosting/binning.py",
+    "line": 232
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Redundant sorting and a full-data unique per column (high)",
+   "location": {
+    "file": "binning.py",
+    "line": 51
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "Strided column extraction from a C-ordered array (medium)",
+   "location": {
+    "file": "binning.py",
+    "line": 234
+   }
+  },
+  {
+   "id": "C-4",
+   "title": "fit_transform runs a full fit and then a full transform, with revalidation (medium)",
+   "location": {
+    "file": "binning.py",
+    "line": 195
+   }
+  },
+  {
+   "id": "C-5",
+   "title": "`_map_to_bins` opens one OpenMP parallel region per column, over strided data (medium)",
+   "location": {
+    "file": "sklearn/ensemble/_hist_gradient_boosting/_binning.pyx",
+    "line": 37
+   }
+  },
+  {
+   "id": "C-6",
+   "title": "Minor",
+   "location": {
+    "file": "binning.py",
+    "line": 199
+   }
+  }
+ ]
+}

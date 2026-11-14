@@ -1,0 +1,28 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "O(numcol^2) Python loop over pybind property accesses in the marginals extraction (high)",
+   "location": {
+    "file": "scipy/optimize/_highspy/_highs_wrapper.py",
+    "line": 265
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Repeated sparse format conversions of the constraint matrices (low)",
+   "location": {
+    "file": "scipy/optimize/_linprog_util.py",
+    "line": 181
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "Redundant validation and dense intermediate arrays (low)",
+   "location": {
+    "file": "scipy/optimize/_linprog_util.py",
+    "line": 324
+   }
+  }
+ ]
+}

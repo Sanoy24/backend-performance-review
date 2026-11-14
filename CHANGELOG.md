@@ -63,6 +63,14 @@ value and `[Unreleased]` accumulates.
   never count. Its repositories are scientific Python libraries, so a result measures how far
   the method transfers, not backend review quality. No model is invoked.
 
+- **The SWE-fficiency transfer test, run and scored.** Nine tasks, skill against a plain request
+  on one model, given the slow workload. The skill named the file the expert changed in 8 of 9
+  tasks, so the method transfers outside backends. It hit the changed lines in 6 of 9 against
+  the plain request's 5, under the pre-registered margin of 2, so it localized no better. Its
+  reports were narrower, about 1.3 findings against 4.1, always gave full paths, and put the
+  expert's file first more often. Results, deviations and all 18 reports are in
+  `benchmark/swefficiency-transfer/`.
+
 ### Fixed
 
 - **Reference-ablation packages lacked the stack detector.** Phase 1 of `SKILL.md` runs

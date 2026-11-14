@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {"generated_at": "2026-11-14T00:00:00Z", "skill_version": "2.2.0", "spec": "backend-performance-review/2.0", "repository": {"name": "dask"}},
+  "completeness": {"review_confidence": "Medium", "evidence_available": "uninstrumented", "ranking_method": "structural-signals-only"},
+  "assumptions": {"known": ["shape reads chunks via cached_cumsum, identity-keyed lru_cache"], "unknown": ["real call frequency of .shape"], "assumed": [], "derived": [], "measured": []},
+  "root_causes": [{"id": "ROOT-001", "description": "Derived shape is recomputed through a wrapper and cache lookup on every access.", "findings": ["PERF-001"]}],
+  "findings": [{
+    "id": "PERF-001", "stable_id": "4daa36f3200dc99b", "root_cause_id": "ROOT-001", "state": "OPEN",
+    "severity": "Low", "confidence": "Medium", "priority": "P3", "category": "cost",
+    "location": {"file": "dask/array/core.py", "line": 1239, "symbol": "Array.shape"},
+    "tags": ["needs-measurement"],
+    "problem": "Array.shape recomputes per access: wrapper allocation and lru_cache lookup with Python-level hash and eq per dimension; result not stored.",
+    "performance_principle": "Do not recompute a value derived from immutable state on every read.",
+    "evidence": [{"statement": "shape property is uncached and calls cached_cumsum per dimension; identity-keyed lru_cache means steady-state cost is constant, with no runtime evidence.", "kind": "static", "file": "dask/array/core.py", "line": 1240}],
+    "evidence_quality": "Weak",
+    "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "endpoint"},
+    "conditions": "Matters only if .shape is read very many times, or many distinct chunk tuples exceed the default 128-entry lru_cache.",
+    "counter_evidence": [{"statement": "Identity-keyed caching already avoids value hashing; no super-linear cost found.", "effect": "bounds-impact", "file": "dask/array/slicing.py", "line": 1304}],
+    "recommendation": "Store the computed shape per chunk assignment or use sum(c) for the last element, avoiding the cumsum tuple and cache lookup.",
+    "trade_offs": "A stored shape needs invalidation when _chunks is reassigned.",
+    "validation": {"metric": "time per array.shape access", "expectation": "lower constant per call", "falsifier": "no measurable change on the supplied workload", "safety": "safe-on-production"}
+  }]
+}
