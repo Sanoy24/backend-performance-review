@@ -55,15 +55,16 @@ This is what separates .NET from a thread-per-request JVM, where `technology/jvm
 same blocking JDBC call as a minor, bounded cost. There, a blocked thread delays only its own
 request. Here, it delays the continuations of every other request.
 
-| Where the blocking call sits | Blast radius | Reading off `rubrics.md` §2 |
-|:--|:--|:--|
-| Shared code on every request: a pipeline behavior, middleware, a filter | `system-wide` | `critical-path` + `system-wide` saturation → **Critical**: blocked threads grow with total concurrency |
-| One endpoint's handler | `system-wide` | Usually **High**: saturation needs that endpoint to carry enough of the concurrency. **Critical** if it dominates traffic, or if the call can take unbounded time (an outbound HTTP call with no timeout) |
-| Startup, a background service on its own thread, an offline job | Per `rubrics.md`; not the request pool | Follows position and frequency; usually Low |
+| Where the blocking call sits | Blast radius |
+|:--|:--|
+| Shared code on every request: a pipeline behavior, middleware, a filter | `system-wide` — blocked threads grow with total concurrency |
+| One endpoint's handler | `system-wide` — blocked threads grow with that endpoint's share of concurrency |
+| Startup, a background service on its own thread, an offline job | Per `rubrics.md` §2 — not the request pool |
 
-Confidence is `High` for the code fact, as `application/async-and-blocking.md` §2 says. How soon
-starvation appears depends on concurrency, so state the load at which it would show, or that it
-is unknown, under `conditions`. Do not lower blast radius because the blocking call itself is
+Severity then follows `rubrics.md` §2 from position, frequency, growth and this blast radius;
+this file sets no level of its own. Confidence is `High` for the code fact, as
+`application/async-and-blocking.md` §2 says. How soon starvation appears depends on concurrency,
+so state the load at which it would show, or that it is unknown, under `conditions`. Do not lower blast radius because the blocking call itself is
 fast: a fast call shrinks the window, not the resource it holds.
 
 ### Sync-over-async can deadlock where a `SynchronizationContext` is captured

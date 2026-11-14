@@ -83,7 +83,8 @@ value and `[Unreleased]` accumulates.
   - says to check shared per-request code (pipeline behaviors, middleware, filters) first;
   - explains why the shared `ThreadPool` makes blast radius `system-wide`, unlike a
     thread-per-request JVM;
-  - adds a table of where the call sits and how that reads off the rubric.
+  - adds a table of where the call sits and the blast radius it gets. Severity is left to the
+    rubric; the file sets no level of its own.
 
   Facts that §2, §4 and §6 each restated are now stated once. No rubric definition changed.
   Previously issued reviews of .NET code may have rated these findings lower than the file now
