@@ -326,16 +326,34 @@ def count_files(checkout):
                    path.relative_to(checkout).as_posix()))
 
 
-def fetch(full_name, commit, destination):
+class FetchError(RuntimeError):
+    """The base commit could not be fetched."""
+
+
+def fetch(full_name, commit, destination, attempts=3):
+    """Fetch one commit alone; reuse a checkout already at that commit."""
     destination = Path(destination)
-    destination.mkdir(parents=True)
     run = lambda *a: subprocess.run(["git", "-C", str(destination)] + list(a), check=True,
                                     capture_output=True, text=True)
-    run("init", "-q")
-    run("remote", "add", "origin", "https://github.com/%s.git" % full_name)
-    run("fetch", "-q", "--depth", "1", "origin", commit)
-    run("checkout", "-q", "FETCH_HEAD")
-    return destination
+    if (destination / ".git").is_dir():
+        try:
+            if run("rev-parse", "HEAD").stdout.strip() == commit:
+                return destination
+        except subprocess.CalledProcessError:
+            pass
+    else:
+        destination.mkdir(parents=True, exist_ok=True)
+        run("init", "-q")
+        run("remote", "add", "origin", "https://github.com/%s.git" % full_name)
+    for attempt in range(attempts):
+        try:
+            run("fetch", "-q", "--depth", "1", "origin", commit)
+            run("checkout", "-q", "FETCH_HEAD")
+            return destination
+        except subprocess.CalledProcessError as error:
+            last = (error.stderr or "").strip()
+            time.sleep(5 * (attempt + 1))
+    raise FetchError("could not fetch %s@%s: %s" % (full_name, commit, last))
 
 
 def verify(candidates, workdir, cases, detect=None, fetcher=fetch):
@@ -348,7 +366,14 @@ def verify(candidates, workdir, cases, detect=None, fetcher=fetch):
         if len(passed) >= cases:
             break
         slug = candidate["repo"].replace("/", "__")
-        checkout = fetcher(candidate["repo"], candidate["base_commit"], Path(workdir) / slug)
+        try:
+            checkout = fetcher(candidate["repo"], candidate["base_commit"],
+                               Path(workdir) / slug)
+        except FetchError as error:
+            records.append(dict(candidate, review_files=None, detected=[],
+                                excluded="base commit could not be fetched",
+                                fetch_error=str(error)[:300]))
+            continue
         detection = detect(checkout)
         files = count_files(checkout)
         record = dict(candidate, review_files=files,
