@@ -1,0 +1,184 @@
+{
+  "model": "claude-sonnet-5-5",
+  "dataset": {
+    "id": "swefficiency/swefficiency",
+    "split": "test",
+    "rows": 498,
+    "hub_revision": "7fbfe6c2f1f409afb17acc4c3f737991ec6e1c27",
+    "parquet_ref": "refs/convert/parquet@d6950c8889b1eb6abf4ef1899d379155e461285d",
+    "parquet_sha256": {
+      "0000.parquet": "fd789d29a255827b23f460974f3a0aff05d399500bd7c207d6144eb23bef5bb1",
+      "0001.parquet": "7124545688883cefb0c7c02ccab57a328038c72b8615da968248a63fbe84aabd",
+      "0002.parquet": "71f0cdf30f73d0f3172618b913711944d2e59fa4b5187d5f0b3b8bfe28541698",
+      "0003.parquet": "30bbe68f9b19b1cba0e4513a6b092164289112f44f4b70f7e851c9e7b071f3ca",
+      "0004.parquet": "f0e7c313419bcd95fb77b2bb014175e3adfe94a36440305f70170f916b7c9376",
+      "0005.parquet": "544871606ad9d739bf23dd98a92d2372e2e3f8e35a7fedc80a2cbdbd5456f59c",
+      "0006.parquet": "d0a692c116d85b381d5c846a4d48d1250226d394dcaf4753160970716be31081"
+    },
+    "license": "CC-BY 4.0 (materials), per github.com/swefficiency/swefficiency README"
+  },
+  "selection": {
+    "command": "python benchmark/swefficiency_transfer.py select --rows <rows.json>",
+    "per_repo": 1,
+    "max_source_files": 3
+  },
+  "scoring": {
+    "command": "python benchmark/swefficiency_transfer.py score --patch <patch> --review <review.json>",
+    "window": 20
+  },
+  "prompts": {
+    "treatment": "benchmark/swefficiency-transfer/treatment-prompt.txt",
+    "treatment_sha256": "0427ca3b3030a0ef0c1c3ba51e16989a45c1a6a48c8f190c7776fe8d46e19e61",
+    "control": "benchmark/swefficiency-transfer/control-prompt.txt",
+    "control_sha256": "f08b7e3fe2c60132669033a2fa2144ac6dba6b1c410778b11251be2a657d76ca"
+  },
+  "tasks": [
+    {
+      "instance_id": "astropy__astropy-16222",
+      "repo": "astropy/astropy",
+      "base_commit": "96cc7fbefd59e79d096802efe9f75b2f1d042487",
+      "source_files": [
+        "astropy/coordinates/angles/core.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/astropy__astropy-16222.patch",
+      "patch_sha256": "31dbb0f6e42e34c0620582ebb3c69cbb269ae31be0ae13852f66cb873db941b8",
+      "workload": "benchmark/swefficiency-transfer/tasks/astropy__astropy-16222.workload.py",
+      "workload_sha256": "062194e200bddd4f1cf26b919807c0273c6049234a64b8af579123f60ce3e601",
+      "order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "instance_id": "dask__dask-7023",
+      "repo": "dask/dask",
+      "base_commit": "4a7a2438219c4ee493434042e50f4cdb67b6ec9f",
+      "source_files": [
+        "dask/array/core.py",
+        "dask/utils.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/dask__dask-7023.patch",
+      "patch_sha256": "8bb402c24b85716fbb1b705a1a8488d0af5e80ad5dac304a6621c1cbb6dd2dda",
+      "workload": "benchmark/swefficiency-transfer/tasks/dask__dask-7023.workload.py",
+      "workload_sha256": "c0ba8493f7592da4bda4e59fd492357466bb679fdda9d317e7ea5f8a5b60a96f",
+      "order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "instance_id": "matplotlib__matplotlib-26899",
+      "repo": "matplotlib/matplotlib",
+      "base_commit": "7d2acfda30077403682d8beef5a3c340ac98a43b",
+      "source_files": [
+        "lib/matplotlib/figure.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/matplotlib__matplotlib-26899.patch",
+      "patch_sha256": "a9b2928e88e30ac3d2df194956aec8b39ec33f994de9a8a439b3740883c9a266",
+      "workload": "benchmark/swefficiency-transfer/tasks/matplotlib__matplotlib-26899.workload.py",
+      "workload_sha256": "f9ecb00c627dd53f3b8744e23a97bc6239eecb6da851e30acc60a4c95cd6225b",
+      "order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "instance_id": "numpy__numpy-12575",
+      "repo": "numpy/numpy",
+      "base_commit": "38236fb225418ad5979511e3caf7e992df72b1a7",
+      "source_files": [
+        "numpy/core/records.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/numpy__numpy-12575.patch",
+      "patch_sha256": "8c951d6f5450f29eda38e71f50b41d08f7da72d02c969556a1a82a8ae8f8d0e9",
+      "workload": "benchmark/swefficiency-transfer/tasks/numpy__numpy-12575.workload.py",
+      "workload_sha256": "e9c68df350a76e2197f162195e807e01747ba088272e76cb48987ca3f1fa56ec",
+      "order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "instance_id": "pandas-dev__pandas-50168",
+      "repo": "pandas-dev/pandas",
+      "base_commit": "5fad2e4e90be46c14e947ac1a7eba3275c4b656d",
+      "source_files": [
+        "pandas/core/tools/datetimes.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/pandas-dev__pandas-50168.patch",
+      "patch_sha256": "a50b5b2174776cca5e6c7a8b4c40769fbd2d8e055c2a0a0cbbcacb92a15110ca",
+      "workload": "benchmark/swefficiency-transfer/tasks/pandas-dev__pandas-50168.workload.py",
+      "workload_sha256": "6774569fb3d1c6978157312ea3d1fdfc57a14d449be8d42cafd49ff9c5135fd7",
+      "order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "instance_id": "pydata__xarray-9429",
+      "repo": "pydata/xarray",
+      "base_commit": "a8c989673d0ea0cd099ede136efa117eaeb7ae1d",
+      "source_files": [
+        "xarray/groupers.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/pydata__xarray-9429.patch",
+      "patch_sha256": "da9412df49d786ff88f7e7398e03e0310044dc07c26e8aa4c5149e1d02cb684d",
+      "workload": "benchmark/swefficiency-transfer/tasks/pydata__xarray-9429.workload.py",
+      "workload_sha256": "57162a50957cc6043bc98afde08e0ee97730d5a3f3aeef930f3b23bac1aabfb9",
+      "order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "instance_id": "scikit-learn__scikit-learn-28064",
+      "repo": "scikit-learn/scikit-learn",
+      "base_commit": "619a1c1028335e9fa7abd4d7fb6477200a4bce67",
+      "source_files": [
+        "sklearn/ensemble/_hist_gradient_boosting/binning.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/scikit-learn__scikit-learn-28064.patch",
+      "patch_sha256": "a786ffc737bcf1b0c72bd61eea5e82adcdefed05939f5996367037060c9f37a0",
+      "workload": "benchmark/swefficiency-transfer/tasks/scikit-learn__scikit-learn-28064.workload.py",
+      "workload_sha256": "7da5e28e7dd926a934c37ba755b49152a402f985e7914adb92072303f50aff27",
+      "order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "instance_id": "scipy__scipy-22660",
+      "repo": "scipy/scipy",
+      "base_commit": "bb9fdc6e82d3663edb519753f3bf4d6df686c5b1",
+      "source_files": [
+        "scipy/optimize/_highspy/_highs_wrapper.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/scipy__scipy-22660.patch",
+      "patch_sha256": "75979bbea7ed0fa9a5b56f9bfa5a536183122d36b28bc06e427109ee8a58836c",
+      "workload": "benchmark/swefficiency-transfer/tasks/scipy__scipy-22660.workload.py",
+      "workload_sha256": "225737b9151e3c522790ed57f27661fa38e10137c029d0e92403824955a4a9af",
+      "order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "instance_id": "sympy__sympy-25452",
+      "repo": "sympy/sympy",
+      "base_commit": "c226febc80e48826d4314f63a391b31c4d20cfeb",
+      "source_files": [
+        "sympy/matrices/inverse.py",
+        "sympy/physics/control/lti.py",
+        "sympy/polys/matrices/rref.py"
+      ],
+      "patch": "benchmark/swefficiency-transfer/tasks/sympy__sympy-25452.patch",
+      "patch_sha256": "63df7c88ca0afb1df7d9bc17453b8cd6060536afd0c1e9263033e51a011a2971",
+      "workload": "benchmark/swefficiency-transfer/tasks/sympy__sympy-25452.workload.py",
+      "workload_sha256": "bc8375d386cca8140bc60379acd890fee81dbc2db529095bfec5e8cbefd228cf",
+      "order": [
+        "treatment",
+        "control"
+      ]
+    }
+  ]
+}

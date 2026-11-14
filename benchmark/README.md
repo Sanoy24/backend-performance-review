@@ -26,6 +26,7 @@ benchmark/
 ├── ground-truth/     annotations, one file per repository/case
 ├── scoring/score.py  precision, recall, calibration, restraint, stability
 ├── swefficiency_transfer.py select SWE-fficiency tasks and score expert-patch localization
+├── swefficiency-transfer/ pre-registered transfer test: design, frozen tasks, prompts
 ├── ab-comparison.md  protocol: does the methodology beat asking the model plainly?
 └── ab-results/       results of that comparison, once adjudicated
 ```
