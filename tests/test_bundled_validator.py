@@ -78,6 +78,21 @@ class BundledValidatorTests(unittest.TestCase):
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("${CLAUDE_SKILL_DIR}/scripts/validate_review.py", skill)
 
+    def test_skill_states_every_schema_version_the_validator_accepts(self):
+        # The SWE-fficiency transfer test found two reviewers writing "2.0", guessed from the
+        # skill's release number, because SKILL.md never stated the version.
+        sys.path.insert(0, str(SKILL / "scripts"))
+        try:
+            import validate_review
+        finally:
+            sys.path.pop(0)
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        template = (SKILL / "templates" / "review-report.md").read_text(encoding="utf-8")
+        for version in validate_review.SUPPORTED_SCHEMA_VERSIONS:
+            stated = '"schema_version": "%s"' % version
+            self.assertIn(stated, skill)
+            self.assertIn(stated, template)
+
 
 if __name__ == "__main__":
     unittest.main()

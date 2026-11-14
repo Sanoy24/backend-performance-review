@@ -73,6 +73,12 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **`SKILL.md` did not state the JSON schema version.** In the SWE-fficiency transfer test, two
+  reviewers wrote `"schema_version": "2.0"`, apparently guessed from the release number. They
+  fixed it only after the bundled validator rejected it. `SKILL.md` now says to set `"1.0"` and
+  that it is the schema's version, not the skill's. A test checks that `SKILL.md` and the report
+  template both state every version the validator accepts.
+
 - **Reference-ablation packages lacked the stack detector.** Phase 1 of `SKILL.md` runs
   `detect_stack.py`, which reads `registry.yaml`, but exported slots shipped neither. In the first
   ablation every reviewer, in every arm, identified the stack by hand. Each slot now carries both,

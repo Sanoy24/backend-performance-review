@@ -193,7 +193,9 @@ repository-local command when the evidence supports one, with its purpose and it
 production-safety label; omit rather than invent a command. Emit the machine-readable JSON
 alongside the Markdown (template §10, the bundled `schemas/review.schema.json`) — the Markdown is
 authoritative; the JSON is the same content in a form that can be diffed and scored,
-including any commands under `validation.commands`. Compute each finding's `stable_id` by
+including any commands under `validation.commands`. Set `"schema_version": "1.0"`: it is the
+version of the JSON schema, not of this skill's release, and the validator rejects any other
+value. Compute each finding's `stable_id` by
 running `python ${CLAUDE_SKILL_DIR}/scripts/compute_stable_id.py --file <location.file>
 --symbol <location.symbol> --category <category>` — never invent this value by reasoning.
 Two independently-run reviews were found to disagree completely on a hand-computed
