@@ -103,6 +103,26 @@ class AdaptiveWorkloadContractTests(unittest.TestCase):
         ]
         self.assertEqual(validate_review.validate(document, ROOT / "schemas"), [])
 
+    def test_unknown_that_no_one_was_asked_is_valid_without_claiming_it_was(self):
+        # Two reviewers in the dotnet.md revision check had no one to ask, and set asked: true
+        # anyway, because the validator rejected an unanswered input that was not marked asked.
+        document = self.adaptive_document()
+        document["workload"]["inputs"][1]["asked"] = False
+        self.assertEqual(validate_review.validate(document, ROOT / "schemas"), [])
+
+    def test_unanswered_input_must_record_the_evidence_that_left_it_open(self):
+        document = self.adaptive_document()
+        unknown = document["workload"]["inputs"][1]
+        unknown["asked"] = False
+        unknown.pop("evidence_checked")
+        problems = validate_review.validate(document, ROOT / "schemas")
+        self.assertTrue(any(
+            "unanswered" in problem and "evidence_checked" in problem for problem in problems))
+
+    def test_method_says_not_to_mark_a_question_asked_when_no_one_was(self):
+        self.assertIn("If no one can be asked", self.method)
+        self.assertIn("Never mark a question `asked: true`", " ".join(self.method.split()))
+
     def test_seven_question_maximum_is_enforced(self):
         document = self.adaptive_document()
         seed = document["workload"]["inputs"][1]

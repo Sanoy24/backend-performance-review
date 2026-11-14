@@ -201,10 +201,15 @@ def _semantic_problems(review):
                     "workload interview questions must be ordered by expected decision value")
             previous_rank = rank
 
+    # An unanswered input may have been asked and left unanswered, or never asked because no
+    # one could be. Both are honest. Requiring asked: true here once pushed reviewers with no
+    # one to ask into claiming they had asked; what an open input must show is why the
+    # repository could not answer it.
     for index, item in enumerate(inputs, 1):
-        if item.get("source") == "unanswered" and item.get("asked") is not True:
+        if (item.get("source") == "unanswered" and item.get("asked") is not True
+                and not _array(item.get("evidence_checked"))):
             problems.append(
-                "workload input %d has source unanswered but was not marked asked"
+                "workload input %d is unanswered and must record evidence_checked"
                 % index)
 
     previous_rank = -1

@@ -179,6 +179,14 @@ not by itself justify asking for it.
 - In the executive summary, state plainly that the ranking would change if workload data
   became available, and name which findings would move.
 
+### If no one can be asked
+
+In an unattended run, such as CI, a batch job or a delegated agent, there is no one to put the
+interview to. Select the questions as above, then record each in `workload.inputs` with
+`asked: false`, `source: unanswered`, and the evidence already checked. Treat them as above: list
+them as unknowns, write the assumptions into `Conditions`, and cap workload-dependent
+confidence. Never mark a question `asked: true` unless a person actually received it.
+
 An honest review under stated assumptions is far more useful than a delayed one.
 
 ---

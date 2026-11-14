@@ -95,6 +95,13 @@ value and `[Unreleased]` accumulates.
 
 ### Fixed
 
+- **The validator made reviewers with no one to ask claim they had asked.** It rejected any
+  `source: unanswered` workload input not marked `asked: true`. In an unattended run, the only
+  valid way to record an open question was to say a person had received it. Two of three
+  reviewers in the `dotnet.md` revision check did exactly that. An unanswered input may now be
+  `asked: false`, if it records `evidence_checked`, the repository evidence that left it open.
+  `methodology/workload.md` has a new "If no one can be asked" section, and the schema's
+  description of `asked` says the same. Every review valid before is still valid.
 - **`SKILL.md` did not state the JSON schema version.** In the SWE-fficiency transfer test, two
   reviewers wrote `"schema_version": "2.0"`, apparently guessed from the release number. They
   fixed it only after the bundled validator rejected it. `SKILL.md` now says to set `"1.0"` and

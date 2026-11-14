@@ -102,7 +102,7 @@
                 "enum": ["user", "repository", "derived", "unanswered"]
               },
               "asked": {
-                "description": "True only when this question was included in the bounded user interview. Repository-derived inputs are false.",
+                "description": "True only when this question was included in the bounded user interview. Repository-derived inputs are false, and so is an unanswered input that no one could be asked.",
                 "type": "boolean"
               },
               "evidence_checked": {
