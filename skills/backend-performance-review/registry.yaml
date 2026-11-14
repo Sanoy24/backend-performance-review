@@ -387,10 +387,11 @@ version: 1
   load: [runtimes/universal.md, application/async-and-blocking.md, technology/dotnet.md]
   tier: deep
   notes: >
-    Determine first whether the code awaits asynchronously throughout or blocks synchronously
-    on async work (.Result/.Wait()/.GetAwaiter().GetResult()) on a hot path; technology/dotnet.md
-    covers thread-pool starvation as the concrete failure mode this produces, sync-over-async
-    deadlock risk, value-type boxing, and Server-vs-Workstation GC as the checkable specifics.
+    Find first every synchronous blocking call on a hot path, both sync-over-async
+    (.Result/.Wait()/.GetAwaiter().GetResult()) and synchronous I/O methods where an *Async one
+    exists (EF Core Count()/ToList()/SaveChanges()/BeginTransaction()); technology/dotnet.md
+    covers thread-pool starvation as the failure mode this produces and how to score it,
+    sync-over-async deadlock risk, value-type boxing, and Server-vs-Workstation GC.
 
 - signal: rust
   kind: runtime

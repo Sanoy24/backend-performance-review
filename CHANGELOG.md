@@ -71,6 +71,28 @@ value and `[Unreleased]` accumulates.
   expert's file first more often. Results, deviations and all 18 reports are in
   `benchmark/swefficiency-transfer/`.
 
+### Changed
+
+- **`technology/dotnet.md` now says how to score a blocking call, and names the ones that get
+  missed.** The second ablation found the file changed neither which issues were found nor how
+  they were rated. Every run scored the synchronous EF Core transaction and `Count()` in async
+  handlers as `endpoint` or `service` blast radius, so mostly Low. The file explained thread-pool
+  starvation but never turned it into a score. It also covered only `.Result`/`.Wait()`, while
+  the real issues were synchronous methods with `*Async` equivalents. It now:
+  - lists both forms, with the EF Core, ADO.NET and I/O methods to look for;
+  - says to check shared per-request code (pipeline behaviors, middleware, filters) first;
+  - explains why the shared `ThreadPool` makes blast radius `system-wide`, unlike a
+    thread-per-request JVM;
+  - adds a table of where the call sits and the blast radius it gets. Severity is left to the
+    rubric; the file sets no level of its own.
+
+  Facts that §2, §4 and §6 each restated are now stated once. No rubric definition changed.
+  A pre-registered three-run check found that two of three reviewers now score both blocking
+  issues `system-wide`, against none before, with no drop in detection
+  (`benchmark/ablation-results/dotnet-revision-check.md`).
+  Previously issued reviews of .NET code may have rated these findings lower than the file now
+  guides.
+
 ### Fixed
 
 - **`SKILL.md` did not state the JSON schema version.** In the SWE-fficiency transfer test, two

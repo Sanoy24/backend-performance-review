@@ -344,7 +344,9 @@ The first empirical three-arm ablation is in
 model, n = 3 per arm, and no measurable difference between tiers on that case. A targeted
 leave-one-out of `technology/dotnet.md` is in
 [`ablation-results/second-ablation.md`](ablation-results/second-ablation.md), also with no
-measurable difference. The existing
+measurable difference. A follow-up, checking whether the revised file's scoring guidance reaches
+reviews, is in [`ablation-results/dotnet-revision-check.md`](ablation-results/dotnet-revision-check.md).
+The existing
 treatment/control reports cannot be relabelled as these arms.
 
 ### Matching is order-independent
