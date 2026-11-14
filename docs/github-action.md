@@ -59,7 +59,7 @@ jobs:
           ...
 
       # ── The half this action does ─────────────────────────────────────────
-      - uses: Sanoy24/backend-performance-review@v2.2.0
+      - uses: Sanoy24/backend-performance-review@v2.3.0
         with:
           review: review.json
 ```

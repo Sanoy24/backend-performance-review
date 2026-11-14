@@ -38,6 +38,16 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-11-14
+
+A minor release. `technology/dotnet.md` now says how to score a blocking call in ASP.NET Core
+and names the synchronous EF Core methods reviews were missing. A pre-registered check found
+reviewers now score these `system-wide`. Two validator fixes stop reviewers guessing or
+misreporting: `SKILL.md` states the schema version, and an unattended review can record an open
+workload question without claiming anyone was asked. The release also adds the first outside
+answer key, a transfer test on SWE-fficiency. No rubric definition or schema field changed, so
+reports issued under 2.2.0 remain valid.
+
 ### Added
 
 - **The first reference ablation, run and scored.** Three reference tiers (category only, plus
