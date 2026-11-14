@@ -1,0 +1,57 @@
+{
+ "schema_version": "1.0",
+ "mode": "full",
+ "reproducibility": {"generated_at": "2026-11-14T00:00:00Z", "skill_version": "2.2.0", "spec": "backend-performance-review/2.0", "model": "claude-sonnet-5-5", "repository": {"name": "xarray"}},
+ "completeness": {"review_confidence": "Medium", "evidence_available": "uninstrumented", "ranking_method": "structural-signals-only"},
+ "assumptions": {"known": ["workload.py times Dataset.groupby('time.month') with an object-dtype year_month coordinate of 10000 elements"], "unknown": ["Relative runtime share of deepcopy and the group-indices loop"], "assumed": ["Users carry object-dtype coordinates along the grouped dimension"], "derived": [], "measured": []},
+ "root_causes": [
+  {"id": "ROOT-001", "description": "Eager deep coordinate copy during groupby construction", "findings": ["PERF-001"]},
+  {"id": "ROOT-002", "description": "Eager Python-loop group index construction", "findings": ["PERF-002"]}
+ ],
+ "findings": [
+  {
+   "id": "PERF-001", "stable_id": "ef0885bf17c2209b", "root_cause_id": "ROOT-001", "state": "OPEN",
+   "severity": "Medium", "confidence": "High", "priority": "P2", "category": "memory",
+   "location": {"file": "xarray/groupers.py", "line": 187, "symbol": "UniqueGrouper._factorize_unique"},
+   "problem": "DataArray.copy defaults to deep=True and deep-copies every non-index coordinate even when data is supplied; the group carries the 10000-element object-dtype cftime coordinate year_month, deep-copied per element on each groupby.",
+   "performance_principle": "Do not copy data that is neither mutated nor retained.",
+   "evidence": [
+    {"statement": "groupers.py:187 calls self.group.copy(data=...) with default deep=True", "kind": "static", "file": "xarray/groupers.py", "line": 187},
+    {"statement": "DataArray._copy deep-copies each coordinate via Variable._copy", "kind": "static", "file": "xarray/core/dataarray.py", "line": 1311},
+    {"statement": "Variable._copy runs copy.deepcopy on the coordinate array", "kind": "static", "file": "xarray/core/variable.py", "line": 927},
+    {"statement": "Dataset._construct_dataarray attaches all coords whose dims subset the virtual variable dims, including year_month", "kind": "static", "file": "xarray/core/dataset.py", "line": 1489}
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint"},
+   "conditions": "Grouped dimension carries large or object-dtype non-index coordinates (as in workload.py: 10000 cftime objects).",
+   "counter_evidence": [{"statement": "Index coords are copied separately via copy_indexes; no cache avoids the copy; codes data is freshly built so deep copy is unnecessary", "effect": "no-effect", "file": "xarray/core/dataarray.py", "line": 1304}],
+   "why_this_might_not_matter": "Only matters with object-dtype or large extra coordinates on the grouped dimension; cost is per groupby construction.",
+   "recommendation": "Use copy(deep=False, data=...) here and in _factorize_dummy.",
+   "alternatives": [{"option": "copy(deep=False, data=...)", "preferred": true, "why": "Smallest change; removes the element-wise copy"}, {"option": "Drop unneeded coords before factorising", "preferred": false}],
+   "trade_offs": "Codes shares coordinate buffers with the source; treat encoded.codes as read-only.",
+   "validation": {"metric": "cumulative time in copy.deepcopy within Dataset.groupby on workload.py", "expectation": "deepcopy time drops out of the profile", "falsifier": "deepcopy is a negligible share of groupby time", "safety": "safe-on-production",
+    "commands": [{"command": "python -m cProfile -s cumtime workload.py", "purpose": "Profile the workload and inspect deepcopy share", "safety": "safe-on-production"}]}
+  },
+  {
+   "id": "PERF-002", "stable_id": "31a6d2f49e70c38f", "root_cause_id": "ROOT-002", "state": "OPEN",
+   "severity": "Medium", "confidence": "Medium", "priority": "P2", "category": "io",
+   "location": {"file": "xarray/core/groupby.py", "line": 77, "symbol": "_codes_to_group_indices"},
+   "problem": "Pure-Python loop over every code to build per-group index lists, run eagerly on every groupby construction.",
+   "performance_principle": "Prefer bulk vectorised operations to per-element interpreter loops.",
+   "evidence": [
+    {"statement": "for n, g in enumerate(codes): groups[g].append(n)", "kind": "static", "file": "xarray/core/groupby.py", "line": 77},
+    {"statement": "EncodedGroups.__init__ calls it when group_indices is None, as _factorize_unique does", "kind": "static", "file": "xarray/groupers.py", "line": 94}
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {"position": "critical-path", "frequency": "per-request", "growth": "O(n)", "blast_radius": "endpoint"},
+   "conditions": "Long grouped dimension (10000 in workload); cost scales with its length.",
+   "counter_evidence": [{"statement": "No lazy or cached construction of group_indices found", "effect": "no-effect"}],
+   "why_this_might_not_matter": "10^4 iterations is bounded and smaller than PERF-001 for this workload.",
+   "recommendation": "Vectorise with a stable argsort plus split on bincount offsets, or build lazily on first use.",
+   "alternatives": [{"option": "Vectorised argsort/split", "preferred": true, "why": "Removes the interpreter-level loop"}, {"option": "Lazy cached property", "preferred": false}],
+   "trade_offs": "Container types must stay compatible with downstream indexing.",
+   "validation": {"metric": "cumulative time of _codes_to_group_indices in workload profile", "expectation": "decreases", "falsifier": "negligible share of runtime", "safety": "safe-on-production",
+    "commands": [{"command": "python -m cProfile -s cumtime workload.py", "purpose": "Profile share of the loop", "safety": "safe-on-production"}]}
+  }
+ ]
+}

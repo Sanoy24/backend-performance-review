@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-14T00:00:00Z",
+    "skill_version": "2.2.0",
+    "spec": "backend-performance-review/2.0",
+    "model": "claude-sonnet-5-5",
+    "repository": {"name": "pandas"}
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {"question": "What is the workload?", "answer": "pd.to_datetime on a list of daily date strings 1900-2000 with format containing %z, plus one string with a different offset", "source": "repository", "asked": false, "evidence_checked": ["workload.py"]}
+    ],
+    "scenarios": ["large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 0,
+    "shared_resources_analyzed": 0,
+    "technology_support": [{"technology": "Python/Cython library", "tier": "generic"}],
+    "unknowns": [
+      {"subject": "Time split between array_strptime and _return_parsed_timezone_results", "reason": "no-evidence-exists", "what_would_resolve_it": "Profile of the workload"}
+    ]
+  },
+  "assumptions": {
+    "known": ["Workload parses one daily date string per day from 1900 to 2000 with %z, plus one string with +02:00 offset (workload.py:6-10)"],
+    "unknown": ["Relative cost of each stage; no profile supplied"],
+    "assumed": ["Per-element Timestamp construction and tz_localize cost dominates a vectorised conversion"],
+    "derived": ["Element count is the number of days in 1900..2000 plus one, from workload.py:6-7"],
+    "measured": []
+  },
+  "root_causes": [
+    {"id": "ROOT-001", "description": "Tz-aware results of format-based parsing are materialised one Python Timestamp at a time instead of by vectorised conversion per distinct offset", "findings": ["PERF-001"]},
+    {"id": "ROOT-002", "description": "Per-row Python-level regex group handling and offset parsing in array_strptime without memoisation per distinct offset string", "findings": ["PERF-002"]}
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "8d94d74bb00fb443",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "cost",
+      "location": {"file": "pandas/core/tools/datetimes.py", "line": 316, "symbol": "_return_parsed_timezone_results"},
+      "tags": ["needs-measurement"],
+      "problem": "When array_strptime returns any timezone, every element is converted through a Python list comprehension that builds a Timestamp and calls tz_localize on it, followed by np.array and Index inference over the resulting object array.",
+      "performance_principle": "Bulk data should be transformed with batch operations over homogeneous groups, not by constructing one heavyweight object per element.",
+      "evidence": [
+        {"statement": "Per-element Python loop: np.array([Timestamp(res).tz_localize(zone) for res, zone in zip(result, timezones)]).", "kind": "static", "file": "pandas/core/tools/datetimes.py", "line": 316},
+        {"statement": "With utc=True a second per-element loop runs tz_convert/tz_localize on each Timestamp.", "kind": "static", "file": "pandas/core/tools/datetimes.py", "line": 321},
+        {"statement": "Taken whenever any timezone is non-None, so all elements of the workload use this path.", "kind": "static", "file": "pandas/core/tools/datetimes.py", "line": 507},
+        {"statement": "Timezones come from pytz.FixedOffset(minutes), so distinct offsets are few (two in the workload) while elements are many. No runtime evidence supplied.", "kind": "derived", "file": "pandas/_libs/tslibs/strptime.pyx", "line": 577}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "endpoint", "amplification": "Nx"},
+      "conditions": "Any to_datetime call with an explicit format containing %z or %Z over a large list or array; cost scales with length. The workload matches (one element per day over 1900-2000).",
+      "counter_evidence": [
+        {"statement": "Searched for a vectorised or grouped path for tz results in this function and in _array_strptime_with_fallback; none exists.", "effect": "no-effect", "file": "pandas/core/tools/datetimes.py", "line": 507},
+        {"statement": "Mixed offsets cannot form a single tz-aware DatetimeIndex, so the output must be an object Index of Timestamps; some per-element object creation is inherent in that case.", "effect": "bounds-impact"}
+      ],
+      "why_this_might_not_matter": "With mixed offsets (as in the workload, one odd row) the output must be an object Index of Timestamps, so some per-element creation is unavoidable; the saving is then only redundant intermediate work. Real share depends on a profile versus array_strptime.",
+      "recommendation": "Group by distinct tzinfo (few) and localize whole int64 blocks once per group; if all offsets are identical return a tz-aware DatetimeIndex directly (and for utc=True convert once). Materialise per-element Timestamps only for the genuinely mixed-offset object result, and avoid the redundant second pass.",
+      "alternatives": [
+        {"option": "Group by unique tz and use vectorised tz_localize on slices", "preferred": true, "why": "Removes per-element object work in the common homogeneous case"},
+        {"option": "Have array_strptime return UTC-normalised int64 plus offsets and build Timestamps from that", "preferred": false, "why": "Larger change to the Cython return contract"}
+      ],
+      "trade_offs": "More branches (homogeneous vs mixed); must preserve existing return types for mixed offsets.",
+      "validation": {
+        "metric": "Wall time of the workload's to_datetime call; cProfile cumulative time of _return_parsed_timezone_results",
+        "expectation": "Direction: lower time, with this function's share shrinking; magnitude unmeasured.",
+        "falsifier": "A profile showing this function is a small fraction of total time.",
+        "safety": "safe-on-production",
+        "guard": "Add an asv benchmark for to_datetime with a %z format on a large list.",
+        "commands": [
+          {"command": "python -m cProfile -s cumtime workload.py", "purpose": "Profile where time is spent in the workload (to be run by the maintainer)", "safety": "safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "5910db17dd26718c",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "cost",
+      "location": {"file": "pandas/_libs/tslibs/strptime.pyx", "line": 219, "symbol": "array_strptime"},
+      "tags": ["needs-measurement"],
+      "problem": "Each row builds a groupdict, loops over group keys with Python-object dict lookups, and re-parses the %z string via parse_timezone_directive (slicing, several int() calls, pytz.FixedOffset) although offset strings repeat heavily.",
+      "performance_principle": "Repeated work on a small set of distinct inputs should be done once per distinct value.",
+      "evidence": [
+        {"statement": "groupdict and per-key dispatch run for every element.", "kind": "static", "file": "pandas/_libs/tslibs/strptime.pyx", "line": 219},
+        {"statement": "parse_timezone_directive is called per row with no memo of already-parsed offset strings.", "kind": "static", "file": "pandas/_libs/tslibs/strptime.pyx", "line": 303},
+        {"statement": "parse_timezone_directive does slicing, three int() conversions and a pytz.FixedOffset call.", "kind": "static", "file": "pandas/_libs/tslibs/strptime.pyx", "line": 556}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "endpoint"},
+      "conditions": "Large inputs with %z where offset strings repeat; the workload has two distinct offset strings across all rows.",
+      "counter_evidence": [
+        {"statement": "Regex matching and groupdict are inherent to this strptime design and also run without %z; only the offset re-parse is avoidable.", "effect": "bounds-impact"}
+      ],
+      "why_this_might_not_matter": "The per-row regex match and date construction likely dominate, and pytz.FixedOffset already caches tz objects, so a memo saves only the string parsing.",
+      "recommendation": "Memoise parse_timezone_directive results in a dict keyed by the raw offset string within one array_strptime call.",
+      "alternatives": [
+        {"option": "Per-call dict memo of offset string to tzinfo", "preferred": true, "why": "Tiny local change"},
+        {"option": "Rewrite parsing without regex groupdict", "preferred": false, "why": "Large and riskier"}
+      ],
+      "trade_offs": "A small dict per call; negligible.",
+      "validation": {
+        "metric": "Time of array_strptime on a list with repeated %z offsets",
+        "expectation": "Small improvement in direction only; not quantified.",
+        "falsifier": "No measurable change after memoisation.",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {"observation": "Regex cache lookup under a lock in array_strptime", "location": "pandas/_libs/tslibs/strptime.pyx:117", "evidence_checked": ["regex cache lookup under lock, once per call"], "why_discarded": "O(1) per call, not per element", "revisit_when": "to_datetime is called in a tight loop with many small inputs"}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "source_files": [
+    "sympy/matrices/inverse.py",
+    "sympy/physics/control/lti.py",
+    "sympy/polys/matrices/rref.py"
+  ],
+  "window": 20,
+  "findings": 5,
+  "file_hit": false,
+  "hunk_hit": false,
+  "file_hits": [],
+  "hunk_hits": [],
+  "top_finding": "C-1",
+  "top_finding_file_hit": false
+}

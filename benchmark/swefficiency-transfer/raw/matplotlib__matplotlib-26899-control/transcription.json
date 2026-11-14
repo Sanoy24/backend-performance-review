@@ -1,0 +1,44 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "Figure.get_tightbbox visits every Axes child twice (high)",
+   "location": {
+    "file": "lib/matplotlib/figure.py",
+    "line": 1711
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Axis ticks are rebuilt and re-measured on every get_tightbbox call (medium)",
+   "location": {
+    "file": "lib/matplotlib/axis.py",
+    "line": 1255
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "Text extents are recomputed through the full draw, tight bbox and SVG draw sequence (medium)",
+   "location": {
+    "file": "lib/matplotlib/backend_bases.py",
+    "line": 2127
+   }
+  },
+  {
+   "id": "C-4",
+   "title": "adjust_bbox and the Axes locator override do per-Axes Python work, with `apply_aspect` repeated (low)",
+   "location": {
+    "file": "lib/matplotlib/_tight_bbox.py",
+    "line": 25
+   }
+  },
+  {
+   "id": "C-5",
+   "title": "SVG renderer overhead for 30 Axes (low, not read in detail)",
+   "location": {
+    "file": "lib/matplotlib/backends/backend_svg.py",
+    "line": 1291
+   }
+  }
+ ]
+}

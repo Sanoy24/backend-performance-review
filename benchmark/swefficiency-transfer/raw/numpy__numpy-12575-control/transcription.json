@@ -1,0 +1,28 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "(High) `find_duplicate` is O(n^2) with a list copy per element",
+   "location": {
+    "file": "numpy/core/records.py",
+    "line": 76
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "(Medium) Per-field Python loops over all fields in `fromarrays`",
+   "location": {
+    "file": "numpy/core/records.py",
+    "line": 586
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "(Low-Medium) Dtype built via string round trip, then rebuilt",
+   "location": {
+    "file": "numpy/core/records.py",
+    "line": 146
+   }
+  }
+ ]
+}

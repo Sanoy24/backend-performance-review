@@ -1,0 +1,41 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "Default 'GE' inverse of a symbolic matrix goes through generic Gaussian elimination with full `simplify()` and `dotprodsimp` (High)",
+   "location": {
+    "file": "inverse.py",
+    "line": 241
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "Pivot search triggers `simplify()` and `.equals(0)` on plain symbols (High)",
+   "location": {
+    "file": "determinant.py",
+    "line": 56
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "`_dotprodsimp` applied cell by cell, including trivially simple cells (Medium)",
+   "location": {
+    "file": "reductions.py",
+    "line": 54
+   }
+  },
+  {
+   "id": "C-4",
+   "title": "Redundant matrix copies and constructions (Low)",
+   "location": {
+    "file": "inverse.py",
+    "line": 241
+   }
+  },
+  {
+   "id": "C-5",
+   "title": "Cold-cache cost is inherent to the workload; no memoisation of simplify results (Low / informational)",
+   "location": {}
+  }
+ ]
+}

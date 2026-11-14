@@ -1,0 +1,18 @@
+{
+  "source_files": [
+    "sklearn/ensemble/_hist_gradient_boosting/binning.py"
+  ],
+  "window": 20,
+  "findings": 2,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "PERF-001",
+    "PERF-002"
+  ],
+  "hunk_hits": [
+    "PERF-001"
+  ],
+  "top_finding": "PERF-001",
+  "top_finding_file_hit": true
+}

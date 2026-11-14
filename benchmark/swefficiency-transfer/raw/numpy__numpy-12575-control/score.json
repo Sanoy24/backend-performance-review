@@ -1,0 +1,19 @@
+{
+  "source_files": [
+    "numpy/core/records.py"
+  ],
+  "window": 20,
+  "findings": 3,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "C-1",
+    "C-2",
+    "C-3"
+  ],
+  "hunk_hits": [
+    "C-1"
+  ],
+  "top_finding": "C-1",
+  "top_finding_file_hit": true
+}

@@ -1,0 +1,28 @@
+{
+ "findings": [
+  {
+   "id": "C-1",
+   "title": "unit-spherical input is promoted to a full SphericalRepresentation with a fabricated distance",
+   "location": {
+    "file": "astropy/coordinates/sky_coordinate_parsers.py",
+    "line": 442
+   }
+  },
+  {
+   "id": "C-2",
+   "title": "redundant validation and copies of already-validated Quantity data",
+   "location": {
+    "file": "sky_coordinate_parsers.py",
+    "line": 554
+   }
+  },
+  {
+   "id": "C-3",
+   "title": "list/dict churn per call",
+   "location": {
+    "file": "sky_coordinate_parsers.py",
+    "line": 381
+   }
+  }
+ ]
+}
