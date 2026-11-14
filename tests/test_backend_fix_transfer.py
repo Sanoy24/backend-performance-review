@@ -233,6 +233,50 @@ class Collect(unittest.TestCase):
         self.assertEqual([r["full_name"] for r in first["repositories"] + second["repositories"]],
                          ordered[:4])
 
+    def test_a_frozen_pool_is_reused_without_searching_again(self):
+        pool = [{"full_name": "o/a", "license": "mit"}, {"full_name": "o/b", "license": "mit"}]
+
+        def gh(args, accept=None):
+            self.assertNotEqual(args[0], "search/repositories")
+            return json.dumps({"items": []})
+
+        original = bft.time.sleep
+        bft.time.sleep = lambda seconds: None
+        try:
+            snapshot = bft.collect(5, gh=gh, log=io.StringIO(), pool=pool)
+        finally:
+            bft.time.sleep = original
+        self.assertEqual(snapshot["pool"], ["o/a", "o/b"])
+        self.assertEqual(snapshot["pool_sha256"],
+                         bft._sha(json.dumps(pool, sort_keys=True)))
+
+    def test_transient_network_errors_are_retried(self):
+        outcomes = [subprocess_result(1, "dial tcp: connectex: timed out"),
+                    subprocess_result(0, "", stdout="{}")]
+        original_run, original_sleep = bft.subprocess.run, bft.time.sleep
+        bft.subprocess.run = lambda *a, **k: outcomes.pop(0)
+        bft.time.sleep = lambda seconds: None
+        try:
+            self.assertEqual(bft._gh(["rate_limit"]), "{}")
+        finally:
+            bft.subprocess.run, bft.time.sleep = original_run, original_sleep
+
+    def test_other_errors_fail_at_once(self):
+        original_run = bft.subprocess.run
+        bft.subprocess.run = lambda *a, **k: subprocess_result(1, "HTTP 404: Not Found")
+        try:
+            with self.assertRaises(RuntimeError):
+                bft._gh(["repos/o/missing"])
+        finally:
+            bft.subprocess.run = original_run
+
+
+def subprocess_result(code, stderr, stdout=""):
+    class Result:
+        returncode = code
+    Result.stderr, Result.stdout = stderr, stdout
+    return Result()
+
 
 class Score(unittest.TestCase):
 
