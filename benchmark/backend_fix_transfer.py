@@ -364,6 +364,63 @@ def verify(candidates, workdir, cases, detect=None, fetcher=fetch):
     return passed, records
 
 
+# --- blind service classification -----------------------------------------------------------
+#
+# The detector reads every dependency declaration, including dev dependencies, examples and
+# docs, so frameworks, test libraries and CLIs that mention a database pass it. In the first
+# batch, about three of ten detector passes were deployable services. A separate model now
+# labels each detector-passing repository from a packet holding only its README excerpt and
+# top-level listing: never the pull request, its title, its diff, or any score.
+
+README_NAMES = ("README.md", "README.rst", "README.txt", "README", "readme.md", "Readme.md")
+README_CHARS = 4000
+SERVICE_QUESTION = (
+    "Is this repository a deployable backend service: an application its maintainers run or "
+    "self-host as a server that handles network requests and keeps data in a datastore or "
+    "cache? Answer no for a library, framework, SDK, CLI, desktop or mobile app, developer "
+    "tool, test helper, or static-analysis tool, even if it can serve HTTP.")
+
+
+def service_packet(checkout, repo):
+    """What the classifier may see about one repository, and nothing else."""
+    checkout = Path(checkout)
+    readme = ""
+    for name in README_NAMES:
+        path = checkout / name
+        if path.is_file():
+            readme = path.read_text(encoding="utf-8", errors="replace")[:README_CHARS]
+            break
+    listing = sorted(p.name + ("/" if p.is_dir() else "") for p in checkout.iterdir()
+                     if p.name != ".git")
+    return {"repo": repo, "question": SERVICE_QUESTION, "top_level": listing,
+            "readme_excerpt": readme}
+
+
+def packets(verified, workdir):
+    """Packets for every detector-passing record, in the order verify checked them."""
+    return [service_packet(Path(workdir) / record["repo"].replace("/", "__"), record["repo"])
+            for record in verified if "excluded" not in record]
+
+
+def accept(verified, decisions, cases):
+    """Keep detector passes the classifier called services, in order, up to `cases`."""
+    labels = {d["repo"]: d for d in decisions}
+    accepted, records = [], []
+    for record in verified:
+        if "excluded" in record:
+            continue
+        decision = labels.get(record["repo"])
+        if decision is None:
+            raise ValueError("no service decision for %s" % record["repo"])
+        if decision.get("service") is not True:
+            records.append(dict(record, excluded="classifier: not a deployable service",
+                                classifier_reason=decision.get("reason")))
+            continue
+        if len(accepted) < cases:
+            accepted.append(dict(record, classifier_reason=decision.get("reason")))
+    return accepted, records
+
+
 # --- score ----------------------------------------------------------------------------------
 
 def _normalize(path, known):
@@ -420,6 +477,13 @@ def main(argv=None):
     v.add_argument("--candidates", type=Path, required=True)
     v.add_argument("--workdir", type=Path, required=True)
     v.add_argument("--cases", type=int, default=10)
+    p = commands.add_parser("packets", help="blind classifier packets for detector passes")
+    p.add_argument("--verified", type=Path, required=True, help="verify's `checked` records")
+    p.add_argument("--workdir", type=Path, required=True)
+    a = commands.add_parser("accept", help="keep detector passes classified as services")
+    a.add_argument("--verified", type=Path, required=True)
+    a.add_argument("--decisions", type=Path, required=True)
+    a.add_argument("--cases", type=int, default=10)
     k = commands.add_parser("check-symptom")
     k.add_argument("--patch", type=Path, required=True)
     k.add_argument("--symptom", required=True)
@@ -447,6 +511,13 @@ def main(argv=None):
         passed, records = verify(json.loads(args.candidates.read_text(encoding="utf-8")),
                                  args.workdir, args.cases)
         result = {"cases": passed, "checked": records}
+    elif args.command == "packets":
+        result = packets(json.loads(args.verified.read_text(encoding="utf-8")), args.workdir)
+    elif args.command == "accept":
+        accepted, rejected = accept(json.loads(args.verified.read_text(encoding="utf-8")),
+                                    json.loads(args.decisions.read_text(encoding="utf-8")),
+                                    args.cases)
+        result = {"cases": accepted, "rejected": rejected}
     elif args.command == "check-symptom":
         leaks = symptom_leaks(args.symptom, args.patch.read_text(encoding="utf-8"))
         result = {"symptom": args.symptom, "leaks": leaks}

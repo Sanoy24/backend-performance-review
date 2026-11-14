@@ -169,6 +169,37 @@ class Verify(unittest.TestCase):
         self.assertEqual(records[1]["review_files"], 1)
 
 
+class ServiceClassification(unittest.TestCase):
+
+    def test_packet_holds_only_readme_excerpt_and_top_level_listing(self):
+        with tempfile.TemporaryDirectory() as work:
+            checkout = Path(work) / "acme__shop"
+            (checkout / ".git").mkdir(parents=True)
+            (checkout / "cmd").mkdir()
+            (checkout / "README.md").write_text("# Shop\n" + "x" * 9000)
+            (checkout / "docker-compose.yml").write_text("services: {}\n")
+            packet = bft.packets([{"repo": "acme/shop"},
+                                  {"repo": "acme/lib", "excluded": "detector"}], work)
+        self.assertEqual(len(packet), 1)
+        self.assertEqual(set(packet[0]), {"repo", "question", "top_level", "readme_excerpt"})
+        self.assertEqual(packet[0]["top_level"], ["README.md", "cmd/", "docker-compose.yml"])
+        self.assertEqual(len(packet[0]["readme_excerpt"]), bft.README_CHARS)
+        self.assertIn("library, framework", packet[0]["question"])
+
+    def test_accept_keeps_services_in_order_and_requires_every_decision(self):
+        verified = [{"repo": "o/a"}, {"repo": "o/b", "excluded": "detector"},
+                    {"repo": "o/c"}, {"repo": "o/d"}, {"repo": "o/e"}]
+        decisions = [{"repo": "o/a", "service": False, "reason": "a framework"},
+                     {"repo": "o/c", "service": True, "reason": "self-hosted server"},
+                     {"repo": "o/d", "service": True, "reason": "API service"},
+                     {"repo": "o/e", "service": True, "reason": "API service"}]
+        accepted, rejected = bft.accept(verified, decisions, 2)
+        self.assertEqual([r["repo"] for r in accepted], ["o/c", "o/d"])
+        self.assertEqual(rejected[0]["classifier_reason"], "a framework")
+        with self.assertRaises(ValueError):
+            bft.accept(verified, decisions[1:], 2)
+
+
 class Collect(unittest.TestCase):
 
     def test_collect_snapshots_prs_with_their_base_commit_and_diff(self):
