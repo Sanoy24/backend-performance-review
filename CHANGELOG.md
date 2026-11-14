@@ -56,6 +56,13 @@ value and `[Unreleased]` accumulates.
   `application/async-and-blocking.md`, not for removing it. In both arms, the per-request
   synchronous transaction was rated Low or left unreported, against the answer key's Critical.
 
+- **A harness for testing transfer to SWE-fficiency.** `benchmark/swefficiency_transfer.py`
+  selects SWE-fficiency tasks by a fixed hash rule, one per repository and before any review
+  exists, and scores whether a review's findings name the source files the expert's speedup
+  patch changed and fall inside its changed hunks. Tests, docs and benchmark files in a patch
+  never count. Its repositories are scientific Python libraries, so a result measures how far
+  the method transfers, not backend review quality. No model is invoked.
+
 ### Fixed
 
 - **Reference-ablation packages lacked the stack detector.** Phase 1 of `SKILL.md` runs
