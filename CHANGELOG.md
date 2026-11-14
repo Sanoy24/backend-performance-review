@@ -38,6 +38,22 @@ value and `[Unreleased]` accumulates.
 
 ## [Unreleased]
 
+### Added
+
+- **A harness for an outside answer key from real backend performance fixes.**
+  `benchmark/backend_fix_transfer.py` builds a repository pool from GitHub search: permissive
+  license, at least 300 stars, recently pushed, across ten backend languages. It snapshots each
+  repository's merged pull requests from 2026 whose titles state a performance change, with the
+  base-to-merge diff. Selection is fixed and offline:
+  - repositories and pull requests are taken in SHA-256 order, one per repository;
+  - a pull request must change 1–3 source files and at most 400 source lines;
+  - tests, docs, migrations, generated and vendored code never count.
+
+  Verification fetches the pre-fix commit alone. It keeps a case only if the skill's own stack
+  detector finds a web framework and a datastore or cache. A symptom checker rejects a hint
+  that names a changed file or a code identifier from a changed hunk. Scoring is the same
+  file and hunk localization as the SWE-fficiency harness. No model is invoked.
+
 ## [2.3.0] — 2026-11-14
 
 A minor release. `technology/dotnet.md` now says how to score a blocking call in ASP.NET Core
