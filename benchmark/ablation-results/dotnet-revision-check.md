@@ -1,6 +1,7 @@
 # Revised `dotnet.md` check — does the scoring guidance reach reviews?
 
-**Status: pre-registered on 2026-11-14; not yet run.** This design is committed before any run.
+**Status: pre-registered on 2026-11-14; run on 2026-11-14 from `5acd445`; results below.** This
+design is committed before any run.
 Results will be appended below the line at the end, without editing anything above it except
 this status line.
 
@@ -76,3 +77,71 @@ guardrail fails. That is reported with the same prominence.
 - **The answer key does not appear in the revised file**, and no slot contains it.
 
 ---
+
+## Results
+
+**Answer: the guidance reaches reviews.** Two of three runs scored both blocking issues
+`system-wide`, against none of three with the old file. The guardrail held: 4.0 expected
+issues per run (3.67 before) and 9.0 distinct real issues (8.67 before).
+
+Severity barely moved. With blast radius `system-wide`, the rubric reads `Critical` for a
+`critical-path` issue with saturation. No run went that far. Each said that on the default
+SQLite provider, which runs in process, a blocked call is short, and rated the issue Medium or
+High instead.
+
+### Runs
+
+All three runs used `claude-sonnet-5-5` on every model call, read from transcript metadata.
+Each read the revised `dotnet.md`, and each `review.json` passed the bundled validator. No run
+used the network. The one `curl` in run `r2-s1`'s transcript is a validation command written
+into its review, and it was never executed. The reports and reviews are in
+[`raw-dotnet-check/`](raw-dotnet-check/), named by slot as in the second ablation.
+
+| Repeat | Run | `GT-001` (sync transaction) | `GT-003` (sync `Count()`) |
+|:--|:--|:--|:--|
+| 1 | `r1-s3` | `service`, Low, P3 | `service`, Medium, P2 |
+| 2 | `r2-s1` | **`system-wide`**, Medium, P2 | **`system-wide`**, Medium, P2 |
+| 3 | `r3-s2` | **`system-wide`**, High, P1 | **`system-wide`**, Medium, P2 |
+
+### Before and after
+
+| | Old file (second ablation) | Revised file |
+|:--|:-:|:-:|
+| **System-wide scoring (primary)** | **0 of 3** | **2 of 3** |
+| `GT-001` reported | 2 of 3 | 3 of 3 |
+| `GT-003` reported | 3 of 3 | 3 of 3 |
+| `GT-001` severity | Low, Low | Low, Medium, High |
+| `GT-003` severity | Low, Low, Medium | Medium, Medium, Medium |
+| Expected issues per run | 3, 4, 4 (mean 3.67) | 4, 4, 4 (mean 4.0) |
+| Distinct real issues per run | 8, 9, 9 (mean 8.67) | 10, 8, 9 (mean 9.0) |
+| A `GT-001`/`GT-003` finding names the thread pool | 1 of 3 runs | 3 of 3 runs |
+| Unsourced performance estimates | 0 | 0 |
+| Validator passed | 3 of 3 | 3 of 3 |
+| Total tokens per run, mean | 129,100 | 125,391 |
+| Elapsed per run, mean | 4.5 min | 4.3 min |
+
+Distinct real issues were credited by the second ablation's rule, against its list of ten. Run
+`r2-s1` listed the follow-collection loads under `considered_not_reported`, and did not report
+the unbounded comment list. Run `r3-s2` listed the Verbose logging under
+`considered_not_reported`. No new issue was found, and no claim was rejected.
+
+### Deviations and notes
+
+- **Parallel, not sequential.** The three runs went out at once, each with its own copy of the
+  target. The second ablation ran its slots one at a time.
+- **Report writes were blocked.** The agent runtime rejected every `Write` of `report.md`. Each
+  report in `raw-dotnet-check/` was recovered verbatim from the rejected call's own content.
+- **A file outside a run's output.** Run `r3-s2` wrote its generator script into the parent of
+  its output directory. It read nothing outside its slot and target.
+- **Workload marked as asked.** Runs `r1-s3` and `r2-s1` set `asked: true` on an unanswered
+  workload input, though no one was asked. Both said they did so to pass the validator. This
+  affects no measure here. It is a validator rule that rewards misreporting, and it is worth a
+  separate fix.
+
+### What this does and does not show
+
+The revised file changes how reviewers score a blocking call in ASP.NET Core: blast radius now
+follows the shared thread pool in two of three runs. Detection did not drop. The file still sets
+no severity, and reviewers used `conditions` to temper it for an in-process database. This is
+the behaviour the revision intended. It does not show that `system-wide` is the right score, and
+it is a before/after comparison on one case, three runs, one model.

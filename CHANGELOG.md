@@ -87,6 +87,9 @@ value and `[Unreleased]` accumulates.
     rubric; the file sets no level of its own.
 
   Facts that §2, §4 and §6 each restated are now stated once. No rubric definition changed.
+  A pre-registered three-run check found that two of three reviewers now score both blocking
+  issues `system-wide`, against none before, with no drop in detection
+  (`benchmark/ablation-results/dotnet-revision-check.md`).
   Previously issued reviews of .NET code may have rated these findings lower than the file now
   guides.
 
