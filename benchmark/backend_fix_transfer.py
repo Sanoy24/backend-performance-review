@@ -206,6 +206,10 @@ def symptom_leaks(symptom, patch):
 
 # --- collect and verify (network) -----------------------------------------------------------
 
+TRANSIENT = ("timeout", "timed out", "connectex", "connection reset", "connection refused",
+             "eof", "http 502", "http 503", "http 504", "tls handshake")
+
+
 def _gh(args, accept=None):
     command = ["gh", "api", "-X", "GET"] + list(args)
     if accept:
@@ -214,8 +218,12 @@ def _gh(args, accept=None):
         done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
         if done.returncode == 0:
             return done.stdout
-        if "rate limit" in done.stderr.lower() or "secondary" in done.stderr.lower():
+        error = done.stderr.lower()
+        if "rate limit" in error or "secondary" in error:
             time.sleep(30 * (attempt + 1))
+            continue
+        if any(word in error for word in TRANSIENT):
+            time.sleep(10 * (attempt + 1))
             continue
         raise RuntimeError("gh %s failed: %s" % (" ".join(args), done.stderr.strip()))
     raise RuntimeError("gh %s: rate limited" % " ".join(args))
@@ -267,13 +275,13 @@ def repository_prs(full_name, gh=_gh):
     return prs
 
 
-def collect(limit_repos, gh=_gh, log=sys.stderr, offset=0):
+def collect(limit_repos, gh=_gh, log=sys.stderr, offset=0, pool=None):
     """Snapshot pull requests for pool repositories [offset, offset + limit), in hash order.
 
-    Batches extend a snapshot without changing which repositories come first, so collection
-    can stop as soon as verification has enough cases.
+    Pass the frozen `pool` from the first batch to every later one: GitHub search results
+    drift as star counts change, so rebuilding the pool could reorder it between batches.
     """
-    pool = repository_pool(gh)
+    pool = repository_pool(gh) if pool is None else pool
     repositories = []
     for repo in pool[offset:offset + limit_repos]:
         try:
@@ -284,6 +292,7 @@ def collect(limit_repos, gh=_gh, log=sys.stderr, offset=0):
         print("%s: %d pull requests" % (repo["full_name"], len(repo["pull_requests"])),
               file=log)
     return {"rules": rules(), "pool_size": len(pool), "offset": offset,
+            "pool_sha256": _sha(json.dumps(pool, sort_keys=True)),
             "pool": [r["full_name"] for r in pool], "repositories": repositories}
 
 
@@ -401,6 +410,8 @@ def main(argv=None):
     c = commands.add_parser("collect")
     c.add_argument("--repos", type=int, required=True, help="pool repositories to snapshot")
     c.add_argument("--offset", type=int, default=0, help="first pool position to snapshot")
+    c.add_argument("--pool", type=Path, required=True,
+                   help="frozen pool file: read if it exists, else built once and written")
     c.add_argument("--out", type=Path, required=True)
     s = commands.add_parser("select")
     s.add_argument("--snapshot", type=Path, required=True)
@@ -419,8 +430,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "collect":
-        args.out.write_text(json.dumps(collect(args.repos, offset=args.offset), indent=2) + "\n",
-                            encoding="utf-8")
+        if args.pool.exists():
+            pool = json.loads(args.pool.read_text(encoding="utf-8"))
+        else:
+            pool = repository_pool()
+            args.pool.write_text(json.dumps(pool, indent=2) + "\n", encoding="utf-8")
+        snapshot = collect(args.repos, offset=args.offset, pool=pool)
+        args.out.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
         return 0
     if args.command == "select":
         excluded = json.loads(args.exclude.read_text(encoding="utf-8")) if args.exclude else ()
