@@ -42,7 +42,11 @@ DETECTOR = ROOT / "skills" / "backend-performance-review" / "scripts" / "detect_
 LANGUAGES = ("Go", "Python", "Java", "Kotlin", "TypeScript", "JavaScript", "C#", "Ruby",
              "Rust", "PHP")
 MERGED_WINDOW = ("2026-01-01", "2026-10-31")
-MIN_STARS = 300
+MIN_STARS = 100
+# The first pool, the most-starred repositories per language, was mostly libraries and tools:
+# of its first 200 repositories, 4 were deployable services. The pool is now built from the
+# topics maintainers use for services. Recorded as a deviation in the test's design.
+POOL_TOPICS = ("self-hosted", "backend", "api", "rest-api", "saas", "microservice")
 MAX_REPO_KB = 150000
 PUSHED_SINCE = "2026-09-01"
 LICENSES = frozenset({"mit", "apache-2.0", "bsd-2-clause", "bsd-3-clause", "isc", "mpl-2.0",
@@ -152,8 +156,21 @@ def eligible(pr):
     return None
 
 
-def select(snapshot, excluded_repos=()):
-    """Order eligible candidates by a rule fixed before any review, never by outcomes."""
+def changed_paths(patch):
+    """Every path the diff touches, source or not."""
+    return [m.group(1) for m in (DIFF_HEADER.match(line) for line in patch.splitlines()) if m]
+
+
+BODY_CHARS = 3000
+
+
+def select(snapshot, excluded_repos=(), all_prs=False):
+    """Order eligible candidates by a rule fixed before any review, never by outcomes.
+
+    By default, one pull request per repository: the first eligible by hash. With `all_prs`,
+    every eligible pull request, each with its `rank` in its repository's hash order, so the
+    blind fix check can move to the next one when the first is not a server-side fix.
+    """
     excluded = {name.lower() for name in excluded_repos}
     chosen, reasons = [], []
     for repo in sorted(snapshot.get("repositories", []), key=lambda r: _sha(r["full_name"])):
@@ -162,18 +179,23 @@ def select(snapshot, excluded_repos=()):
             continue
         prs = sorted(repo.get("pull_requests", []),
                      key=lambda p: _sha("%s#%d" % (repo["full_name"], p["number"])))
+        rank = 0
         for pr in prs:
             why = eligible(pr)
             if why:
                 reasons.append({"repo": repo["full_name"], "number": pr["number"],
                                 "excluded": why})
                 continue
-            chosen.append({"repo": repo["full_name"], "number": pr["number"],
-                           "title": pr["title"], "base_commit": pr["base_commit"],
+            chosen.append({"repo": repo["full_name"], "number": pr["number"], "rank": rank,
+                           "title": pr["title"], "body": (pr.get("body") or "")[:BODY_CHARS],
+                           "base_commit": pr["base_commit"],
                            "merge_commit": pr.get("merge_commit"),
                            "license": repo.get("license"),
+                           "changed_paths": changed_paths(pr["patch"]),
                            "source_files": sorted(changed_regions(pr["patch"]))})
-            break
+            rank += 1
+            if not all_prs:
+                break
     return chosen, reasons
 
 
@@ -229,22 +251,24 @@ def _gh(args, accept=None):
     raise RuntimeError("gh %s: rate limited" % " ".join(args))
 
 
-def repository_pool(gh=_gh, pages=2):
+def repository_pool(gh=_gh, pages=1):
     pool = {}
-    for language in LANGUAGES:
-        query = ('language:"%s" stars:>=%d pushed:>=%s archived:false fork:false'
-                 % (language, MIN_STARS, PUSHED_SINCE))
-        for page in range(1, pages + 1):
-            result = json.loads(gh(["search/repositories", "-f", "q=" + query, "-f",
-                                    "sort=stars", "-f", "per_page=100", "-f",
-                                    "page=%d" % page]))
-            for item in result.get("items", []):
-                spdx = ((item.get("license") or {}).get("spdx_id") or "").lower()
-                if spdx in LICENSES and (item.get("size") or 0) <= MAX_REPO_KB:
-                    pool[item["full_name"]] = {"full_name": item["full_name"],
-                                               "license": spdx, "language": language,
-                                               "stars": item.get("stargazers_count")}
-            time.sleep(2.5)
+    for topic in POOL_TOPICS:
+        for language in LANGUAGES:
+            query = ('topic:%s language:"%s" stars:>=%d pushed:>=%s archived:false fork:false'
+                     % (topic, language, MIN_STARS, PUSHED_SINCE))
+            for page in range(1, pages + 1):
+                result = json.loads(gh(["search/repositories", "-f", "q=" + query, "-f",
+                                        "sort=stars", "-f", "per_page=100", "-f",
+                                        "page=%d" % page]))
+                for item in result.get("items", []):
+                    spdx = ((item.get("license") or {}).get("spdx_id") or "").lower()
+                    if spdx in LICENSES and (item.get("size") or 0) <= MAX_REPO_KB:
+                        pool.setdefault(item["full_name"], {
+                            "full_name": item["full_name"], "license": spdx,
+                            "language": language, "topic": topic,
+                            "stars": item.get("stargazers_count")})
+                time.sleep(2.5)
     return [pool[name] for name in sorted(pool, key=_sha)]
 
 
@@ -298,7 +322,7 @@ def collect(limit_repos, gh=_gh, log=sys.stderr, offset=0, pool=None):
 
 def rules():
     return {"languages": list(LANGUAGES), "merged_window": list(MERGED_WINDOW),
-            "min_stars": MIN_STARS, "max_repo_kb": MAX_REPO_KB, "pushed_since": PUSHED_SINCE,
+            "min_stars": MIN_STARS, "pool_topics": list(POOL_TOPICS), "max_repo_kb": MAX_REPO_KB, "pushed_since": PUSHED_SINCE,
             "licenses": sorted(LICENSES), "perf_title": PERF_TITLE.pattern,
             "not_perf_title": NOT_PERF_TITLE.pattern, "max_source_files": MAX_SOURCE_FILES,
             "max_changed_lines": MAX_CHANGED_LINES, "max_review_files": MAX_REVIEW_FILES,
@@ -446,6 +470,59 @@ def accept(verified, decisions, cases):
     return accepted, records
 
 
+# --- blind fix check ------------------------------------------------------------------------
+#
+# Title keywords also catch features and frontend changes: in the first pool, a chart option
+# matched on "latency" and a service-worker image cap on "perf". A separate model now reads
+# each eligible pull request of a service repository (its title, description and changed
+# paths, never any review or score) and answers whether it fixes a server-side performance
+# problem. The first yes per repository, in hash order, becomes the case.
+
+FIX_QUESTION = (
+    "Does this pull request fix a performance problem in server-side code, code that runs "
+    "while the service handles requests or background jobs (latency, throughput, memory, CPU, "
+    "or database or cache load)? Answer no for browser or frontend code, build, CI or test "
+    "speed, documentation, a new feature or configuration option, or a refactor that states "
+    "no performance problem.")
+
+
+def fix_packets(candidates, service_repos):
+    """One packet per eligible pull request of each service repository, in order."""
+    services = set(service_repos)
+    return [{"repo": c["repo"], "number": c["number"], "question": FIX_QUESTION,
+             "title": c["title"], "body": c.get("body", ""),
+             "changed_paths": c.get("changed_paths", [])}
+            for c in candidates if c["repo"] in services]
+
+
+def accept_fixes(service_records, candidates, decisions, cases):
+    """Per service repository, in order, the first pull request judged a server-side fix."""
+    labels = {(d["repo"], d["number"]): d for d in decisions}
+    by_repo = {}
+    for candidate in sorted(candidates, key=lambda c: c.get("rank", 0)):
+        by_repo.setdefault(candidate["repo"], []).append(candidate)
+    accepted, rejected = [], []
+    for record in service_records:
+        chosen = None
+        for candidate in by_repo.get(record["repo"], []):
+            decision = labels.get((candidate["repo"], candidate["number"]))
+            if decision is None:
+                raise ValueError("no fix decision for %s#%d"
+                                 % (candidate["repo"], candidate["number"]))
+            if decision.get("server_side_fix") is True:
+                chosen = dict(candidate, review_files=record.get("review_files"),
+                              detected=record.get("detected"),
+                              classifier_reason=record.get("classifier_reason"),
+                              fix_reason=decision.get("reason"))
+                break
+            rejected.append({"repo": candidate["repo"], "number": candidate["number"],
+                             "excluded": "fix check: not a server-side performance fix",
+                             "fix_reason": decision.get("reason")})
+        if chosen is not None and len(accepted) < cases:
+            accepted.append(chosen)
+    return accepted, rejected
+
+
 # --- score ----------------------------------------------------------------------------------
 
 def _normalize(path, known):
@@ -498,6 +575,7 @@ def main(argv=None):
     s = commands.add_parser("select")
     s.add_argument("--snapshot", type=Path, required=True)
     s.add_argument("--exclude", type=Path, help="JSON list of repository names to skip")
+    s.add_argument("--all", action="store_true", help="every eligible PR per repository")
     v = commands.add_parser("verify")
     v.add_argument("--candidates", type=Path, required=True)
     v.add_argument("--workdir", type=Path, required=True)
@@ -509,6 +587,14 @@ def main(argv=None):
     a.add_argument("--verified", type=Path, required=True)
     a.add_argument("--decisions", type=Path, required=True)
     a.add_argument("--cases", type=int, default=10)
+    f = commands.add_parser("fix-packets", help="blind fix-check packets for service repos")
+    f.add_argument("--candidates", type=Path, required=True, help="select --all candidates")
+    f.add_argument("--services", type=Path, required=True, help="accept's `cases`")
+    g = commands.add_parser("accept-fixes", help="first server-side fix per service repo")
+    g.add_argument("--services", type=Path, required=True)
+    g.add_argument("--candidates", type=Path, required=True)
+    g.add_argument("--decisions", type=Path, required=True)
+    g.add_argument("--cases", type=int, default=10)
     k = commands.add_parser("check-symptom")
     k.add_argument("--patch", type=Path, required=True)
     k.add_argument("--symptom", required=True)
@@ -530,7 +616,7 @@ def main(argv=None):
     if args.command == "select":
         excluded = json.loads(args.exclude.read_text(encoding="utf-8")) if args.exclude else ()
         chosen, reasons = select(json.loads(args.snapshot.read_text(encoding="utf-8")),
-                                 excluded)
+                                 excluded, all_prs=args.all)
         result = {"candidates": chosen, "excluded": reasons}
     elif args.command == "verify":
         passed, records = verify(json.loads(args.candidates.read_text(encoding="utf-8")),
@@ -542,6 +628,16 @@ def main(argv=None):
         accepted, rejected = accept(json.loads(args.verified.read_text(encoding="utf-8")),
                                     json.loads(args.decisions.read_text(encoding="utf-8")),
                                     args.cases)
+        result = {"cases": accepted, "rejected": rejected}
+    elif args.command == "fix-packets":
+        services = json.loads(args.services.read_text(encoding="utf-8"))
+        result = fix_packets(json.loads(args.candidates.read_text(encoding="utf-8")),
+                             [record["repo"] for record in services])
+    elif args.command == "accept-fixes":
+        accepted, rejected = accept_fixes(
+            json.loads(args.services.read_text(encoding="utf-8")),
+            json.loads(args.candidates.read_text(encoding="utf-8")),
+            json.loads(args.decisions.read_text(encoding="utf-8")), args.cases)
         result = {"cases": accepted, "rejected": rejected}
     elif args.command == "check-symptom":
         leaks = symptom_leaks(args.symptom, args.patch.read_text(encoding="utf-8"))

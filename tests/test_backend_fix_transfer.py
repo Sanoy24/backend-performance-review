@@ -217,6 +217,76 @@ class ServiceClassification(unittest.TestCase):
             bft.accept(verified, decisions[1:], 2)
 
 
+class FixCheck(unittest.TestCase):
+
+    def candidates(self):
+        snapshot = {"repositories": [
+            {"full_name": "acme/shop", "pull_requests": [pr(n) for n in (5, 9, 12)]},
+            {"full_name": "acme/blog", "pull_requests": [pr(3)]},
+        ]}
+        chosen, _ = bft.select(snapshot, all_prs=True)
+        return chosen
+
+    def test_select_all_ranks_every_eligible_pr_and_records_its_paths(self):
+        chosen = self.candidates()
+        shop = [c for c in chosen if c["repo"] == "acme/shop"]
+        self.assertEqual([c["rank"] for c in shop], [0, 1, 2])
+        self.assertEqual([c["number"] for c in shop],
+                         sorted((5, 9, 12), key=lambda n: bft._sha("acme/shop#%d" % n)))
+        self.assertEqual(shop[0]["changed_paths"], ["internal/store/orders.go",
+                                                    "internal/store/orders_test.go",
+                                                    "docs/perf.md"])
+        default, _ = bft.select({"repositories": [
+            {"full_name": "acme/shop", "pull_requests": [pr(n) for n in (5, 9, 12)]}]})
+        self.assertEqual(len(default), 1)
+
+    def test_fix_packets_cover_only_service_repos_and_carry_no_diff(self):
+        packets = bft.fix_packets(self.candidates(), ["acme/shop"])
+        self.assertEqual({p["repo"] for p in packets}, {"acme/shop"})
+        self.assertEqual(set(packets[0]), {"repo", "number", "question", "title", "body",
+                                           "changed_paths"})
+        self.assertIn("server-side", packets[0]["question"])
+
+    def test_accept_fixes_moves_to_the_next_pr_when_the_first_is_not_a_fix(self):
+        chosen = self.candidates()
+        shop = [c for c in chosen if c["repo"] == "acme/shop"]
+        services = [{"repo": "acme/shop", "review_files": 40}, {"repo": "acme/blog"}]
+        decisions = [{"repo": "acme/shop", "number": shop[0]["number"],
+                      "server_side_fix": False, "reason": "frontend"},
+                     {"repo": "acme/shop", "number": shop[1]["number"],
+                      "server_side_fix": True, "reason": "batches queries"},
+                     {"repo": "acme/shop", "number": shop[2]["number"],
+                      "server_side_fix": True, "reason": "x"},
+                     {"repo": "acme/blog", "number": 3, "server_side_fix": False,
+                      "reason": "docs"}]
+        accepted, rejected = bft.accept_fixes(services, chosen, decisions, 10)
+        self.assertEqual([(a["repo"], a["number"]) for a in accepted],
+                         [("acme/shop", shop[1]["number"])])
+        self.assertEqual(accepted[0]["review_files"], 40)
+        self.assertEqual(len(rejected), 2)
+        with self.assertRaises(ValueError):
+            bft.accept_fixes(services, chosen, decisions[1:], 10)
+
+    def test_pool_searches_service_topics(self):
+        queries = []
+
+        def gh(args, accept=None):
+            queries.append([a for a in args if a.startswith("q=")][0])
+            return json.dumps({"items": [{"full_name": "acme/svc", "size": 10,
+                                          "license": {"spdx_id": "MIT"}}]})
+
+        original = bft.time.sleep
+        bft.time.sleep = lambda seconds: None
+        try:
+            pool = bft.repository_pool(gh)
+        finally:
+            bft.time.sleep = original
+        self.assertEqual(len(queries), len(bft.POOL_TOPICS) * len(bft.LANGUAGES))
+        self.assertTrue(all("topic:" in q for q in queries))
+        self.assertEqual(len(pool), 1)
+        self.assertEqual(pool[0]["topic"], bft.POOL_TOPICS[0])
+
+
 class Collect(unittest.TestCase):
 
     def test_collect_snapshots_prs_with_their_base_commit_and_diff(self):
