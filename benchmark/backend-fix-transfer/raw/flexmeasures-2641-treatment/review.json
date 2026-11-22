@@ -1,0 +1,164 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T12:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py (bundled)",
+    "model": "Claude Sonnet 5.5",
+    "repository": {"name": "flexmeasures-2641-treatment"}
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {"question": "How many devices and time steps does a typical schedule have?", "answer": "Not stated in the repository; the operator report says only that cost grows with device count.", "source": "unanswered", "asked": false, "evidence_checked": ["flexmeasures/data/models/planning/storage.py"]},
+      {"question": "Which LP backend is configured?", "answer": "Default is highspy (FLEXMEASURES_LP_SOLVER); deployment value unknown.", "source": "repository", "asked": false, "evidence_checked": ["flexmeasures/utils/config_defaults.py", "flexmeasures/data/models/planning/linear_optimization.py"]}
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Scheduling code path only: planning/storage.py (_prepare and constraint validation), linear_optimization.py, scheduling_problem.py, highspy_optimization.py (skimmed). API, DB access and job queue not reviewed.",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 0,
+    "shared_resources_analyzed": 0,
+    "technology_support": [
+      {"technology": "python", "tier": "deep", "detection_confidence": 0.86},
+      {"technology": "postgres", "tier": "deep", "detection_confidence": 0.99}
+    ],
+    "unknowns": [
+      {"subject": "Share of schedule-computation time spent in constraint validation versus the solver", "reason": "no-evidence-exists", "what_would_resolve_it": "A cProfile or timing capture of one multi-device schedule computation"},
+      {"subject": "Typical device count, horizon length and commitment count", "reason": "no-evidence-exists", "what_would_resolve_it": "Operator-supplied deployment sizes or a representative flex-model"},
+      {"subject": "Configured LP backend in the affected deployment", "reason": "no-evidence-exists", "what_would_resolve_it": "Value of FLEXMEASURES_LP_SOLVER in the deployment config"}
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "StorageScheduler._prepare calls validate_power_constraints and (when stock validation applies) validate_storage_constraints once per flexible device, unless skip_validation is set (storage.py:1642-1660).",
+      "Each validate_constraint call runs sanitize_expression (regex) twice and DataFrame.eval twice over a float-cast, NaN-filled copy of the frame (storage.py:4183-4230).",
+      "validate_power_constraints issues 3 validate_constraint calls; validate_storage_constraints issues up to 2 + 3 + 6 = 11.",
+      "The default LP backend is highspy; the Pyomo cjg set is built only on the non-default path (linear_optimization.py:213)."
+    ],
+    "unknown": [
+      "Fraction of schedule time spent in validation.",
+      "Device, commitment and time-step counts of affected deployments.",
+      "Deployed value of FLEXMEASURES_LP_SOLVER."
+    ],
+    "assumed": [
+      "Schedules are computed with skip_validation=False (the compute() default), as the operator report implies validation is running."
+    ],
+    "derived": [
+      "Up to 14 validate_constraint calls per storage device, so up to 28 DataFrame.eval calls and 28 astype(float).fillna(0) copies per device (3 + 11 calls, 2 evals each; derived from the call sites)."
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {"question": "What fraction of one multi-device schedule computation is spent in _prepare constraint validation?", "what_it_would_change": "Whether PERF-001 is the cause of the operators' complaint or the solver dominates.", "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "highest", "affects": ["PERF-001"]},
+    {"question": "Is FLEXMEASURES_LP_SOLVER set to a Pyomo-based solver in the affected deployment, and how many commitments does a schedule have?", "what_it_would_change": "Whether PERF-002 is reachable at all.", "decision_dimensions": ["severity", "confidence"], "expected_decision_value": "medium", "affects": ["PERF-002"]}
+  ],
+  "root_causes": [
+    {"id": "ROOT-001", "description": "Constraint validation is implemented as generic string-expression evaluation (regex sanitising plus DataFrame.eval over a full-frame copy) repeated per inequality and per device, so fixed interpretive overhead multiplies with device count.", "findings": ["PERF-001"]},
+    {"id": "ROOT-002", "description": "Pyomo 3-D index set is built by a nested scan of the full commitment-group set for every (commitment, time) pair.", "findings": ["PERF-002"]}
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "08674fba0b423d4c",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "io",
+      "location": {"file": "flexmeasures/data/models/planning/storage.py", "line": 4183, "symbol": "validate_constraint"},
+      "tags": ["needs-measurement", "scalability-risk"],
+      "problem": "Per-device constraint validation evaluates each inequality through regex column sanitising and two DataFrame.eval calls on a freshly cast copy of the whole frame, up to 14 times per device, so the validation step costs a large fixed amount per device.",
+      "performance_principle": "Do not pay interpretive, per-call setup costs for work that is a handful of vectorised comparisons; hoist invariant work (type cast, fill, parsing) out of repeated operations.",
+      "evidence": [
+        {"statement": "_prepare validates every flexible device inside the per-device loop: validate_power_constraints, then validate_storage_constraints when stock validation applies.", "kind": "static", "file": "flexmeasures/data/models/planning/storage.py", "line": 1642},
+        {"statement": "validate_constraint calls sanitize_expression for both sides; sanitize_expression runs re.search and re.sub (pattern built per call) for every column of the frame.", "kind": "static", "file": "flexmeasures/data/models/planning/storage.py", "line": 4163},
+        {"statement": "validate_constraint does constraints_df.astype(float).fillna(0).eval(...).round(...) separately for lhs and rhs, so the whole frame is copied and cast twice per inequality.", "kind": "static", "file": "flexmeasures/data/models/planning/storage.py", "line": 4218},
+        {"statement": "validate_storage_constraints issues up to 11 validate_constraint calls and validate_power_constraints 3 (derived: 3 + 11 = 14 calls, 2 evals each = 28 evals per device).", "kind": "derived", "file": "flexmeasures/data/models/planning/storage.py", "line": 4009},
+        {"statement": "No runtime evidence (profile, benchmark, trace) exists in the repository or was supplied.", "kind": "static"}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "endpoint", "amplification": "14x"},
+      "conditions": "Matters when a schedule has many devices (the operators' stated symptom) and the solver time per device is small enough that this fixed pandas overhead is a visible share; assumes skip_validation is False. Per-device cost is roughly independent of device count, so total grows linearly with devices; the time horizon only affects vectorised work. Magnitude unknown without a profile.",
+      "counter_evidence": [
+        {"statement": "Validation is vectorised over time steps, so cost per call does not grow with horizon length; the cost is mostly fixed overhead per call.", "effect": "bounds-impact", "file": "flexmeasures/data/models/planning/storage.py", "line": 4218},
+        {"statement": "Growth is linear in devices, not superlinear; the LP solve is likely to grow faster, so validation may not be the dominant share. Not measurable from source.", "effect": "lowers-confidence"},
+        {"statement": "A skip_validation switch exists on compute(), so a caller can already bypass it.", "effect": "bounds-impact", "file": "flexmeasures/data/models/planning/storage.py", "line": 3438},
+        {"statement": "Searched _prepare and the validators for cross-device loops (device x device); none found in the validation path.", "effect": "no-effect"}
+      ],
+      "why_this_might_not_matter": "Each device does a fixed, small number of vectorised pandas calls; with realistic device counts the LP solve may dwarf this, and a failed validation avoids an infeasible solve, which is expensive. Without a profile this could be a minor share.",
+      "recommendation": "Replace the string-expression engine in the validators with direct vectorised comparisons on numpy/pandas columns: cast and fill the frame once per device, compute lhs/rhs with plain arithmetic, and build the violation message text only for rows that fail. Keep the existing violation output format so the error message is unchanged.",
+      "alternatives": [
+        {"option": "Cache the float-cast, NaN-filled frame once per device and reuse it across the validate_constraint calls, keeping eval.", "preferred": false, "why": "Removes the repeated casts but leaves the regex and eval parsing cost."},
+        {"option": "Rewrite the validators as direct column arithmetic with lazy message construction.", "preferred": true, "why": "Removes parsing, regex and repeated copies, which are the per-call overheads; behaviour is easy to pin with the existing validate_storage_constraints tests."},
+        {"option": "Skip validation for devices whose constraint columns are entirely unset.", "preferred": false, "why": "Cheap but changes what is checked and does not help dense inputs."}
+      ],
+      "trade_offs": "Hand-written comparisons are less declarative than the expression strings and must preserve NaN-skipping and rounding semantics (6 decimals) exactly; a regression there would change which inputs are rejected.",
+      "validation": {
+        "metric": "Wall time and call counts of validate_power_constraints plus validate_storage_constraints within one StorageScheduler._prepare for a multi-device flex-model, at several device counts.",
+        "expectation": "Validation time per device drops and the share of _prepare spent in pandas eval and re.sub decreases; direction only, magnitude to be measured.",
+        "falsifier": "A profile showing validation is a negligible share of schedule computation time, or that time per device is flat but small relative to the solve.",
+        "safety": "safe-on-production",
+        "guard": "A micro-benchmark or unit test that asserts identical violation lists before and after the rewrite on the existing test inputs.",
+        "commands": [
+          {"command": "python -m cProfile -s cumtime -m pytest flexmeasures/data/models/planning/tests/test_solver.py -k storage_constraints -x", "purpose": "Profile the validators on the existing constraint tests to see the share of eval and regex time (run in a dev checkout, not by this review).", "safety": "not-safe-on-production"}
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "2df49fbfaddfbf17",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "io",
+      "location": {"file": "flexmeasures/data/models/planning/linear_optimization.py", "line": 303, "symbol": "commitment_time_device_groups_init"},
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "The Pyomo cjg index set is built by iterating, for every (commitment, time) pair, the whole commitment-device-group set and filtering by commitment id, which is O(|cj| x |cg|).",
+      "performance_principle": "Index by the join key (group by commitment) instead of re-scanning the full relation for each probe.",
+      "evidence": [
+        {"statement": "commitment_time_device_groups_init: ((c, j, g) for (c, j) in m.cj for (_, g) in m.cg if _ == c) scans all of m.cg for each of the (c, j) pairs.", "kind": "static", "file": "flexmeasures/data/models/planning/linear_optimization.py", "line": 304},
+        {"statement": "device_group_lookup already maps commitment to its groups, so a per-commitment lookup is available (used at line 292 for cg).", "kind": "static", "file": "flexmeasures/data/models/planning/linear_optimization.py", "line": 292},
+        {"statement": "Reached only when FLEXMEASURES_LP_SOLVER is not highspy, because the highspy backend returns earlier.", "kind": "static", "file": "flexmeasures/data/models/planning/linear_optimization.py", "line": 213},
+        {"statement": "No runtime evidence exists.", "kind": "static"}
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {"position": "critical-path", "frequency": "per-batch", "growth": "O(n^2)+", "blast_radius": "endpoint"},
+      "conditions": "Only for deployments configured with a Pyomo-based solver, and with many commitments (each time step of each commitment contributes a (c,j) pair that scans every (c,g) pair). Commitment count is assumed, not shown, to grow with device count because the scheduler appends per-device commitments (e.g. storage.py:1127, 1338).",
+      "counter_evidence": [
+        {"statement": "Default backend is highspy, which bypasses this code entirely.", "effect": "bounds-impact", "file": "flexmeasures/data/models/planning/linear_optimization.py", "line": 213},
+        {"statement": "Interchangeable sub-commitments are merged before model build, which reduces the commitment count.", "effect": "bounds-impact", "file": "flexmeasures/data/models/planning/scheduling_problem.py", "line": 227},
+        {"statement": "Searched highspy_optimization.py for the same pattern; it consumes device_group_lookup per commitment directly.", "effect": "no-effect", "file": "flexmeasures/data/models/planning/highspy_optimization.py", "line": 569}
+      ],
+      "recommendation": "Build the set from device_group_lookup directly: for each (c, j) in cj, iterate only the groups of c.",
+      "trade_offs": "Set ordering may differ, which could change Pyomo variable ordering and solver tie-breaking among equal-cost solutions; negligible complexity.",
+      "validation": {
+        "metric": "Time to construct model.cjg for a Pyomo-configured multi-device schedule.",
+        "expectation": "Construction time grows linearly rather than quadratically with commitment count; direction only.",
+        "falsifier": "Deployments use highspy, or construction time is negligible in a profile.",
+        "safety": "safe-on-production",
+        "guard": "A test that the set of cjg tuples is unchanged by the rewrite."
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "_validate_commitments_are_enforceable and the commitment-group construction loops in scheduling_problem.py.",
+      "why_discarded": "Linear in sub-commitments with array reads; no repeated scans found. A source comment in scheduling_problem.py already records an earlier optimisation of this loop.",
+      "location": "flexmeasures/data/models/planning/scheduling_problem.py:733",
+      "path": "schedule computation",
+      "evidence_checked": ["flexmeasures/data/models/planning/scheduling_problem.py:733-775", "flexmeasures/data/models/planning/scheduling_problem.py:565-620"],
+      "revisit_when": "A profile shows model-preparation time rather than validation or the solve dominating."
+    }
+  ]
+}

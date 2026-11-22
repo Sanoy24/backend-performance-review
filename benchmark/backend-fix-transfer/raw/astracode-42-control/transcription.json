@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go",
+        "line": 74
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "judge_job_consumer.go",
+        "line": 49
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "go_judge_client.go",
+        "line": 208
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go",
+        "line": 209
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "process_judge_job.go",
+        "line": 43
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "go_judge_client.go",
+        "line": 57
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

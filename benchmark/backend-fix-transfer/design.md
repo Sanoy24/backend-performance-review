@@ -1,6 +1,7 @@
 # Backend performance-fix test — does the method find the code a maintainer sped up?
 
-**Status: pre-registered on 2026-11-22; not yet run.** This design is committed before any
+**Status: pre-registered on 2026-11-22; run on 2026-11-22 with the skill exported from `main` at
+`8aa114d`; results below.** This design is committed before any
 review exists. Results will be appended below the line at the end, without editing anything
 above it except this status line.
 
@@ -134,3 +135,150 @@ One collection error (`zelloptt/zello-channel-api`, a diff that could not be fet
 repository with no pull requests. It fell outside the ten either way.
 
 ---
+
+## Results
+
+**Answer: no measurable difference in localization, and the method localizes real backend
+fixes.**
+
+- **Hunk hits:** the treatment hit a changed hunk in 7 of 10 cases and the control in 6. The
+  difference of 1 is under the pre-registered 2, so neither "does better" rule is met.
+- **File hits:** on its own, the treatment named a changed source file in **9 of 10** cases. That
+  meets the "localizes" rule of at least 5.
+- **Path reading:** as in the SWE-fficiency test, the control's strict score depends on how
+  abbreviated paths are read. Under the sensitivity reading the control leads by 1 instead. Either
+  way the difference stays under 2, so the answer does not change.
+
+### Runs
+
+All 20 runs used `claude-sonnet-5-5` on every model call, read from transcript metadata.
+
+- Every treatment `review.json` passed the bundled validator.
+- No run used the network, or read or wrote another run's files.
+- Each checkout was read-only.
+
+Reports, treatment reviews, control transcriptions and per-run scores are in [`raw/`](raw/).
+
+### Summary by arm
+
+| | Treatment | Control |
+|:--|:-:|:-:|
+| **Hunk hit (primary)** | **7 of 10** | **6 of 10** |
+| File hit | 9 of 10 | 8 of 10 |
+| Top-finding file hit | 8 of 10 | 8 of 10 |
+| Findings per run | 2.1 (21 in all) | 6.6 (66 in all) |
+| Treatment `review.json` valid | 10 of 10 | — |
+| Total tokens per run, mean | 121.2k | 81.4k |
+| Elapsed per run, mean | 3.6 min | 1.4 min |
+
+### Per case
+
+`F`/`H`/`T` mark a file hit, hunk hit and top-finding file hit as scored; `-` marks a miss.
+
+| Case | Maintainer's change | Treatment | Control |
+|:--|:--|:-:|:-:|
+| `relay-panel-43` | shard the UDP session map | `F H T` | `F H T` |
+| `tibiadata-api-go-630` | zero-allocation case-insensitive lookups | `- - -` | `F H T` |
+| `dnb-backend-508` | remove per-item `populate` in list endpoints | `F H T` | `- - -` |
+| `arcane-4106` | resolve compose paths once per list request | `F H T` | `F H T` |
+| `astracode-42` | batch official test-case execution | `F H T` | `F H T` |
+| `pokeapi-1688` | one query for the evolution-chain serializer | `F H T` | `F H T` |
+| `commafeed-2089` | batch the entry existence check | `F - T` | `- - -` |
+| `flexmeasures-2641` | validate constraints without `DataFrame.eval` | `F H T` | `F H T` |
+| `gatus-1541` | add PostgreSQL indexes | `F H -` | `F - T` |
+| `claude-code-agent-monitor-332` | index `events.tool_name` | `F - T` | `F - T` |
+
+### The sensitivity reading
+
+The control was asked for each file's path from the repository root. It still abbreviated some
+paths:
+
+- `badge.service.js`;
+- `B/feed/...`, after defining `B/` as a prefix;
+- `specific_postgres.go`.
+
+Transcribed literally, as pre-registered, those match no patch path. This decides two control
+misses: `dnb-backend-508` and `commafeed-2089`.
+
+As a sensitivity reading, outside the rules, a path was resolved when it is a suffix of exactly
+one changed source file. The control then has **8** hunk hits, 10 file hits and 9 top-finding
+file hits, against the treatment's 7, 9 and 8.
+
+- `B/feed/FeedRefreshUpdater.java` is not a suffix of any path, so it stays unresolved. The
+  commafeed control hit comes from a later finding that names `FeedRefreshUpdater.java` alone.
+- The treatment is unaffected, because the skill's schema requires a repository-relative path.
+
+### Did the arms name the maintainer's mechanism?
+
+This is descriptive, outside the decision rules.
+
+- **Both arms, same mechanism, near the top:** arcane, astracode, pokeapi, flexmeasures,
+  dnb-backend and commafeed.
+  - In dnb-backend, the treatment's top finding is award evaluation on every read, with the
+    per-badge query loop inside it. The control's second finding is that loop on its own.
+- **relay-panel:** the maintainer sharded the session map and throttled the tracker touch.
+  - The control's second finding, rated High, is exactly that.
+  - The treatment named it as its third finding, Low and P3, with "profile first; change nothing
+    yet". Its top finding was a reader-task leak the maintainer did not change.
+- **tibiadata:** the maintainer replaced linear `EqualFold` scans with zero-allocation map
+  lookups.
+  - The control's top finding is those scans, with a map index as the fix.
+  - The treatment read the same functions and reported no findings, reasoning that `EqualFold`
+    does not allocate and the lists are scanned once per request.
+  - This is the case where the symptom hinted most strongly, and the method declined the target.
+- **gatus:** both arms named the missing PostgreSQL indexes.
+  - The treatment ranked a key-listing query first and the indexes second. That made it a hunk
+    hit but not a top-finding hit.
+  - The control ranked the indexes first, but located them at the table definition, line 60. The
+    indexes were added at line 120. That made it a hunk miss.
+- **Agent-Monitor:** both arms' top finding is the missing `tool_name` index. Both located it at
+  the query (`server/db.js:1961`), not where the index was added (line 404), so both miss the
+  hunk the same way.
+
+So on mechanism, the control named the maintainer's change in all ten cases, and ranked it first
+or second in each. The treatment named it in nine, and ranked it low in one.
+
+### Cost
+
+The treatment used about 1.5 times the tokens and 2.5 times the elapsed time. It reported about a
+third as many findings: 2.1 per run against 6.6. Its narrower reports put the changed file first
+in 8 of 10 cases, the same as the control.
+
+### Deviations and notes
+
+- **Every report write was refused.** The agent runtime rejected the `Write` of `report.md` in
+  all 20 runs. Each report in `raw/` was recovered verbatim from the refused call's own content.
+  Nothing in a report was edited.
+- **Transcription was done by a separate agent.** The coordinator saw the treatment scores and
+  every report before the controls were transcribed. To keep that from steering the
+  transcription, a separate `claude-sonnet-5-5` agent transcribed all ten control reports. It saw
+  only the reports and the literal rule, not the patches, scores or repositories. Its judgement
+  calls are in [`raw/transcriber-notes.txt`](raw/transcriber-notes.txt).
+- **Run-root commands.** Five treatment runs changed directory to the run root to call the
+  bundled validator on their own `review.json`. Transcripts show no read or write of another
+  run's files.
+- **Validator iterations.** Two treatment runs (arcane and Agent-Monitor) fixed schema errors the
+  validator reported, then validated again. That is the skill's intended loop.
+- **Parallel dispatch.** Runs went out in two waves of ten: each case's first arm in manifest
+  order, then each case's second arm once all first arms had finished. The two arms of one case
+  never ran at the same time.
+
+### What this does and does not show
+
+On ten real backend performance fixes chosen by rule, a reviewer following the skill found the
+file a maintainer later changed in 9 of 10 cases, given a one-line symptom. A plain request to the
+same model did about as well: one hunk hit fewer when scored strictly, one more once abbreviated
+paths are resolved. So the method localizes backend fixes, but it did not localize them better
+than asking plainly.
+
+It did differ in three ways:
+
+- Its reports were about a third as long, and always gave full paths.
+- In two cases it ranked the maintainer's change lower, or declined it, where the plain request
+  put it near the top.
+- It cost more.
+
+The SWE-fficiency test found the same pattern outside backends.
+
+The symptom pointed both arms at the slow operation. A review with no symptom, the skill's normal
+setting, was not tested. Neither was more than one run per case, nor any other model.

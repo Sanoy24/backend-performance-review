@@ -1,0 +1,23 @@
+{
+  "source_files": [
+    "pokemon_v2/serializers.py"
+  ],
+  "window": 20,
+  "findings": 7,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "F1",
+    "F2",
+    "F4",
+    "F5",
+    "F6"
+  ],
+  "hunk_hits": [
+    "F1",
+    "F4",
+    "F6"
+  ],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

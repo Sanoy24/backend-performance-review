@@ -1,0 +1,62 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "storage/store/sql/specific_postgres.go",
+        "line": 60
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "specific_postgres.go",
+        "line": 85
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "specific_postgres.go",
+        "line": 45
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "sql.go",
+        "line": 117
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "sql.go",
+        "line": 815
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "sql.go",
+        "line": 1453
+      }
+    },
+    {
+      "id": "F7",
+      "location": {
+        "file": "sql.go",
+        "line": 239
+      }
+    },
+    {
+      "id": "F8",
+      "location": {
+        "file": "sql.go",
+        "line": 805
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

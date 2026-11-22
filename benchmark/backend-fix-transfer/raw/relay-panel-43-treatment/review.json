@@ -1,0 +1,438 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "repository": { "name": "relay-panel-43-treatment" }
+  },
+  "services": [
+    { "name": "node", "path": "crates/node", "runtime": ["rust"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How many distinct UDP client source addresses reach one node per day, and how many are concurrently active?",
+        "answer": "Operator report only: many clients send at the same time; no counts supplied.",
+        "source": "unanswered",
+        "asked": false,
+        "evidence_checked": ["crates/node/src/forwarder/udp.rs", "docs/NODE.md"],
+        "decision_dimensions": ["severity", "confidence"],
+        "expected_decision_value": "highest"
+      }
+    ],
+    "scenarios": ["high-concurrency", "burst"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "UDP forwarding path of the node service (udp.rs, limiter.rs, the UDP parts of reporter.rs and outbound.rs, the UDP spawn in manager.rs). Panel, frontend, TCP, WS and TLS paths not examined.",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 4,
+    "shared_resources_analyzed": 4,
+    "technology_support": [
+      { "technology": "rust", "tier": "deep", "detection_confidence": 0.94 }
+    ],
+    "unknowns": [
+      {
+        "subject": "Concurrent and cumulative UDP client counts, and whether rules set rate limits",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "Per-rule limits from the panel config plus the node's open-fd and task counts over a day of traffic."
+      },
+      {
+        "subject": "Per-packet CPU split between syscalls, lock handling and tracing",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "A CPU profile of the node under a multi-client UDP load test."
+      },
+      {
+        "subject": "Whether the service manager's file-descriptor limit is the one installed by scripts/relay-node-install.sh in the operators' deployment",
+        "reason": "not-examined",
+        "what_would_resolve_it": "Read the effective limit from the running process."
+      }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "UDP_SESSION_TIMEOUT is 60 s and the sweeper interval is 15 s (reporter.rs, udp.rs).",
+      "One recv_from loop serves each bound inbound socket (udp.rs).",
+      "Each new session creates one outbound socket, one spawned reader task and a 65535-byte buffer (udp.rs, UDP_BUF_SIZE).",
+      "The generated systemd unit sets LimitNOFILE=65536 (scripts/relay-node-install.sh:391)."
+    ],
+    "unknown": [
+      "Client count, packet rate, packet size, client churn.",
+      "Whether affected rules carry upload or download limits.",
+      "Core count of the node host."
+    ],
+    "assumed": [
+      "Clients are NAT-ed or short-lived enough that distinct source ports accumulate over time (needed for PERF-001 to matter)."
+    ],
+    "derived": [
+      "65535 bytes of reader buffer per session is the UDP_BUF_SIZE constant, read as a file value, not a measured footprint."
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Do the affected rules set upload or download caps?",
+      "what_it_would_change": "If yes, PERF-002 becomes the primary explanation for slowdown under concurrent clients; if no, it is largely moot.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-002"]
+    },
+    {
+      "question": "Does the node process's open file descriptor and task count keep rising after client traffic stops, beyond 60 s?",
+      "what_it_would_change": "Confirms PERF-001 at runtime (Confirmed) and decides whether it is the main driver of degradation.",
+      "decision_dimensions": ["confidence", "severity"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001"]
+    },
+    {
+      "question": "Is one core pinned at 100 percent during the slow period while others idle?",
+      "what_it_would_change": "Indicates the single ingress task is the limit (PERF-002/PERF-003) rather than the leak.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-002", "PERF-003"]
+    }
+  ],
+  "root_causes": [
+    {
+      "id": "ROOT-001",
+      "description": "Session expiry removes the map entry but not the owning reader task, which keeps the outbound socket alive and blocks in recv forever.",
+      "findings": ["PERF-001"]
+    },
+    {
+      "id": "ROOT-002",
+      "description": "All client-to-target work for a listener runs serially in one receive loop that also awaits limiter sleeps and per-client socket setup.",
+      "findings": ["PERF-002"]
+    },
+    {
+      "id": "ROOT-003",
+      "description": "Per-listener session map and per-node UDP tracker are single async mutexes touched on every datagram in both directions and scanned by periodic sweeps.",
+      "findings": ["PERF-003"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "1971000196dd4103",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "memory",
+      "location": {
+        "service": "node",
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 118,
+        "symbol": "serve_udp_listener"
+      },
+      "tags": ["scalability-risk"],
+      "problem": "When a UDP session goes idle, the sweeper removes its map entry, but the reader task spawned for it still owns an Arc to the outbound socket and waits in recv forever. The socket, the task and its 65535-byte buffer are never released, and a later packet from the same client creates a second set.",
+      "performance_principle": "Resources acquired per unit of demand must be released when that unit of demand ends; otherwise resource use grows with cumulative history rather than with current load.",
+      "evidence": [
+        {
+          "statement": "The cleanup sweeper only calls sessions.retain(...) on the HashMap, dropping the map's Arc<UdpSocket>; it signals nothing to the reader task.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 118
+        },
+        {
+          "statement": "The reader task clones the outbound socket (outbound_c) and loops on outbound_c.recv(). Its only exits are a recv error or a failed send_to to the client. An idle connected UDP socket produces neither, so the task and socket stay alive.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 240
+        },
+        {
+          "statement": "Each reader task allocates vec![0u8; UDP_BUF_SIZE] with UDP_BUF_SIZE = 65535; each outbound socket also requests 4 MiB send and receive buffers.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 238
+        },
+        {
+          "statement": "The task's exit path runs sessions_c.lock().await.remove(&src_c), keyed only by client address. A stale task that ends later can remove a newer live session for the same client, orphaning that session's reader as well.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 266
+        },
+        {
+          "statement": "The generated service unit sets LimitNOFILE=65536, so descriptor exhaustion is bounded by that figure in installs made with the script. There is no runtime evidence in the repository.",
+          "kind": "static",
+          "file": "scripts/relay-node-install.sh",
+          "line": 391
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when distinct client source addresses keep arriving over the node's lifetime (NAT port churn, short-lived clients, many users) and each idles past 60 s at least once. Growth is linear in cumulative expired sessions, not in concurrent clients. A small, stable client population would not exhibit it. Client counts are unknown.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for a cancellation token, abort handle, Drop impl or timeout around the reader recv. None exists in udp.rs.",
+          "effect": "no-effect",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 240
+        },
+        {
+          "statement": "A reply arriving late would refresh the tracker and send to the client, and an ICMP port-unreachable on a connected socket can surface as a recv error and end the task. Neither is guaranteed for a silent target, so release depends on target behaviour.",
+          "effect": "bounds-impact",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 240
+        },
+        {
+          "statement": "Node-wide descriptor limit of 65536 in the install script caps the leak before unbounded memory growth, but exhaustion then also affects TCP accept and new outbound sockets.",
+          "effect": "bounds-impact",
+          "file": "scripts/relay-node-install.sh",
+          "line": 391
+        }
+      ],
+      "why_this_might_not_matter": "If targets answer and reply traffic keeps the session alive, or clients are few and long-lived, sessions rarely expire and the leak never accumulates. If the node is restarted often by deploys, the accumulation is reset.",
+      "recommendation": "Tie the reader task's lifetime to the session: give each session a cancellation signal (for example a CancellationToken or an abort handle stored in UdpSession) that the sweeper fires when it evicts an entry, and make the task select on it alongside recv so it drops the socket. Make the task's exit path remove the map entry only if it still holds that task's own socket (compare Arc pointers).",
+      "alternatives": [
+        {
+          "option": "Wrap the reader's recv in tokio::time::timeout based on last_active and exit when the session has expired.",
+          "preferred": false,
+          "why": "Works, but needs a wake-up per session and a shared last_active read; explicit cancellation is simpler to reason about."
+        },
+        {
+          "option": "Store a cancellation handle in UdpSession and fire it from the sweeper and from replacement.",
+          "preferred": true,
+          "why": "Removes the cause directly and also fixes the stale-remove race."
+        },
+        {
+          "option": "Raise LimitNOFILE.",
+          "preferred": false,
+          "why": "Delays exhaustion without releasing anything."
+        }
+      ],
+      "trade_offs": "Adds a handle per session and a select branch per reader; a client returning after eviction pays the setup cost again, as it does today.",
+      "validation": {
+        "metric": "Open file descriptors and live tokio tasks of the node process after client traffic has been idle for more than 60 s plus one sweep interval (15 s).",
+        "expectation": "After the change, descriptors and tasks fall back toward the baseline within about 75 s of the last packet; before it, they stay at their peak.",
+        "falsifier": "If descriptor and task counts already return to baseline within 75 s of idling on the current code, the finding is wrong.",
+        "safety": "safe-on-production",
+        "guard": "A test that opens a session, advances the paused tokio clock past UDP_SESSION_TIMEOUT plus CLEANUP_INTERVAL, and asserts the outbound socket's strong count falls to zero.",
+        "commands": []
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "0d54573bc853f934",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "concurrency",
+      "location": {
+        "service": "node",
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 285,
+        "symbol": "serve_udp_listener"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Every client's upload path runs inside a single receive loop per listener socket. That loop awaits the rule's shared upload limiter sleep, new-session setup (socket creation, bind, connect, spawn) and the target send before reading the next datagram, so one throttled or newly arriving client delays every other client of the rule.",
+      "performance_principle": "A single serial stage shared by all clients caps throughput at one worker and turns any slow step into head-of-line blocking for everyone; slow work should be off the shared dispatch path.",
+      "evidence": [
+        {
+          "statement": "One loop does recv_from, then udp_touch, session lookup, and, for new clients, udp_outbound_socket (socket2 socket, two buffer setsockopts, bind), connect and tokio::spawn, all awaited inline.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 174
+        },
+        {
+          "statement": "rate_limit.acquire_upload(n).await is called inline in that loop. The limiter returns a debt wait and sleeps for it (limiter.rs charge), so the loop stops reading while it sleeps; the limiter is shared per rule, so the wait reflects aggregate rule traffic, not one client's.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 285
+        },
+        {
+          "statement": "RuleLimiter::charge releases the bucket lock before sleeping (so the lock itself is not the stall), but the sleeping caller here is the only receiver for the listener.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/limiter.rs",
+          "line": 125
+        },
+        {
+          "statement": "The v4 and v6 serve futures are driven by tokio::select! inside one spawned task, so a rule's UDP ingress for both address families shares one task.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/manager.rs",
+          "line": 575
+        },
+        {
+          "statement": "Buffers requested on the inbound socket are 4 MiB (UDP_SOCKET_BUFFER_BYTES), which absorbs bursts while the loop is busy; the kernel may clamp this and the effective size is not known.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/outbound.rs",
+          "line": 376
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "unknown"
+      },
+      "conditions": "Matters when a rule has an upload cap and aggregate client traffic exceeds it (the loop then sleeps, and datagrams queue in the socket buffer or are dropped), or when many new clients arrive in a burst (each new client costs several syscalls inline), or when a single core cannot keep up with the packet rate. None of these quantities is known. The limiter case is partly intended behaviour: the cap is an aggregate cap by design.",
+      "counter_evidence": [
+        {
+          "statement": "Unlimited rules skip the limiter entirely (RateLimit::Unlimited), so the first mechanism applies only to rules with caps.",
+          "effect": "bounds-impact",
+          "file": "crates/node/src/forwarder/limiter.rs",
+          "line": 153
+        },
+        {
+          "statement": "v1.0.9 already moved socket bind and connect outside the session-map lock, and enlarged socket buffers; the remaining cost is serial placement, not lock hold time.",
+          "effect": "bounds-impact",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 157
+        },
+        {
+          "statement": "Downstream replies are handled by one task per session, so the return path is parallel; only the client-to-target direction is serial.",
+          "effect": "bounds-impact",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 237
+        },
+        {
+          "statement": "Per-datagram work for existing sessions is a bounded number of awaited steps plus one send syscall, and the loop was not shown to be CPU-bound. Searched for a recvmmsg or batched-read path; none exists.",
+          "effect": "lowers-confidence"
+        }
+      ],
+      "why_this_might_not_matter": "If the cap is intended to throttle the whole rule, stalling intake is how the cap works, and the kernel buffer absorbs short bursts. If packet rates stay far below what one task can forward, serial ingress is not the limit.",
+      "recommendation": "First measure where the single task spends its time. If it is the limiter sleep, move the throttle off the receive loop: hand datagrams to a bounded per-rule queue (or spawn per datagram) so the loop keeps draining, and drop or reject on queue overflow explicitly. If it is session setup, create the outbound socket and reader task in a spawned task and queue the first datagram behind it. If it is raw packet rate, consider several receivers on the same port (SO_REUSEPORT) after confirming the platform behaviour.",
+      "alternatives": [
+        {
+          "option": "Leave as is and raise the cap on affected rules.",
+          "preferred": false,
+          "why": "Only helpful if the cap was the cause; no code risk."
+        },
+        {
+          "option": "Offload limiter wait and session setup to spawned tasks fed by a bounded queue.",
+          "preferred": true,
+          "why": "Targets the serial stage without changing semantics of the aggregate cap."
+        },
+        {
+          "option": "SO_REUSEPORT with multiple receive loops.",
+          "preferred": false,
+          "why": "Splits a client's packets across loops unless the kernel hashes by 4-tuple; session map sharing becomes harder."
+        }
+      ],
+      "trade_offs": "A queue adds memory and a new drop policy; spawning per datagram can reorder packets from one client, which matters for some UDP protocols; per-client ordering needs a per-session queue.",
+      "validation": {
+        "metric": "Per-rule UDP datagrams forwarded per second and datagrams dropped by the inbound socket (kernel receive queue drops) at increasing concurrent client counts, with and without a cap on the rule.",
+        "expectation": "With the throttle off the receive loop, intake no longer stalls during limiter waits, and kernel drops under a capped burst move from the socket buffer to an explicit, counted queue overflow.",
+        "falsifier": "If a profile shows the receive task is mostly idle (waiting on recv_from) during the slow period, serial ingress is not the bottleneck.",
+        "safety": "not-safe-on-production",
+        "guard": "A load-test case with N concurrent UDP clients against a capped rule, asserting aggregate throughput approaches the cap and one client's burst does not delay another's first packet."
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "d81a8e139da0a80d",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "concurrency",
+      "location": {
+        "service": "node",
+        "file": "crates/node/src/reporter.rs",
+        "line": 203,
+        "symbol": "ConnectionTracker::udp_touch"
+      },
+      "tags": ["needs-measurement"],
+      "problem": "Every datagram in either direction takes the node-wide UDP tracker mutex (udp_touch) and the listener's session-map mutex, and the same two locks are held across O(sessions) scans by the periodic sweeper and the status reporter. With many clients this puts N reader tasks and the ingress loop on two shared locks.",
+      "performance_principle": "State written on every operation should be sharded or lock-free so contention does not rise with concurrency; global scans should not hold the lock that the hot path needs.",
+      "evidence": [
+        {
+          "statement": "udp_touch locks the tracker's Mutex<HashMap> on every call; it is called once per inbound datagram and once per reply.",
+          "kind": "static",
+          "file": "crates/node/src/reporter.rs",
+          "line": 203
+        },
+        {
+          "statement": "The reply path takes the tracker lock and then the sessions lock for every datagram received from the target.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 250
+        },
+        {
+          "statement": "The sweeper holds the sessions lock while retain scans every session, and prune_expired_locked scans the tracker map under its lock; the tracker scan also runs from current() in the status reporter.",
+          "kind": "static",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 116
+        },
+        {
+          "statement": "The tracker and the session map both record last-activity per client, so the same fact is written twice (two locks) per packet.",
+          "kind": "static",
+          "file": "crates/node/src/reporter.rs",
+          "line": 167
+        }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "unknown"
+      },
+      "conditions": "Matters only at packet rates and session counts high enough for the critical sections (a hash lookup and an Instant write) to contend, or when the sweep scan time becomes noticeable. The tracker lock is shared across all UDP rules on the node. Neither quantity is known; an uncontended async mutex is cheap.",
+      "counter_evidence": [
+        {
+          "statement": "The v1.0.9 change already removed a full-table scan from udp_touch and moved the traffic counter to a read lock plus atomics, so the worst per-packet costs were addressed.",
+          "effect": "lowers-confidence",
+          "file": "crates/node/src/reporter.rs",
+          "line": 208
+        },
+        {
+          "statement": "Critical sections hold no await and do O(1) work except the sweeps, which run every 15 s per listener.",
+          "effect": "bounds-impact",
+          "file": "crates/node/src/forwarder/udp.rs",
+          "line": 104
+        }
+      ],
+      "recommendation": "Do not change this on static grounds alone. If a profile shows lock wait time, replace the two maps' activity timestamps with a single sharded structure or per-session atomics (an Arc<AtomicU64> of last-active millis shared by the session and tracker entry), so the hot path takes no global lock and sweeps need not block it.",
+      "trade_offs": "More state to keep consistent between the tracker and the session; sharding adds code.",
+      "validation": {
+        "metric": "Time spent waiting on the tracker and session-map locks under N concurrent UDP clients, from a profile or tokio-console.",
+        "expectation": "Wait time per packet stays flat as client count rises if the locks are not a constraint; a rise points to contention.",
+        "falsifier": "If lock wait is a negligible share of per-packet time at the highest tested client count, close this finding.",
+        "safety": "not-safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Per-datagram buffer copying or allocation on the forward path.",
+      "why_discarded": "The receive buffer is allocated once per listener and reused; reply buffers are once per session; sends use slices without copying.",
+      "location": "crates/node/src/forwarder/udp.rs:130",
+      "evidence_checked": ["crates/node/src/forwarder/udp.rs"],
+      "revisit_when": "A profile shows allocation in the packet path."
+    },
+    {
+      "observation": "TrafficCounter::add per packet.",
+      "why_discarded": "Uses a shared read lock plus relaxed atomic adds; the write lock is only taken for a rule's first bytes.",
+      "location": "crates/node/src/reporter.rs:35",
+      "evidence_checked": ["crates/node/src/reporter.rs"],
+      "revisit_when": "Never expected to matter before the other findings."
+    },
+    {
+      "observation": "TargetSelector::order allocates two small Vecs per new session.",
+      "why_discarded": "Runs per new session, not per datagram; bounded by the target count.",
+      "location": "crates/node/src/forwarder/selector.rs:112",
+      "evidence_checked": ["crates/node/src/forwarder/selector.rs"],
+      "revisit_when": "Rules with large target lists and heavy session churn."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 4204
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 4163
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 4255
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 3979
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 1521
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "flexmeasures/data/models/planning/storage.py",
+        "line": 1642
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

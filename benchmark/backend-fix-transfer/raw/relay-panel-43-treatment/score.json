@@ -1,0 +1,22 @@
+{
+  "source_files": [
+    "crates/node/src/forwarder/udp.rs",
+    "crates/node/src/reporter.rs"
+  ],
+  "window": 20,
+  "findings": 3,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "PERF-001",
+    "PERF-002",
+    "PERF-003"
+  ],
+  "hunk_hits": [
+    "PERF-001",
+    "PERF-002",
+    "PERF-003"
+  ],
+  "top_finding": "PERF-001",
+  "top_finding_file_hit": true
+}

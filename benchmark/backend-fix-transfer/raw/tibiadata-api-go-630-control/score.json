@@ -1,0 +1,28 @@
+{
+  "source_files": [
+    "src/validation/highscore.go",
+    "src/validation/tibia.go",
+    "src/validation/validation.go"
+  ],
+  "window": 20,
+  "findings": 7,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F7"
+  ],
+  "hunk_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F5",
+    "F7"
+  ],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

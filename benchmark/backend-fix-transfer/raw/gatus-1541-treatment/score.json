@@ -1,0 +1,17 @@
+{
+  "source_files": [
+    "storage/store/sql/specific_postgres.go"
+  ],
+  "window": 20,
+  "findings": 3,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "PERF-002"
+  ],
+  "hunk_hits": [
+    "PERF-002"
+  ],
+  "top_finding": "PERF-001",
+  "top_finding_file_hit": false
+}

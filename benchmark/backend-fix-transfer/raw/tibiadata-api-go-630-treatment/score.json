@@ -1,0 +1,15 @@
+{
+  "source_files": [
+    "src/validation/highscore.go",
+    "src/validation/tibia.go",
+    "src/validation/validation.go"
+  ],
+  "window": 20,
+  "findings": 0,
+  "file_hit": false,
+  "hunk_hit": false,
+  "file_hits": [],
+  "hunk_hits": [],
+  "top_finding": null,
+  "top_finding_file_hit": false
+}

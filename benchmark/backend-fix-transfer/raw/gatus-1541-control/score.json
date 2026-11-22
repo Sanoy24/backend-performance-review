@@ -1,0 +1,15 @@
+{
+  "source_files": [
+    "storage/store/sql/specific_postgres.go"
+  ],
+  "window": 20,
+  "findings": 8,
+  "file_hit": true,
+  "hunk_hit": false,
+  "file_hits": [
+    "F1"
+  ],
+  "hunk_hits": [],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

@@ -1,0 +1,8 @@
+NOTES: dnb-backend-508 F1: used the detailed-section path as written ("badge.service.js") rather than the table's full "src/services/..." path.
+NOTES: dnb-backend-508 F3 and F4: the detailed sections give lines but no file, so I took the file and first line from the summary table (badge.service.js, 7 and 20).
+NOTES: commafeed-2089 F1-F7: used the summary table's location for each finding, since the detailed sections often give a line without a file. The "B/" prefix is kept as written. F2 is 233 from the table, while the detailed section says 231-233. F5 uses the table's "FeedRefreshUpdater.java" with no B/ prefix.
+NOTES: gatus-1541 F1-F3: used the "around line N" figures given for table creation (60, 85, 45) as the line. F1 keeps the full path; F2 and F3 use the abbreviated "specific_postgres.go". F5 and F8 use the "~" lines 815 and 805.
+NOTES: pokeapi-1688 F7: the file has no line, but "CACHES around line 117" is the only line given, so I used 117.
+NOTES: pokeapi-1688 F5: the report names the file but gives no line, so there is no line key.
+NOTES: relay-panel-43 F6, tibiadata-api-go-630 F6 and F7, and arcane-4106 F6: each finding is a single top-level heading with sub-bullets, so I took the first location stated.
+NOTES: flexmeasures-2641 F6: the first line stated is 1642, ahead of 148.

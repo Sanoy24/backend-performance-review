@@ -1,0 +1,17 @@
+{
+  "source_files": [
+    "workers/judge/internal/adapter/outbound/execute/go_judge_client.go"
+  ],
+  "window": 20,
+  "findings": 4,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "PERF-001"
+  ],
+  "hunk_hits": [
+    "PERF-001"
+  ],
+  "top_finding": "PERF-001",
+  "top_finding_file_hit": true
+}

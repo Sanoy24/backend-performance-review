@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "pokemon_v2/serializers.py",
+        "line": 3533
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "pokemon_v2/serializers.py",
+        "line": 3431
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "pokemon_v2/api.py",
+        "line": 376
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "pokemon_v2/serializers.py",
+        "line": 3468
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "pokemon_v2/serializers.py"
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "pokemon_v2/serializers.py",
+        "line": 3480
+      }
+    },
+    {
+      "id": "F7",
+      "location": {
+        "file": "config/settings.py",
+        "line": 117
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

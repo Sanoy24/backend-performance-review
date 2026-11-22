@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T12:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py (bundled)",
+    "model": "claude-sonnet-5-5 via Claude Code",
+    "repository": { "name": "dnb-backend" }
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Badge award/read path (service, controller, routes, models, callers) and notification list path (controller, model, indexes) read in full; remainder of repository not examined.",
+    "critical_paths_identified": 4,
+    "critical_paths_analyzed": 4,
+    "shared_resources_identified": 1,
+    "shared_resources_analyzed": 1,
+    "technology_support": [
+      { "technology": "mongodb", "tier": "deep", "detection_confidence": 0.99 },
+      { "technology": "node", "tier": "deep", "detection_confidence": 0.88 },
+      { "technology": "rest", "tier": "deep", "detection_confidence": 0.86 }
+    ],
+    "unknowns": [
+      { "subject": "Real badge, notification and completed-course counts per user", "reason": "no-evidence-exists", "what_would_resolve_it": "Per-user count aggregation on UserBadge, Notification and CourseProgress collections" },
+      { "subject": "Actual query plans and slow-query log output", "reason": "no-evidence-exists", "what_would_resolve_it": "explain('executionStats') on the unread-count query; slow-query log from the existing Mongoose plugin" },
+      { "subject": "Whether custom (non-default) badges exist in the Badge collection", "reason": "no-evidence-exists", "what_would_resolve_it": "Badge.countDocuments() on the deployed database" },
+      { "subject": "Rest of the repository (payments, courses, contracts, sdk)", "reason": "out-of-scope", "what_would_resolve_it": "A separate review scoped to those areas" }
+    ]
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      { "question": "How many badges and notifications do heavy users hold, and how often are the badge endpoints and user profile fetched?", "answer": "Not supplied; operators state only that heavy-badge and heavy-notification users are slow.", "source": "unanswered", "asked": false, "evidence_checked": ["src/services/badge.service.js", "src/controllers/notificationController.js", "k8s/deployment.yaml"] }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "assumptions": {
+    "known": [
+      "DEFAULT_BADGES contains 5 badge definitions (src/utils/badge-criteria.js)",
+      "BadgeService.getUserBadges calls checkAndAwardBadges before reading (src/services/badge.service.js:74-79)",
+      "GET /badges/user/:userId is registered without auth middleware (src/routes/badge.routes.js:13)",
+      "getUserNotifications caps limit at 100 and uses indexed recipient+isDeleted+createdAt sort (src/controllers/notificationController.js:281-305, src/models/Notification.js:90)"
+    ],
+    "unknown": [
+      "Per-user volumes of badges, notifications, completed courses",
+      "Request rates of badge endpoints and user profile endpoint",
+      "Whether custom badges exist beyond the 5 defaults"
+    ],
+    "assumed": [
+      "Badge collection holds the 5 defaults only, so steady-state round trips are computed from that (affects PERF-001)",
+      "Heavy users accumulate notifications without bound because no TTL or scheduled cleanup was found (affects PERF-002)"
+    ],
+    "derived": [
+      "Steady-state round trips per badge read for a user holding every default badge: 5 seed upserts + 1 CourseProgress.find + 1 populate + 1 Badge.find + up to 5 UserBadge.findOne + 1 UserBadge.find + 1 populate = at most 15, from the 5 entries in DEFAULT_BADGES and the call sequence in badge.service.js"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "How often are GET /badges/user/:userId, GET /badges/my-badges and the user profile endpoint called, and are any polled?",
+      "what_it_would_change": "Raises or lowers PERF-001 severity; a polled or public-crawled path moves it toward High.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001"]
+    },
+    {
+      "question": "What is the typical and maximum count of non-deleted notifications per recipient, and is the unread count slow in the slow-query log?",
+      "what_it_would_change": "Decides whether PERF-002 stays P3 or justifies an index and a counter.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "medium",
+      "affects": ["PERF-002"]
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Badge award evaluation (catalog seeding plus eligibility and per-badge existence checks) is executed synchronously on every badge read instead of when course completion occurs.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "Notification list issues two extra counts per request, and the unread count filters on a field not covered by the index that contains isDeleted.", "findings": ["PERF-002"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "767ac5d875f7aba9",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "src/services/badge.service.js", "line": 17, "symbol": "BadgeService.checkAndAwardBadges" },
+      "tags": ["quick-win", "scalability-risk", "needs-measurement"],
+      "problem": "Every badge read (user badges, public badge catalog, user profile) first runs the full award evaluation, which re-seeds the catalog with 5 upserts, reloads and populates all completed course progress, loads all badges and does a per-badge existence query, all of which is write-path work that mostly changes nothing.",
+      "performance_principle": "Do work when its inputs change, not on every read; do not repeat idempotent setup per request; avoid per-item round trips when one set-based query can answer.",
+      "evidence": [
+        { "statement": "getUserBadges awaits checkAndAwardBadges before the read query.", "kind": "static", "file": "src/services/badge.service.js", "line": 74 },
+        { "statement": "checkAndAwardBadges starts with seedDefaultBadges, which loops over DEFAULT_BADGES doing one findOneAndUpdate upsert each, awaited serially.", "kind": "static", "file": "src/services/badge.service.js", "line": 7 },
+        { "statement": "getAllBadges, a public unauthenticated route, also runs the 5 serial upserts on each call.", "kind": "static", "file": "src/services/badge.service.js", "line": 81 },
+        { "statement": "All completed CourseProgress documents for the user are loaded in full (including the lessonsCompleted array) and populated with course, then only a count and a category tally are used.", "kind": "static", "file": "src/services/badge.service.js", "line": 20 },
+        { "statement": "For each eligible badge a separate UserBadge.findOne is awaited inside the loop, and a first award adds create and findById+populate.", "kind": "static", "file": "src/services/badge.service.js", "line": 49 },
+        { "statement": "The user profile endpoint calls getUserBadges, so a profile view triggers the evaluation; the public route GET /badges/user/:userId needs no authentication.", "kind": "static", "file": "src/controllers/userController.js", "line": 142 },
+        { "statement": "Derived: 5 default badges give at most 5 + 1 + 1 + 1 + 5 + 1 + 1 = 15 round trips per steady-state badge read, versus 2 needed to read UserBadge with its badge populated.", "kind": "derived" },
+        { "statement": "No runtime evidence (profile, slow-query log, trace) was supplied or found in the repository.", "kind": "static" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when badge or profile endpoints are called often (page loads, polling, or crawling of the unauthenticated /badges/user/:userId route) and users hold several completed courses and badges. Assumes only the 5 default badges exist; custom badges add one round trip each. Request rate is unknown.",
+      "counter_evidence": [
+        { "statement": "Queries use indexed fields (UserBadge unique user+badge, CourseProgress unique user+course, Badge unique slug) so each round trip is cheap and no collection scan was found.", "effect": "bounds-impact", "file": "src/models/user-badge.model.js", "line": 25 },
+        { "statement": "Badge catalog size is fixed at 5 defaults in code, so per-request work is bounded unless custom badges exist.", "effect": "bounds-impact", "file": "src/utils/badge-criteria.js", "line": 1 },
+        { "statement": "Searched for caching or a memoised seed flag around the seed and award calls and found none.", "effect": "no-effect" },
+        { "statement": "Searched for award hooks at course completion (callers of checkAndAwardBadges); only HTTP controllers and the user profile call it, so no existing award-on-completion path makes the read-time check redundant.", "effect": "no-effect", "file": "src/controllers/userController.js", "line": 142 }
+      ],
+      "why_this_might_not_matter": "Each statement is indexed and the badge catalog is five items, so per-call cost is a small constant of fast queries; if badge reads are infrequent this will never show up against the rest of the database load.",
+      "recommendation": "Separate awarding from reading. Seed the catalog once at startup or in a migration rather than per request. Make getUserBadges and getAllBadges pure reads. Run the award evaluation when a course reaches completion (or on the explicit POST /badges/evaluate), and inside it replace the per-badge findOne loop with one UserBadge.find for the user's existing badge ids, then one insertMany of the missing ones, using a lean, projected CourseProgress query (select course, no lessonsCompleted) or an aggregation that returns the count and per-category counts.",
+      "alternatives": [
+        { "option": "Move evaluation to the course-completion event and make reads pure", "preferred": true, "why": "Removes the work instead of making it cheaper; reads drop to the minimum two queries." },
+        { "option": "Keep evaluation on read but seed once at startup and batch the existence checks and queries", "preferred": false, "why": "Cuts round trips to roughly 5 but still does write-path work on every read and on a public route." },
+        { "option": "Cache the evaluation result per user for a short time", "preferred": false, "why": "Masks the work, adds staleness (a user could miss a badge just earned) and invalidation rules for no gain over doing it on completion." }
+      ],
+      "trade_offs": "Awarding on completion needs a hook in the progress-update code and a backfill for users whose completions pre-date it; badge display after a missed event relies on the manual evaluate endpoint. Startup seeding adds a boot-time dependency on the database.",
+      "validation": {
+        "metric": "MongoDB commands issued per GET /api/v1/badges/my-badges and per GET user profile request",
+        "expectation": "Direction: fewer database round trips per read; derived from the code the minimum is 2 (UserBadge.find plus populate) versus up to 15 today, assuming only default badges.",
+        "falsifier": "If a command-count capture of a staging request shows far fewer than the derived round trips, or badge endpoints are almost never called, the finding does not matter.",
+        "safety": "not-safe-on-production",
+        "guard": "A test that asserts getUserBadges issues no write operations and a bounded query count.",
+        "commands": [
+          { "command": "db.setProfilingLevel(2) on a staging database, call the endpoint once, then db.system.profile.find({ ns: /userbadges|badges|courseprogresses/ }).count()", "purpose": "Count commands per request in staging to compare with the derived 15.", "safety": "not-safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "d96200a278c15044",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "Medium",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "src/controllers/notificationController.js", "line": 307, "symbol": "getUserNotifications" },
+      "tags": ["needs-measurement", "scalability-risk"],
+      "problem": "The notification list runs, serially after the page query, a total count and an unread count; the unread count filters on isRead with recipient and isDeleted, a combination no single index covers, so it must fetch documents to apply the remaining predicate.",
+      "performance_principle": "Work per request should not grow with the size of the user's whole history when only one page is returned; keep filters answerable from one index.",
+      "evidence": [
+        { "statement": "Two countDocuments calls are awaited sequentially after the page query, in addition to up to three populate lookups on the page.", "kind": "static", "file": "src/controllers/notificationController.js", "line": 307 },
+        { "statement": "Indexes are recipient+createdAt, recipient+isRead, recipient+isDeleted and recipient+isDeleted+createdAt; none holds recipient, isRead and isDeleted together.", "kind": "static", "file": "src/models/Notification.js", "line": 87 },
+        { "statement": "No TTL index or scheduled cleanup was found; the repository hard-delete helper is described as manual cleanup.", "kind": "static", "file": "mongo/repositories/NotificationRepository.js", "line": 324 },
+        { "statement": "No runtime evidence supplied.", "kind": "static" }
+      ],
+      "evidence_quality": "Weak",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "endpoint"
+      },
+      "conditions": "Only matters for recipients holding thousands of notifications or more with the list polled or loaded on every page; volumes per user are unknown and assumed to grow without bound because no cleanup was found.",
+      "counter_evidence": [
+        { "statement": "The page query itself is well indexed (recipient+isDeleted+createdAt matches filter and sort) and limit is capped at 100, so the row transfer is bounded.", "effect": "bounds-impact", "file": "src/controllers/notificationController.js", "line": 283 },
+        { "statement": "Counts use index prefixes on recipient so scan size is limited to one user's notifications, not the collection.", "effect": "bounds-impact", "file": "src/models/Notification.js", "line": 88 },
+        { "statement": "Searched for an N+1 pattern in the list path; populate batches per path so only 3 extra queries run regardless of page size.", "effect": "lowers-confidence" }
+      ],
+      "recommendation": "Measure first. If the unread count shows up in slow-query output, add an index on recipient, isDeleted, isRead and, if counts remain costly for very large histories, run the two counts concurrently (Promise.all) or maintain a per-user unread counter. Otherwise take no action.",
+      "trade_offs": "A new index costs write amplification on every notification insert and extra memory; a counter adds consistency risk with read, delete and bulk operations.",
+      "validation": {
+        "metric": "docsExamined versus nReturned for the unread-count query",
+        "expectation": "If docsExamined is much larger than the count, the extra index would reduce it; direction only, no magnitude is derivable.",
+        "falsifier": "docsExamined close to the count, or the query absent from the slow-query log, means no change is warranted.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "db.notifications.find({ recipient: ObjectId('<id>'), isRead: false, isDeleted: false }).explain('executionStats')", "purpose": "Compare docsExamined with returned count for a heavy user.", "safety": "safe-on-production" }
+        ]
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Notification list page query and populate calls",
+      "why_discarded": "Filter and sort are served by recipient+isDeleted+createdAt, limit is capped at 100, and populate is batched per path.",
+      "location": "src/controllers/notificationController.js:298",
+      "path": "GET /api/v1/notifications",
+      "evidence_checked": ["src/models/Notification.js:90", "src/controllers/notificationController.js:281-305"],
+      "revisit_when": "Slow-query log shows the page query examining far more documents than returned, for example with very deep skip values."
+    },
+    {
+      "observation": "Duplicate TypeScript sources of the badge service and controller",
+      "why_discarded": "The .js files are the ones imported by routes and the app; the .ts copies have the same logic so no distinct performance cost.",
+      "location": "src/services/badge.service.ts",
+      "path": "badge read path",
+      "evidence_checked": ["src/routes/badge.routes.js", "package.json main and type fields"],
+      "revisit_when": "A build step is found that compiles the .ts files into the deployed artifact."
+    }
+  ]
+}
