@@ -1,0 +1,362 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py",
+    "model": "claude-sonnet-5-5",
+    "repository": {
+      "name": "claude-code-agent-monitor"
+    }
+  },
+  "services": [
+    {
+      "name": "server",
+      "path": "server",
+      "runtime": [
+        "node"
+      ],
+      "datastores": [
+        "sqlite"
+      ]
+    }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How large is the events table and how frequently do hook events arrive?",
+        "answer": "Not supplied; operator states only that the activity history table is very large",
+        "source": "user"
+      }
+    ],
+    "scenarios": [
+      "large-dataset"
+    ]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Analytics read path only: server/routes/analytics.js, the statements in server/db.js, server/lib/scoped-stats.js, and the Analytics page refresh logic. Rest of repository not reviewed.",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 2,
+    "shared_resources_analyzed": 2,
+    "technology_support": [
+      {
+        "technology": "sqlite",
+        "tier": "deep"
+      },
+      {
+        "technology": "node",
+        "tier": "deep"
+      }
+    ],
+    "unknowns": [
+      {
+        "subject": "Row count of events and share of rows with non-null tool_name",
+        "reason": "no-evidence-exists"
+      },
+      {
+        "subject": "Actual query plans and per-query time within GET /api/analytics",
+        "reason": "no-evidence-exists"
+      },
+      {
+        "subject": "Cost of the pricing total-cost endpoint, called alongside analytics on every refresh",
+        "reason": "not-examined"
+      }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "toolUsageCounts filters and groups on events.tool_name; no index on tool_name is created (server/db.js:1961, table at :195, index list at :346-:406)",
+      "better-sqlite3 prepared statements are synchronous (.all()/.get()) inside an Express handler (server/routes/analytics.js:30-32)",
+      "The Analytics page refetches every 15 s and on each new_event websocket frame without debounce (client/src/pages/Analytics.tsx:710-728)"
+    ],
+    "unknown": [
+      "events row count",
+      "hook event arrival rate",
+      "whether the unscoped or scoped (source/provider) path is used by the reporting operators"
+    ],
+    "assumed": [
+      "The operators' phrase 'very large' means a row count where a full scan is seconds-scale; affects PERF-001 and PERF-002",
+      "The page is open while hooks are actively streaming events; affects PERF-002"
+    ],
+    "derived": [
+      "Unscoped GET /api/analytics performs at least 5 aggregations over events per call (toolUsageCounts, dailyEventCounts, eventTypeCounts, avgEventsPerSession, stats total_events) - from server/routes/analytics.js:30-52 and server/db.js:1715-1722, 1961-1985"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Roughly how many rows are in events, and how often do hook events arrive while the Analytics page is open?",
+      "what_it_would_change": "Confirms PERF-001 magnitude and whether PERF-002 amplification is the dominant cause of freezes; could raise PERF-002 to High confidence",
+      "decision_dimensions": [
+        "severity",
+        "confidence"
+      ],
+      "expected_decision_value": "highest",
+      "affects": [
+        "PERF-001",
+        "PERF-002"
+      ]
+    }
+  ],
+  "root_causes": [
+    {
+      "id": "ROOT-001",
+      "description": "Analytics aggregates are computed on demand by synchronous full scans of the unbounded events table on the single Node event loop, with no covering index on tool_name and no precomputed or cached result.",
+      "findings": [
+        "PERF-001"
+      ]
+    },
+    {
+      "id": "ROOT-002",
+      "description": "The Analytics client re-issues the whole bundle on every new_event websocket frame plus a 15 s timer with no in-flight guard or debounce, multiplying the cost of ROOT-001.",
+      "findings": [
+        "PERF-002"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "765212b340d637d1",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Critical",
+      "confidence": "High",
+      "priority": "P0",
+      "category": "data-access",
+      "location": {
+        "service": "server",
+        "file": "server/db.js",
+        "line": 1961,
+        "symbol": "toolUsageCounts"
+      },
+      "tags": [
+        "scalability-risk",
+        "needs-measurement"
+      ],
+      "problem": "The tool-usage aggregate scans every row of events (no index covers tool_name) synchronously on the event loop, alongside several other whole-table aggregates in the same handler, so a large events table stalls the whole server.",
+      "performance_principle": "Work per request should not grow linearly with total accumulated history, and long CPU/IO-bound work must not run on a thread shared with all other requests.",
+      "evidence": [
+        {
+          "statement": "toolUsageCounts is SELECT tool_name, COUNT(*) FROM events WHERE tool_name IS NOT NULL GROUP BY tool_name ORDER BY count DESC LIMIT 20 with no time or session bound.",
+          "kind": "static",
+          "file": "server/db.js",
+          "line": 1961
+        },
+        {
+          "statement": "No index mentions tool_name: events indexes are session_id, event_type, created_at, (session_id,event_type), (session_id,event_type,json_extract uuid) partial, (agent_id,event_type), (agent_id,created_at), (session_id,created_at). SQLite therefore has no index that avoids reading the table rows for this query.",
+          "kind": "static",
+          "file": "server/db.js",
+          "line": 346
+        },
+        {
+          "statement": "The handler runs this and the other aggregates with better-sqlite3 .all()/.get(), which block the event loop for the full duration of each statement.",
+          "kind": "static",
+          "file": "server/routes/analytics.js",
+          "line": 30
+        },
+        {
+          "statement": "Sibling whole-table aggregates in the same request: eventTypeCounts (GROUP BY event_type, all rows), avgEventsPerSession (COUNT(*) over events), stats total_events (COUNT(*)), dailyEventCounts (365-day range). The scoped variants add session_id IN (SELECT id FROM sessions ...) over events.",
+          "kind": "static",
+          "file": "server/db.js",
+          "line": 1975
+        },
+        {
+          "statement": "A comment in the same file already records that an events-table scan 'becomes tens of seconds and blocks the event loop' on a large DB, showing the authors have seen this failure class for events scans.",
+          "kind": "static",
+          "file": "server/db.js",
+          "line": 393
+        },
+        {
+          "statement": "No runtime evidence (EXPLAIN, profile, timing) exists in the repository or was supplied.",
+          "kind": "static"
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "system-wide",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when events is large (operators report 'very large'; exact row count unknown) and rows are wide enough or numerous enough for a table scan to take seconds. Negligible on small databases.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for an index or covering index on tool_name, a cache, a materialized counter table, or a LIMIT/time window on this query; found none. The LIMIT 20 applies after aggregation, not before.",
+          "effect": "no-effect",
+          "file": "server/db.js",
+          "line": 1961
+        },
+        {
+          "statement": "Looked for server-side caching or memoization in server/routes/analytics.js; none present. Only dailyEventCounts is bounded (365 days) and can use idx_events_created.",
+          "effect": "no-effect",
+          "file": "server/routes/analytics.js",
+          "line": 17
+        },
+        {
+          "statement": "The exact time split between the sibling aggregates is not knowable without a plan or timing; SQLite may satisfy event_type counts from a narrow index, which is cheaper than the tool_name scan of full rows. This keeps confidence at High (mechanism) not Confirmed.",
+          "effect": "lowers-confidence"
+        }
+      ],
+      "why_this_might_not_matter": "If most deployments have modest events tables, or the SQLite page cache keeps the table hot so scans are fast, the cost is tolerable. Tens-of-seconds reports from operators suggest it is not in the affected deployment, but the per-query split is unmeasured.",
+      "recommendation": "Stop recomputing whole-history aggregates per request. Preferred: maintain the aggregate incrementally (counter table keyed by tool_name updated at event insert, or a periodically refreshed snapshot) or at minimum memoize the analytics result server-side with a short TTL and a single in-flight computation. Add a partial index on events(tool_name) WHERE tool_name IS NOT NULL as a cheaper interim step so the scan reads a narrow index instead of full rows.",
+      "alternatives": [
+        {
+          "option": "Partial index on events(tool_name) WHERE tool_name IS NOT NULL (covering for the unscoped query)",
+          "preferred": false,
+          "why": "Cheap and quick, reduces I/O per scan but remains O(rows with tool_name) and still blocks the loop; good first step, not the end state."
+        },
+        {
+          "option": "Incremental counter table or periodic snapshot for tool and event-type totals",
+          "preferred": true,
+          "why": "Removes the per-request O(n) work entirely; read becomes O(distinct tools)."
+        },
+        {
+          "option": "Server-side TTL cache with single-flight around the whole analytics bundle",
+          "preferred": false,
+          "why": "Fast to implement and also fixes PERF-002 server-side, but each miss still blocks the loop for the full scan."
+        },
+        {
+          "option": "Move the aggregation to a worker thread or separate read connection",
+          "preferred": false,
+          "why": "Frees the event loop but does not reduce total work; useful in addition if scans must stay."
+        }
+      ],
+      "trade_offs": "A counter table needs backfill and must stay consistent with event deletes/cascades and the tool_name NULLing migration (server/db.js:540); a TTL cache serves slightly stale charts; a new index adds write cost on every event insert, which is the hot ingest path.",
+      "validation": {
+        "metric": "Wall time of GET /api/analytics and event-loop delay of the server while it runs, on a database copy with a large events table",
+        "expectation": "Direction: the tool_name query switches from SCAN events to a scan of the narrow index (or no scan with a counter table), and event-loop stall during the request drops. Magnitude not derivable from code.",
+        "falsifier": "EXPLAIN QUERY PLAN already shows a covering index scan and the tool-usage statement is a negligible share of request time (profile shows the time is elsewhere, e.g. in pricing).",
+        "safety": "safe-on-production",
+        "guard": "A server test that asserts EXPLAIN QUERY PLAN for toolUsageCounts uses an index, plus an event-loop-delay metric alert on the analytics route.",
+        "commands": [
+          {
+            "command": "sqlite3 <copy-of-db> \"EXPLAIN QUERY PLAN SELECT tool_name, COUNT(*) FROM events WHERE tool_name IS NOT NULL GROUP BY tool_name ORDER BY COUNT(*) DESC LIMIT 20;\"",
+            "purpose": "Confirm the scan strategy and temp b-tree for the tool-usage query on a COPY of the database",
+            "safety": "safe-on-production"
+          }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "9046c8f5878edbc7",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "networking",
+      "location": {
+        "service": "client",
+        "file": "client/src/pages/Analytics.tsx",
+        "line": 710,
+        "symbol": "load"
+      },
+      "tags": [
+        "needs-measurement"
+      ],
+      "problem": "The Analytics page refetches the full bundle every 15 s and on every new_event, session_created, session_updated and agent_created websocket frame, with no debounce and no in-flight guard, so each open tab can queue back-to-back multi-second synchronous scans.",
+      "performance_principle": "Expensive idempotent reads should be coalesced and rate-limited so request rate is bounded independently of upstream event rate.",
+      "evidence": [
+        {
+          "statement": "load() is invoked on mount, every 15000 ms, and in an eventBus subscription for session_created, session_updated, new_event, agent_created and remote refresh messages; no debounce or in-flight check.",
+          "kind": "static",
+          "file": "client/src/pages/Analytics.tsx",
+          "line": 710
+        },
+        {
+          "statement": "The server broadcasts new_event, session_updated and agent_updated for hook ingest events (per event).",
+          "kind": "static",
+          "file": "server/routes/hooks.js",
+          "line": 129
+        },
+        {
+          "statement": "Each load calls api.analytics.get() and api.pricing.totalCost(); the server side of analytics has no cache (PERF-001).",
+          "kind": "static",
+          "file": "client/src/pages/Analytics.tsx",
+          "line": 692
+        },
+        {
+          "statement": "The openapi description for the session overview endpoint states the frontend debounces calls on these frames, so a debounce convention exists elsewhere but is not applied here.",
+          "kind": "static",
+          "file": "server/openapi.js",
+          "line": 1776
+        }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "system-wide",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when the Analytics page is open during active Claude Code sessions (frequent hook events) and an analytics call takes longer than the gap between events. Event rate is unknown.",
+      "counter_evidence": [
+        {
+          "statement": "Looked for a debounce, throttle, abort controller or in-flight flag around load() in the page; none found in the page code reviewed.",
+          "effect": "no-effect",
+          "file": "client/src/pages/Analytics.tsx",
+          "line": 716
+        },
+        {
+          "statement": "Browsers cap concurrent connections per origin and the requests are serialized by the synchronous server, so pile-up is bounded in practice by the tab count and connection cap, but not by cost.",
+          "effect": "lowers-confidence"
+        },
+        {
+          "statement": "Event arrival rate and whether the websocket is connected during the reported freeze are unknown.",
+          "effect": "lowers-confidence"
+        }
+      ],
+      "why_this_might_not_matter": "If the page is opened briefly or on an idle system, only the 15 s timer fires and the amplification is small; the reported freeze may then be entirely PERF-001.",
+      "recommendation": "Coalesce refreshes: a single in-flight request with a trailing refetch, a debounce of the websocket-triggered reloads, and ideally a server-side TTL cache or ETag so repeated polls within the window cost nothing. Pause polling when the tab is hidden.",
+      "alternatives": [
+        {
+          "option": "Client-side single-flight plus debounce of event-triggered loads",
+          "preferred": true,
+          "why": "Smallest change that bounds request rate regardless of event rate; matches the debounce convention used elsewhere."
+        },
+        {
+          "option": "Server-side TTL cache of the analytics response",
+          "preferred": false,
+          "why": "Protects against many tabs and clients too, but stale charts and a first-miss cost remain; pair with the preferred option."
+        },
+        {
+          "option": "Push incremental updates over the websocket instead of refetching",
+          "preferred": false,
+          "why": "Largest redesign for charts that tolerate seconds of staleness."
+        }
+      ],
+      "trade_offs": "Charts update at most once per debounce window rather than instantly; a server cache adds invalidation/staleness questions.",
+      "validation": {
+        "metric": "Count of GET /api/analytics requests per minute and their overlap while the Analytics page is open during an active session",
+        "expectation": "Request rate becomes bounded by the debounce/poll window and independent of hook event rate; direction only, no magnitude claimed.",
+        "falsifier": "Request log or browser network panel shows only the 15 s poll even during bursts of hook events (frames not reaching the page), or requests never overlap.",
+        "safety": "safe-on-production",
+        "guard": "Client test that fires N new_event frames and asserts at most one analytics request per window."
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Unscoped path loads every token_usage row joined to sessions and prices it in JS per request.",
+      "why_discarded": "Row count is bounded by sessions x models x tiers, not by events; likely far smaller than events, so not the cause of the reported symptom. Cannot be ruled out without row counts.",
+      "location": "server/routes/analytics.js:57",
+      "path": "GET /api/analytics",
+      "evidence_checked": [
+        "server/routes/analytics.js",
+        "server/db.js token_usage schema"
+      ],
+      "revisit_when": "token_usage row count is large or the pricing total-cost endpoint profiles slowly"
+    }
+  ]
+}

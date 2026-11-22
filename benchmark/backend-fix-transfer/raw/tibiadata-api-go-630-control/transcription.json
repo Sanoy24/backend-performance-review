@@ -1,0 +1,55 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 205
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 272
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 306
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 367
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 53
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "src/TibiaDataUtils.go",
+        "line": 80
+      }
+    },
+    {
+      "id": "F7",
+      "location": {
+        "file": "src/validation/tibia.go",
+        "line": 288
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

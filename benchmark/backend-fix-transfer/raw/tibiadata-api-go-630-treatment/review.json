@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py (bundled)",
+    "model": "claude-sonnet-5-5",
+    "repository": { "name": "tibiadata-api-go" }
+  },
+  "services": [
+    { "name": "api", "path": "src", "runtime": ["go"] },
+    { "name": "validation", "path": "src/validation", "runtime": ["go"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How large are the creature, spell, house, world and town lists?",
+        "answer": "Not stated in the repository; loaded at startup from an external mapping asset.",
+        "source": "unanswered",
+        "asked": false,
+        "evidence_checked": ["src/validation/validation.go", "src/validation/tibia.go"]
+      }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Name-lookup and validation paths read in full; HTML parsers only sampled for case-folding calls.",
+    "critical_paths_identified": 3,
+    "critical_paths_analyzed": 3,
+    "shared_resources_identified": 1,
+    "shared_resources_analyzed": 1,
+    "technology_support": [
+      { "technology": "go", "tier": "deep", "detection_confidence": 0.99 }
+    ],
+    "unknowns": [
+      {
+        "subject": "Actual size of the validation lists and per-request CPU/memory",
+        "reason": "no-evidence-exists",
+        "what_would_resolve_it": "Go benchmark of IsCreatureNameValid and IsSpellNameOrFormulaValid with the production list, plus a pprof CPU/alloc profile of a staging endpoint."
+      },
+      {
+        "subject": "Upstream fetch and HTML parsing cost per request",
+        "reason": "not-examined",
+        "what_would_resolve_it": "A profile or trace of a representative request in staging."
+      }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Case-insensitive lookups use strings.EqualFold against slices loaded once in Initiate (src/validation/tibia.go, src/validation/validation.go).",
+      "No per-request ToLower is applied to the lists in the lookup functions."
+    ],
+    "unknown": [
+      "Number of creatures, spells, houses, worlds and towns.",
+      "Request rate."
+    ],
+    "assumed": [],
+    "derived": [],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "Is there a profile or trace showing the slow case-insensitive requests, and which endpoint do they hit?",
+      "what_it_would_change": "Would show whether the cost is in validation or elsewhere (upstream fetch, HTML parsing), which this review could not see.",
+      "decision_dimensions": ["recommendation", "confidence"],
+      "expected_decision_value": "highest"
+    }
+  ],
+  "root_causes": [],
+  "findings": [],
+  "considered_not_reported": [
+    {
+      "observation": "Linear scan with strings.EqualFold (up to three comparisons per entry) over the creature and spell lists in IsCreatureNameValid and IsSpellNameOrFormulaValid.",
+      "why_discarded": "EqualFold folds in place without allocating, the lists are static and in memory, name length is bounded by validation before the scan, and the scan precedes a network fetch that dominates request cost. No mechanism produces the reported excess memory.",
+      "location": "src/validation/tibia.go:205",
+      "path": "GET /v4/creature/{race} and /v4/spell/{spell_id}",
+      "evidence_checked": [
+        "src/validation/tibia.go",
+        "src/validation/validation.go",
+        "src/validation/limits.go",
+        "src/webserver.go"
+      ],
+      "revisit_when": "A benchmark or profile shows the scan in the top CPU samples, or the lists grow by orders of magnitude."
+    },
+    {
+      "observation": "GetHouseRaw and GetHouseInTown linearly scan the houses slice, copying a small struct per iteration, with EqualFold on town.",
+      "why_discarded": "Bounded in-memory list, called once per house request, no allocation per iteration.",
+      "location": "src/validation/tibia.go:367",
+      "path": "house detail endpoint",
+      "evidence_checked": ["src/validation/tibia.go", "src/TibiaHousesHouse.go"],
+      "revisit_when": "A profile shows house lookup as a hotspot."
+    }
+  ],
+  "adjacent_findings": []
+}

@@ -1,0 +1,386 @@
+{
+ "schema_version": "1.0",
+ "mode": "full",
+ "reproducibility": {
+  "generated_at": "2026-11-22T12:00:00Z",
+  "skill_version": "2.3.0",
+  "spec": "backend-performance-review/2.0",
+  "model": "claude-sonnet-5-5",
+  "detector_version": "detect_stack.py (bundled)",
+  "repository": {
+   "name": "gatus-1541-treatment"
+  }
+ },
+ "completeness": {
+  "review_confidence": "Medium",
+  "evidence_available": "uninstrumented",
+  "ranking_method": "structural-signals-only",
+  "critical_paths_identified": 1,
+  "critical_paths_analyzed": 1,
+  "shared_resources_identified": 3,
+  "shared_resources_analyzed": 3,
+  "technology_support": [
+   {
+    "technology": "postgres",
+    "tier": "deep"
+   },
+   {
+    "technology": "sqlite",
+    "tier": "deep"
+   },
+   {
+    "technology": "go",
+    "tier": "deep"
+   }
+  ],
+  "unknowns": [
+   {
+    "subject": "Actual Postgres plans and row counts",
+    "reason": "no-evidence-exists",
+    "what_would_resolve_it": "EXPLAIN (ANALYZE, BUFFERS) on the three queries against a copy with many results per endpoint"
+   },
+   {
+    "subject": "Whether the deployment uses Postgres and the write-through cache",
+    "reason": "no-evidence-exists",
+    "what_would_resolve_it": "The deployed storage config (type and caching settings)"
+   },
+   {
+    "subject": "Write path, alerting, watchdog and web frontend cost",
+    "reason": "not-examined",
+    "what_would_resolve_it": "A separate review scoped to those paths"
+   }
+  ]
+ },
+ "assumptions": {
+  "known": [
+   "The status API calls GetAllEndpointStatuses on a miss of a 10s-TTL cache",
+   "Postgres schema lacks indexes on endpoint_results(endpoint_id), endpoint_result_conditions(endpoint_result_id) and endpoint_events(endpoint_id)"
+  ],
+  "unknown": [
+   "Deployed storage type and caching setting",
+   "Number of endpoints",
+   "Query plans"
+  ],
+  "assumed": [
+   "The reported DB-server CPU implies Postgres"
+  ],
+  "derived": [
+   "Up to 4 queries per endpoint plus 1 per cache miss, from the loop in getEndpointStatusByKey"
+  ],
+  "measured": []
+ },
+ "root_causes": [
+  {
+   "id": "ROOT-001",
+   "description": "Key listing scans the full results table on every uncached load",
+   "findings": [
+    "PERF-001"
+   ]
+  },
+  {
+   "id": "ROOT-002",
+   "description": "Postgres schema omits indexes on foreign-key lookup columns",
+   "findings": [
+    "PERF-002"
+   ]
+  },
+  {
+   "id": "ROOT-003",
+   "description": "Status assembly issues per-endpoint queries in a loop",
+   "findings": [
+    "PERF-003"
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "id": "PERF-001",
+   "stable_id": "fc83b49cbbee401a",
+   "root_cause_id": "ROOT-001",
+   "state": "OPEN",
+   "severity": "High",
+   "confidence": "High",
+   "priority": "P1",
+   "category": "data-access",
+   "location": {
+    "file": "storage/store/sql/sql.go",
+    "line": 689,
+    "symbol": "getAllEndpointKeys"
+   },
+   "problem": "The key-listing query that starts every uncached dashboard load joins endpoints to endpoint_results and applies DISTINCT. It has to read every non-suite result row of every endpoint, so its cost follows total stored results, not the page size or endpoint count.",
+   "performance_principle": "Work done per request should be proportional to what is returned, not to the volume of retained history.",
+   "evidence": [
+    {
+     "statement": "SELECT DISTINCT e.endpoint_key FROM endpoints e INNER JOIN endpoint_results er ON ... WHERE er.suite_result_id IS NULL ORDER BY e.endpoint_key, run inside GetAllEndpointStatuses on each cache miss.",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 689
+    },
+    {
+     "statement": "GetAllEndpointStatuses calls getAllEndpointKeys first, then loops over the keys.",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 117
+    },
+    {
+     "statement": "The API handler calls store.Get().GetAllEndpointStatuses on a miss of a 10s-TTL cache. No runtime evidence was supplied.",
+     "kind": "static",
+     "file": "api/endpoint_status.go",
+     "line": 24
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-request",
+    "growth": "O(n)",
+    "blast_radius": "service",
+    "amplification": "Nx"
+   },
+   "conditions": "Many past results retained per endpoint (the reported condition) and cache misses on the 10s API cache. Rows examined is roughly endpoints x results retained per endpoint; the retention limit is storage maximum-number-of-results, whose default is 100 (storage/config.go:8).",
+   "counter_evidence": [
+    {
+     "statement": "Looked for an existence check, a LIMIT, or a pre-aggregated endpoint list; none exists. The only filter is IS NULL on suite_result_id, which the indexes cannot make selective.",
+     "effect": "no-effect",
+     "file": "storage/store/sql/sql.go",
+     "line": 689
+    },
+    {
+     "statement": "Retention is capped per endpoint by deleteOldEndpointResults, so growth is bounded by the configured maximum, but that maximum is the variable the operators report as large.",
+     "effect": "bounds-impact",
+     "file": "storage/store/sql/sql.go",
+     "line": 1026
+    }
+   ],
+   "why_this_might_not_matter": "With the default of 100 results and few endpoints the scan is cheap. The 10s API cache and the write-through cache absorb repeat requests. Nothing here proves it dominates DB CPU; no plan was supplied.",
+   "recommendation": "Derive the key list without scanning the results table, for example from endpoints alone with an EXISTS check that stops at the first match per endpoint, or keep a flag on endpoints. Either makes cost follow endpoints, not retained results.",
+   "alternatives": [
+    {
+     "option": "EXISTS (SELECT 1 FROM endpoint_results WHERE endpoint_id = e.endpoint_id AND suite_result_id IS NULL) over endpoints",
+     "preferred": true,
+     "why": "Stops at the first match per endpoint and needs only an index on endpoint_id (see PERF-002)."
+    },
+    {
+     "option": "Raise the API cache TTL",
+     "preferred": false,
+     "why": "Masks the work and adds staleness to the status page without removing it."
+    }
+   ],
+   "trade_offs": "The EXISTS form must keep the exclusion of suite-only endpoints. A flag column adds a write-path update and a migration.",
+   "validation": {
+    "metric": "Rows read and execution time of the key-listing query on a copy of production data with many results per endpoint",
+    "expectation": "Rows examined should fall from the order of the results table to the order of the endpoints table.",
+    "falsifier": "EXPLAIN (ANALYZE, BUFFERS) already shows an index-only or semi-join plan that touches roughly one row per endpoint.",
+    "safety": "not-safe-on-production",
+    "guard": "A benchmark in storage/store/store_bench_test.go with many results per endpoint, asserting cost stays flat as results grow.",
+    "commands": [
+     {
+      "command": "EXPLAIN (ANALYZE, BUFFERS) SELECT DISTINCT e.endpoint_key FROM endpoints e INNER JOIN endpoint_results er ON e.endpoint_id = er.endpoint_id WHERE er.suite_result_id IS NULL ORDER BY e.endpoint_key;",
+      "purpose": "Show the plan and rows read; run on a restored copy.",
+      "safety": "not-safe-on-production"
+     }
+    ]
+   },
+   "tags": [
+    "scalability-risk"
+   ]
+  },
+  {
+   "id": "PERF-002",
+   "stable_id": "4ba6f9c912976834",
+   "root_cause_id": "ROOT-002",
+   "state": "OPEN",
+   "severity": "High",
+   "confidence": "Medium",
+   "priority": "P1",
+   "category": "data-access",
+   "location": {
+    "file": "storage/store/sql/specific_postgres.go",
+    "line": 108,
+    "symbol": "createPostgresSchema"
+   },
+   "problem": "The Postgres schema creates no index on endpoint_results(endpoint_id), endpoint_result_conditions(endpoint_result_id) or endpoint_events(endpoint_id). Postgres does not index foreign-key columns automatically, and the dashboard path filters on all three. The SQLite schema does index the first two (specific_sqlite.go:115 and :127).",
+   "performance_principle": "A selective lookup should be answered by an access path proportional to the matching rows, not by scanning the table.",
+   "evidence": [
+    {
+     "statement": "Postgres index statements: only suite_results_suite_id_idx and endpoint_results_suite_result_id_idx are created; endpoint_uptimes has an implicit UNIQUE(endpoint_id, hour_unix_timestamp) index.",
+     "kind": "static",
+     "file": "storage/store/sql/specific_postgres.go",
+     "line": 113
+    },
+    {
+     "statement": "Results query: WHERE endpoint_id = $1 ORDER BY endpoint_result_id DESC LIMIT/OFFSET, run once per endpoint.",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 791
+    },
+    {
+     "statement": "Condition lookup: WHERE endpoint_result_id IN (...) over endpoint_result_conditions, run once per endpoint; it is the largest table (one or more rows per result).",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 826
+    },
+    {
+     "statement": "deleteOldEndpointResults repeats an endpoint_id filter with a NOT IN subquery on each insert.",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 1026
+    },
+    {
+     "statement": "SQLite schema creates endpoint_results_endpoint_id_idx and endpoint_result_conditions_endpoint_result_id_idx.",
+     "kind": "static",
+     "file": "storage/store/sql/specific_sqlite.go",
+     "line": 115
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-item",
+    "growth": "O(n)",
+    "blast_radius": "service",
+    "amplification": "Nx"
+   },
+   "conditions": "Postgres storage (a separate DB server is implied by the report; SQLite is in-process) with many retained results per endpoint. The planner's real choice is unknown: for the results query it may walk the primary key backwards filtering on endpoint_id, cheap for recently active endpoints and costly for sparse ones. The condition lookup has no such shortcut.",
+   "counter_evidence": [
+    {
+     "statement": "Searched storage/store/sql for CREATE INDEX statements and migrations on these columns; none exist for Postgres.",
+     "effect": "no-effect",
+     "file": "storage/store/sql/specific_postgres.go",
+     "line": 113
+    },
+    {
+     "statement": "The planner might pick a backward primary-key scan for the results query. That lowers certainty on that query only, so confidence is capped at Medium.",
+     "effect": "lowers-confidence",
+     "file": "storage/store/sql/sql.go",
+     "line": 791
+    }
+   ],
+   "why_this_might_not_matter": "If an index was added out of band, or the primary-key scan terminates early, the effect is smaller. Small tables make a sequential scan cheap, and the write-through cache hides repeated reads.",
+   "recommendation": "Add indexes on endpoint_results(endpoint_id), endpoint_result_conditions(endpoint_result_id) and endpoint_events(endpoint_id) for Postgres, mirroring SQLite, via CREATE INDEX IF NOT EXISTS in createPostgresSchema.",
+   "alternatives": [
+    {
+     "option": "Add the three btree indexes",
+     "preferred": true,
+     "why": "Matches the access patterns in the code and already exists in the SQLite schema."
+    },
+    {
+     "option": "Composite (endpoint_id, endpoint_result_id DESC)",
+     "preferred": false,
+     "why": "Could serve the ordered LIMIT directly but costs more write space; choose only if a plan shows the simple index is not enough."
+    }
+   ],
+   "trade_offs": "Each index adds write cost and storage on insert-heavy tables. Building indexes on large existing tables locks writes unless built concurrently.",
+   "validation": {
+    "metric": "Plan node type and buffers read for the results and condition queries per endpoint, before and after",
+    "expectation": "Sequential scans on endpoint_results and endpoint_result_conditions are replaced by index scans.",
+    "falsifier": "EXPLAIN already shows index scans on these columns, or an out-of-band index exists in pg_indexes.",
+    "safety": "safe-on-production",
+    "guard": "A schema test asserting the index set for the Postgres driver.",
+    "commands": [
+     {
+      "command": "SELECT tablename, indexname, indexdef FROM pg_indexes WHERE tablename IN ('endpoint_results','endpoint_result_conditions','endpoint_events');",
+      "purpose": "Confirm which indexes exist on the live database before changing anything.",
+      "safety": "safe-on-production"
+     },
+     {
+      "command": "EXPLAIN (ANALYZE, BUFFERS) SELECT endpoint_result_id, condition, success FROM endpoint_result_conditions WHERE endpoint_result_id IN (1,2,3);",
+      "purpose": "Check the scan type for the condition lookup; substitute real ids on a restored copy.",
+      "safety": "not-safe-on-production"
+     }
+    ]
+   },
+   "tags": [
+    "quick-win",
+    "needs-measurement"
+   ]
+  },
+  {
+   "id": "PERF-003",
+   "stable_id": "29186535ec857543",
+   "root_cause_id": "ROOT-003",
+   "state": "OPEN",
+   "severity": "Medium",
+   "confidence": "High",
+   "priority": "P2",
+   "category": "data-access",
+   "location": {
+    "file": "storage/store/sql/sql.go",
+    "line": 117,
+    "symbol": "GetAllEndpointStatuses"
+   },
+   "problem": "GetAllEndpointStatuses runs several queries per endpoint serially in one transaction (id lookup, events, results, plus a conditions lookup), so round trips grow linearly with the endpoint count.",
+   "performance_principle": "Round trips per request should not scale with the number of returned entities.",
+   "evidence": [
+    {
+     "statement": "Loop over keys calling getEndpointStatusByKey, which issues getEndpointIDGroupAndNameByKey, getEndpointEventsByEndpointID and getEndpointResultsByEndpointID (the last with a follow-up conditions query).",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 117
+    },
+    {
+     "statement": "Per-key errors are swallowed by continue, so a failing query is silent.",
+     "kind": "static",
+     "file": "storage/store/sql/sql.go",
+     "line": 129
+    }
+   ],
+   "evidence_quality": "Moderate",
+   "impact": {
+    "position": "critical-path",
+    "frequency": "per-item",
+    "growth": "O(n)",
+    "blast_radius": "endpoint",
+    "amplification": "Nx"
+   },
+   "conditions": "Many endpoints and a miss on the 10s API cache. Derived: up to 4 queries per endpoint plus 1 for the key list; latency impact depends on network distance to the DB, which is unknown.",
+   "counter_evidence": [
+    {
+     "statement": "The write-through cache (up to 10000 entries) can serve getEndpointStatusByKey without queries when enabled; whether it is enabled depends on config not examined.",
+     "effect": "bounds-impact",
+     "file": "storage/store/sql/sql.go",
+     "line": 713
+    },
+    {
+     "statement": "Single transaction on one connection, so no pool exhaustion from the loop itself.",
+     "effect": "no-effect",
+     "file": "storage/store/sql/sql.go",
+     "line": 118
+    }
+   ],
+   "why_this_might_not_matter": "A local or low-latency DB with few endpoints makes the loop cheap, and caches sit on the path. It matters most together with PERF-002, where each per-endpoint query is also slow.",
+   "recommendation": "Batch by fetching events and results for all keys in a few set-based queries (window function over endpoint_id, one IN list), or pre-warm the write-through cache.",
+   "alternatives": [
+    {
+     "option": "Set-based queries using ROW_NUMBER() OVER (PARTITION BY endpoint_id)",
+     "preferred": true,
+     "why": "Removes per-endpoint round trips without adding state."
+    },
+    {
+     "option": "Rely on the write-through cache",
+     "preferred": false,
+     "why": "Only helps when enabled and warm; cold start and 10s API cache expiry still pay the full cost."
+    }
+   ],
+   "trade_offs": "More complex SQL and a different pagination implementation; larger result sets per query.",
+   "validation": {
+    "metric": "Number of queries issued per GET of the endpoint statuses API on a cache miss",
+    "expectation": "Query count should stop growing with endpoint count.",
+    "falsifier": "Query logging shows the write-through cache serves nearly all lookups on an API cache miss.",
+    "safety": "safe-on-production",
+    "guard": "A test counting queries against a store seeded with N endpoints."
+   }
+  }
+ ],
+ "considered_not_reported": [
+  {
+   "observation": "getEndpointResultsByEndpointID prepends each row with append([]*Result{r}, results...)",
+   "why_discarded": "Quadratic copy, but bounded by the page size, which is clamped to the configured maximum; negligible next to query cost.",
+   "location": "storage/store/sql/sql.go:820",
+   "evidence_checked": [
+    "Read the loop at sql.go:791-846; page size is clamped in api/util.go:38-41"
+   ],
+   "revisit_when": "The results page size limit is raised substantially"
+  }
+ ]
+}

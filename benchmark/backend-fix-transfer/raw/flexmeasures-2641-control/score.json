@@ -1,0 +1,25 @@
+{
+  "source_files": [
+    "flexmeasures/data/models/planning/storage.py"
+  ],
+  "window": 20,
+  "findings": 6,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6"
+  ],
+  "hunk_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+  ],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

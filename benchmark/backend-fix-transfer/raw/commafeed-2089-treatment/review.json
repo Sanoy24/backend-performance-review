@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T12:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py (bundled)",
+    "model": "claude-sonnet-5-5 via Claude Code",
+    "repository": { "name": "commafeed-2089-treatment" }
+  },
+  "services": [
+    { "name": "commafeed-server", "path": "commafeed-server", "runtime": ["jvm"], "datastores": ["mysql", "postgres"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How many entries does a typical feed document carry, and how many feeds are refreshed per cycle?",
+        "answer": "Unknown. Repository only bounds it: maxFeedCapacity default 500 entries per feed, refill batch min(100, 3*httpThreads).",
+        "source": "repository",
+        "asked": false,
+        "evidence_checked": [
+          "commafeed-server/src/main/java/com/commafeed/CommaFeedConfiguration.java",
+          "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshEngine.java"
+        ]
+      },
+      {
+        "question": "How many subscriptions per feed use a filtering expression?",
+        "answer": "Unknown; no data in repository.",
+        "source": "unanswered",
+        "asked": false,
+        "evidence_checked": ["commafeed-server/src/main/java/com/commafeed/backend/dao/FeedSubscriptionDAO.java"]
+      }
+    ],
+    "scenarios": ["normal", "peak", "large-dataset", "high-concurrency"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "partially-instrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Feed refresh path (engine, worker, updater, entry/content services, DAOs, filtering, notifier, relevant changelogs and config) read in full; REST resources, client and cleanup tasks only skimmed or not read.",
+    "critical_paths_identified": 2,
+    "critical_paths_analyzed": 2,
+    "shared_resources_identified": 4,
+    "shared_resources_analyzed": 4,
+    "technology_support": [
+      { "technology": "mysql", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "postgres", "tier": "deep", "detection_confidence": 0.82 },
+      { "technology": "jvm", "tier": "deep", "detection_confidence": 0.99 }
+    ],
+    "unknowns": [
+      { "subject": "Actual DB engine, pool size and feed size distribution in the deployment", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployment config, query log or per-statement counts during one refresh cycle" },
+      { "subject": "Hibernate flush and batching settings effect on per-entry inserts", "reason": "not-examined", "what_would_resolve_it": "Read the full application.properties and enable SQL statement logging in a staging run" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Default feedRefresh.databaseThreads is 1 and httpThreads is 3 (CommaFeedConfiguration.java).",
+      "Default maxFeedCapacity is 500 entries per feed (CommaFeedConfiguration.java).",
+      "FeedRefreshUpdater.addEntry opens a transaction and runs one SELECT per parsed entry (FeedRefreshUpdater.java:90-91, FeedEntryDAO.java:25-27).",
+      "An index on (guidHash, feed_id) exists (db.changelog-1.2.xml create-guid-feed-index)."
+    ],
+    "unknown": [
+      "Entries per feed document in the deployment.",
+      "Number of subscriptions per feed that carry a filter expression.",
+      "Database engine and connection pool size in the operators' deployment."
+    ],
+    "assumed": [
+      "Feeds that changed (content hash or published date differs) commonly still contain mostly already-stored entries; affects PERF-001.",
+      "Some subscriptions use filter expressions; affects PERF-002."
+    ],
+    "derived": [
+      "Upper bound of existence SELECTs per refreshed feed equals the entries kept after the maxFeedCapacity limit, at most 500 at default config, from CommaFeedConfiguration maxFeedCapacity default and FeedRefreshWorker.java:54-57."
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "How many entries per feed and how many feeds per cycle, and how many of those entries are already stored on a typical refresh?",
+      "what_it_would_change": "Magnitude of PERF-001: confirms or lowers severity.",
+      "decision_dimensions": ["severity", "confidence"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001"]
+    },
+    {
+      "question": "Do many subscriptions per feed use filter expressions?",
+      "what_it_would_change": "Raises PERF-002 to High if filtered subscriptions per feed are numerous; drops it to not-reported if filters are rare.",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-002"]
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Entry ingestion is item-at-a-time: each parsed entry gets its own transaction and its own existence query, executed sequentially on the (default single) database updater thread, instead of one set-based lookup per feed.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "Per-entry-per-subscription filter evaluation repeats HTML parsing and expression compilation inside the open database transaction.", "findings": ["PERF-002"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "b973b3824663a0b3",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "data-access",
+      "location": {
+        "service": "commafeed-server",
+        "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java",
+        "line": 90,
+        "symbol": "FeedRefreshUpdater.addEntry"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Every refresh of a changed feed issues one existence SELECT per parsed entry, each inside its own transaction, even when almost all entries are already stored. All of it runs serially on the database updater thread (default 1).",
+      "performance_principle": "Work should scale with what changed, not with what was re-read; round trips and transaction boundaries should be amortized over a batch rather than paid per item.",
+      "evidence": [
+        { "statement": "update() loops over entries and calls addEntry for each; addEntry opens unitOfWork.call per entry.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java", "line": 130 },
+        { "statement": "Inside that transaction feedEntryService.find runs findExisting, a query by guidHash and feed, before any insert.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java", "line": 91 },
+        { "statement": "findExisting issues a single-row query per call.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedEntryDAO.java", "line": 25 },
+        { "statement": "Entries are only capped at maxFeedCapacity (default 500) and entriesMaxAge, not filtered against stored entries before the loop.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshWorker.java", "line": 54 },
+        { "statement": "databaseThreads defaults to 1, so all updates are serialized on one thread.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/CommaFeedConfiguration.java", "line": 233 },
+        { "statement": "No runtime evidence (traces, query logs) exists in the repository or was supplied.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "async",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "system-wide",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters when feeds carry tens to hundreds of entries (up to the 500 default cap) and many feeds change per cycle, so that the single updater thread and the shared database see entries-times-feeds sequential queries. Assumed, not measured: feeds that changed still mostly contain stored entries.",
+      "counter_evidence": [
+        { "statement": "Content hash and published-date checks in FeedFetcher throw NotModifiedException for unchanged feeds, so fully unchanged feeds skip this loop entirely.", "effect": "bounds-impact", "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedFetcher.java", "line": 82 },
+        { "statement": "The lookup is served by the guidHash_feed_index composite index, so each query is cheap individually.", "effect": "bounds-impact", "file": "commafeed-server/src/main/resources/changelogs/db.changelog-1.2.xml" },
+        { "statement": "Searched for a batched or cached existence check; none found.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Each query is an indexed point lookup and the refresh is background work with a 5 minute default interval. If feeds are small, mostly unchanged, or the database is local or embedded, the total may be negligible.",
+      "recommendation": "Load the existing guidHashes for the feed once per refresh (one query keyed by feed and a set of guidHashes, or by feed alone bounded by capacity), drop entries already present, and process only the remainder. Keep the per-entry re-check under the lock only for entries that survive the pre-filter, so the concurrency guarantee is retained.",
+      "alternatives": [
+        { "option": "Single set-based lookup per feed, then insert only missing entries", "preferred": true, "why": "Removes the repeated work instead of masking it; query count becomes O(1) per feed for the already-stored case." },
+        { "option": "Raise databaseThreads", "preferred": false, "why": "Parallelizes the same redundant queries and increases database load; treats the symptom." },
+        { "option": "Keep one transaction for the whole feed", "preferred": false, "why": "Fewer commits but holds locks longer and still issues N queries." }
+      ],
+      "trade_offs": "A set-based IN lookup or feed-wide key fetch has size limits and must still be re-verified under the lock to stay correct against concurrent refreshes; slightly more code in the updater.",
+      "validation": {
+        "metric": "Number of SQL statements per refreshed feed, and updater active time per feed (FeedRefreshEngine updater.active gauge)",
+        "expectation": "Statement count for a feed whose entries are all already stored drops from about one per entry to a small constant; direction only, magnitude not asserted.",
+        "falsifier": "Statement logging in a representative run shows per-entry existence queries are negligible in total time against the rest of refresh time.",
+        "safety": "safe-on-production",
+        "guard": "Integration test asserting statement count for refreshing a feed with all-existing entries does not grow with entry count.",
+        "commands": [
+          { "command": "grep -n \"updater\" commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshEngine.java", "purpose": "Locate the existing updater gauges to chart during a refresh cycle as a baseline", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "cca683a2730f38a7",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "concurrency",
+      "location": {
+        "service": "commafeed-server",
+        "file": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryFilteringService.java",
+        "line": 51,
+        "symbol": "FeedEntryFilteringService.filterMatchesEntry"
+      },
+      "tags": ["needs-measurement"],
+      "problem": "For each new entry and each subscription with a filter, the filter re-parses title and content HTML with Jsoup, recompiles the expression, and runs it on a cached thread pool, all while the entry's database transaction and striped locks are held on the single updater thread.",
+      "performance_principle": "Loop-invariant and per-item CPU work should not be repeated or run while holding scarce resources such as a transaction, a connection and locks.",
+      "evidence": [
+        { "statement": "addEntry calls applyFilter for every subscription inside unitOfWork.call.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java", "line": 98 },
+        { "statement": "Jsoup.parse of title and content runs per call; the parsed text does not depend on the subscription but is recomputed per subscription.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryFilteringService.java", "line": 56 },
+        { "statement": "The expression is compiled on every evaluation and a task is submitted to an unbounded cached thread pool.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryFilteringService.java", "line": 96 },
+        { "statement": "Blank filters return early, so cost applies only to subscriptions with a filter.", "kind": "static", "file": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryFilteringService.java", "line": 52 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "async",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Matters for feeds with many new entries (first refresh of a newly added feed, bursts) that have several subscriptions using filter expressions; unknown whether the deployment has any filters.",
+      "counter_evidence": [
+        { "statement": "Filtering is skipped for blank filters and only runs for newly inserted entries, not for already-stored ones.", "effect": "bounds-impact", "file": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryFilteringService.java", "line": 52 },
+        { "statement": "Searched for caching of compiled programs or parsed text; none found.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "If few subscriptions use filters, or filtered feeds publish a handful of entries per refresh, the CPU cost is small relative to network fetch time.",
+      "recommendation": "Compute the Jsoup text fields once per entry and reuse across subscriptions, cache the compiled program per filter string, and evaluate filters outside the striped locks where the entry content is already built.",
+      "alternatives": [
+        { "option": "Hoist per-entry text extraction and cache compiled expressions", "preferred": true, "why": "Removes repeated work directly with a small, local change." },
+        { "option": "Evaluate filters asynchronously after commit", "preferred": false, "why": "Changes read-state semantics for the first reader; larger behavioural change." }
+      ],
+      "trade_offs": "A compiled-expression cache needs a size bound and invalidation when a user edits a filter; hoisting evaluation out of the transaction needs care to keep status inserts atomic with entry creation.",
+      "validation": {
+        "metric": "CPU time and transaction duration in addEntry for a feed with many filtered subscriptions",
+        "expectation": "Transaction duration per new entry decreases as the number of filtered subscriptions grows; direction only.",
+        "falsifier": "A profile of a refresh shows filter evaluation is a negligible share of addEntry time.",
+        "safety": "not-safe-on-production",
+        "guard": "Benchmark test for filterMatchesEntry with N subscriptions per entry."
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "findNextUpdatable uses DISTINCT with a join to subscriptions ordered by disabledUntil on each queue refill.",
+      "why_discarded": "Runs at most once per refill, which happens only when the queue empties (batch bounded to at most 100 feeds), and disableduntil_index exists; no evidence it is hot.",
+      "location": "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedDAO.java:30",
+      "path": "Feed refill loop against the primary database",
+      "evidence_checked": ["FeedDAO.java findNextUpdatable", "FeedRefreshEngine.java getBatchSize and refill loop", "db.changelog-1.0.xml disableduntil_index"],
+      "revisit_when": "Query plans on a deployment with a very large number of subscriptions show the DISTINCT join dominating."
+    },
+    {
+      "observation": "Content lookup by (contentHash, titleHash) plus persist per new entry in FeedEntryContentService.findOrCreate.",
+      "why_discarded": "Indexed by content_title_index and executed only for entries not already stored; subsumed by the per-item ingestion root cause in PERF-001.",
+      "location": "commafeed-server/src/main/java/com/commafeed/backend/service/FeedEntryContentService.java:31",
+      "path": "Database updater thread",
+      "evidence_checked": ["FeedEntryContentDAO.java findExisting", "db.changelog-1.2.xml content_title_index"],
+      "revisit_when": "Statement logging shows content lookups are many times more frequent than new entries."
+    }
+  ]
+}

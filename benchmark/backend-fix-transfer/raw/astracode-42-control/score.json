@@ -1,0 +1,17 @@
+{
+  "source_files": [
+    "workers/judge/internal/adapter/outbound/execute/go_judge_client.go"
+  ],
+  "window": 20,
+  "findings": 6,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "F1"
+  ],
+  "hunk_hits": [
+    "F1"
+  ],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

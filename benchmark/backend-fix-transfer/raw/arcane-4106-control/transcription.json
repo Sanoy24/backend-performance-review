@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "backend/internal/project/project_listing.go",
+        "line": 1080
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "backend/internal/project/project_details.go",
+        "line": 504
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "backend/internal/project/project_listing.go",
+        "line": 253
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "project_listing.go",
+        "line": 194
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "project_listing.go",
+        "line": 65
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "project.go",
+        "line": 553
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

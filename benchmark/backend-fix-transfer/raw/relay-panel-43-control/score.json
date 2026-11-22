@@ -1,0 +1,24 @@
+{
+  "source_files": [
+    "crates/node/src/forwarder/udp.rs",
+    "crates/node/src/reporter.rs"
+  ],
+  "window": 20,
+  "findings": 6,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+  ],
+  "hunk_hits": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+  ],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

@@ -1,0 +1,16 @@
+{
+  "source_files": [
+    "server/db.js"
+  ],
+  "window": 20,
+  "findings": 6,
+  "file_hit": true,
+  "hunk_hit": false,
+  "file_hits": [
+    "F1",
+    "F2"
+  ],
+  "hunk_hits": [],
+  "top_finding": "F1",
+  "top_finding_file_hit": true
+}

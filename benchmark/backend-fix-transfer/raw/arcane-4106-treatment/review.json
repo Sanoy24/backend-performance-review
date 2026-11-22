@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "repository": { "name": "arcane" },
+    "model": "claude-sonnet-5-5"
+  },
+  "services": [
+    { "name": "backend", "path": "backend", "runtime": ["go"], "datastores": ["postgres", "sqlite"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How many projects are listed per request and how many are GitOps-managed?",
+        "answer": "Unknown; the operator report says load time grows with the number of Git-managed projects.",
+        "source": "unanswered",
+        "asked": false,
+        "evidence_checked": ["backend/internal/project/project_listing.go", "backend/internal/project/handler.go"]
+      }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "List request path and its helpers only",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 3,
+    "shared_resources_analyzed": 3,
+    "technology_support": [
+      { "technology": "go", "tier": "deep" },
+      { "technology": "postgres", "tier": "deep" },
+      { "technology": "sqlite", "tier": "deep" }
+    ],
+    "unknowns": [
+      { "subject": "Project counts, page size, GitOps share", "reason": "no-evidence-exists", "what_would_resolve_it": "Operator answer or a COUNT on the projects table" },
+      { "subject": "Latency split between DB, filesystem and Docker", "reason": "no-evidence-exists", "what_would_resolve_it": "Per-step trace of one list request" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Derived-filter list path clamps limit to 100 except -1 meaning all",
+      "Status, updates, label filters and status sort load all projects",
+      "Per-project fan-out is bounded to 8 workers"
+    ],
+    "unknown": ["Page size", "Project count", "GitOps-managed share"],
+    "assumed": ["A meaningful share of projects is GitOps-managed (operator report)"],
+    "derived": ["gitops_syncs queries per list request = 2 x GitOps-managed projects in the result set, from two call sites"],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "How many projects per request, and how many are GitOps-managed?",
+      "what_it_would_change": "PERF-001 severity High versus Medium",
+      "decision_dimensions": ["severity"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-001"]
+    }
+  ],
+  "root_causes": [
+    {
+      "id": "ROOT-001",
+      "description": "Compose-file resolution does DB and filesystem work per project before the caches are consulted.",
+      "findings": ["PERF-001"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "620c3c99e9965782",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "High",
+      "priority": "P1",
+      "category": "data-access",
+      "location": {
+        "service": "backend",
+        "file": "backend/internal/project/project.go",
+        "line": 553,
+        "symbol": "ProjectService.ResolveProjectComposeFile"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "For every GitOps-managed project, ResolveProjectComposeFile runs a gitops_syncs lookup by ID and re-reads .env.global and .env; it is called twice per project per list request (ProjectMetadata and getCachedComposeProjectInternal), each before the respective cache is consulted.",
+      "performance_principle": "Repeated per-item work with a stable answer should be batched or hoisted, and a cache must be consulted before the work it exists to avoid.",
+      "evidence": [
+        { "statement": "ProjectMetadata calls ResolveProjectComposeFile before the metaCache lookup.", "kind": "static", "file": "backend/internal/project/project_listing.go", "line": 1083 },
+        { "statement": "Per-project GORM First on gitops_syncs when GitOpsManagedBy is set.", "kind": "static", "file": "backend/internal/project/project.go", "line": 574 },
+        { "statement": "getCachedComposeProjectInternal calls the resolver again before LoadCachedComposeProject.", "kind": "static", "file": "backend/internal/project/project.go", "line": 636 },
+        { "statement": "ComposeFileEnvSelection parses .env.global and project .env on every call.", "kind": "static", "file": "backend/pkg/projects/env.go", "line": 856 },
+        { "statement": "No runtime evidence exists; the 2 x N count is derived from the two call sites above.", "kind": "derived" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "endpoint",
+        "amplification": "2x"
+      },
+      "conditions": "Many GitOps-managed projects in the listed set, list requested often, or requested unpaginated (-1) or with status/updates/label filters or status sort, which load all projects. Assumed and unmeasured; negligible for small project counts.",
+      "counter_evidence": [
+        { "statement": "Each lookup is a primary-key probe, individually cheap.", "effect": "bounds-impact", "file": "backend/resources/migrations/postgres/028_add_gitops.sql" },
+        { "statement": "Tags and update records are already batched; metadata and compose caches avoid YAML re-parsing on hits.", "effect": "bounds-impact", "file": "backend/pkg/projects/cache.go", "line": 47 },
+        { "statement": "Searched for a request-scoped or sync-record cache around the resolver; none found.", "effect": "no-effect" }
+      ],
+      "why_this_might_not_matter": "Single-row primary-key reads on a local database are cheap and the page query is capped; with tens of projects Docker and filesystem time likely dominate.",
+      "recommendation": "Resolve each project's compose file once per request: collect the distinct GitOpsManagedBy IDs on the page, load id and compose_path with one IN query before fan-out, and pass the resolved path into both ProjectMetadata and the update-summary step.",
+      "alternatives": [
+        { "option": "Batch-load compose paths once per request and pass resolved paths down", "preferred": true, "why": "Removes the work with no staleness or invalidation." },
+        { "option": "Join gitops_syncs into the project page query", "preferred": false },
+        { "option": "In-memory cache of compose_path by sync ID", "preferred": false }
+      ],
+      "trade_offs": "Larger function signatures; env-file selection still runs per project unless also hoisted; an in-memory cache alternative would add invalidation and staleness risk.",
+      "validation": {
+        "metric": "Count of gitops_syncs statements per project-list request with N GitOps projects",
+        "expectation": "Statement count falls from 2N to 1; latency direction down, magnitude not derivable from code.",
+        "falsifier": "The statement count is already constant in N before the change.",
+        "safety": "not-safe-on-production",
+        "guard": "Service test asserting a bounded statement count for a list of N GitOps projects."
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "location": "backend/internal/project/project_listing.go",
+      "observation": "Goroutine persisting service_count when the DB value is 0",
+      "why_discarded": "Self-healing after the first write; not repeated per request in steady state"
+    }
+  ],
+  "adjacent_findings": []
+}

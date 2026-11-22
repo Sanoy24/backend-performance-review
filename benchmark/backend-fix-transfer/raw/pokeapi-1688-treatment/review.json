@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "model": "claude-sonnet-5-5 via Claude Code",
+    "repository": { "name": "pokeapi-1688-treatment" }
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Scoped to the evolution-chain detail request path (viewset, serializers, models, settings, seed CSV row counts); the rest of the API was not reviewed.",
+    "critical_paths_identified": 2,
+    "critical_paths_analyzed": 2,
+    "shared_resources_identified": 2,
+    "shared_resources_analyzed": 2,
+    "technology_support": [
+      { "technology": "Django / Django REST Framework", "tier": "deep" },
+      { "technology": "PostgreSQL", "tier": "deep" },
+      { "technology": "Redis (django-redis)", "tier": "conceptual" }
+    ],
+    "unknowns": [
+      { "subject": "Production response caching or CDN in front of the API", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployment config or CDN/cache hit-rate metrics for /api/v2/evolution-chain/" },
+      { "subject": "Actual latency and query count per request", "reason": "no-evidence-exists", "what_would_resolve_it": "Per-request query log or APM trace for the detail endpoint" },
+      { "subject": "Whether the Postgres foreign-key column evolved_species_id is indexed in production", "reason": "not-examined", "what_would_resolve_it": "Inspect migrations / pg_indexes" }
+    ]
+  },
+  "workload": {
+    "answered": false,
+    "inputs": [
+      { "question": "Request rate and cache layering for the evolution-chain detail endpoint", "answer": "Not stated by operators; settings define a Redis cache backend but no view or serializer code uses it.", "source": "unanswered", "asked": false, "evidence_checked": ["config/settings.py", "pokemon_v2/api.py", "config/local.py"] }
+    ],
+    "scenarios": ["normal", "large-dataset"]
+  },
+  "assumptions": {
+    "known": [
+      "Detail serialization issues one PokemonEvolution query per non-root species in the chain (pokemon_v2/serializers.py:3534).",
+      "Largest chain in data/v2/csv/pokemon_species.csv has 9 species, 8 with evolves_from_species_id set; 19 pokemon_evolution rows reference its species.",
+      "No assertNumQueries test exists in pokemon_v2."
+    ],
+    "unknown": ["Production request rate", "Upstream cache or CDN behaviour", "Measured latency"],
+    "assumed": ["Each ORM query is one database round trip on the default connection."],
+    "derived": [
+      "Largest chain: 1 chain lookup + 1 species query + 8 per-species evolution queries = 10 queries, plus 1 if baby_trigger_item is set and 1 per evolution row with nature_bitmask or condition_expression (0 such rows in that chain per CSV). Inputs: CSV counts above and the code at serializers.py:3479-3545."
+    ],
+    "measured": []
+  },
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Evolution details are fetched one species at a time while recursively walking the chain tree, instead of in one chain-scoped query with related lookups prefetched.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "The viewset queryset does not select the nullable baby_trigger_item relation the serializer renders.", "findings": ["PERF-002"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "d3dfb16a9f92560e",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "High",
+      "priority": "P2",
+      "category": "data-access",
+      "location": { "file": "pokemon_v2/serializers.py", "line": 3534, "symbol": "EvolutionChainDetailSerializer.build_chain_link_entry" },
+      "tags": ["quick-win", "scalability-risk"],
+      "problem": "build_chain_link_entry runs a PokemonEvolution query for every non-root species while recursing, and PokemonEvolutionSerializer adds further queries per evolution row (allowed_natures, condition_expression). Query count grows with the number of species in the chain.",
+      "performance_principle": "Work that is per-item against a data store should be batched into per-request work; round trips should not scale with result size.",
+      "evidence": [
+        { "statement": "PokemonEvolution.objects.filter(evolved_species=species['id']).select_related(...) executes inside the recursive build_chain_link_entry, once per species with evolves_from_species.", "kind": "static", "file": "pokemon_v2/serializers.py", "line": 3534 },
+        { "statement": "get_condition_expression issues EvolutionVariable.objects.filter(symbol__in=tokens) per evolution row with an expression.", "kind": "static", "file": "pokemon_v2/serializers.py", "line": 3445 },
+        { "statement": "get_allowed_natures issues Nature.objects.filter(id__in=...) per evolution row with a nature_bitmask.", "kind": "static", "file": "pokemon_v2/serializers.py", "line": 3432 },
+        { "statement": "Derived: the largest chain in the seed CSV has 9 species (8 evolving), giving 8 per-species evolution queries on top of the chain and species queries. No runtime measurement exists.", "kind": "derived", "file": "data/v2/csv/pokemon_species.csv" }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-item", "growth": "O(n)", "blast_radius": "endpoint", "amplification": "Nx" },
+      "conditions": "Matters for requests to the evolution-chain detail endpoint on chains with many evolving species (largest in the seed data: 9 species) when it is not served from an upstream cache. Chain size is bounded by game data and changes rarely, so the multiplier is single digits to low tens of queries, not unbounded. Request rate is unknown.",
+      "counter_evidence": [
+        { "statement": "Searched for response or queryset caching in pokemon_v2 and config; Redis is configured in settings.py but nothing in the view or serializers uses it, and local.py uses DummyCache. Upstream caching is not visible in the repository.", "effect": "lowers-confidence", "file": "config/settings.py", "line": 117 },
+        { "statement": "Each per-species query is filtered by evolved_species and uses select_related, so it is a single join query, not a nested N+1.", "effect": "bounds-impact", "file": "pokemon_v2/serializers.py", "line": 3534 },
+        { "statement": "Tree construction and the next(...) summary lookup are quadratic in chain size but in-memory over at most 9 entries in the seed data.", "effect": "bounds-impact", "file": "pokemon_v2/serializers.py", "line": 3490 }
+      ],
+      "why_this_might_not_matter": "Chains are small and the queries are indexed-style lookups on a pooled persistent connection; if a CDN or cache serves almost all requests the database never sees this. Without a measured latency the cost per request may be a few milliseconds.",
+      "recommendation": "Fetch all PokemonEvolution rows for the chain in one query (filter evolved_species__evolution_chain=obj with the existing select_related), group them by evolved_species_id in memory, and pass the grouped rows into build_chain_link_entry. Load Nature (25 rows maximum per the serializer range) and EvolutionVariable once per request into dicts and reuse them in the nested serializer instead of querying per row. This removes the per-species round trips rather than hiding them.",
+      "alternatives": [
+        { "option": "Single chain-scoped query plus in-memory grouping, and per-request lookup dicts for natures and variables", "preferred": true, "why": "Removes the per-item queries; query count becomes constant in chain size." },
+        { "option": "Prefetch_related on the species queryset with a Prefetch to PokemonEvolution", "preferred": false, "why": "Also constant queries, but the evolution serializer is applied manually here so it needs reshaping to use prefetched objects anyway." },
+        { "option": "Cache the serialized response", "preferred": false, "why": "Masks the work and needs invalidation on data rebuild; worth considering only after measurement shows hot chains." }
+      ],
+      "trade_offs": "Slightly more code in the serializer and a per-request dictionary of natures and variables; the chain query returns all rows at once (19 rows for the largest seed chain). Output must remain byte-identical, so ordering of evolution_details needs to be preserved.",
+      "validation": {
+        "metric": "Database query count for GET of the largest evolution chain detail",
+        "expectation": "Query count becomes independent of the number of species in the chain; direction is a decrease from roughly one query per evolving species. Magnitude not measured.",
+        "falsifier": "If the query count on the largest chain is already constant, or latency is dominated by something other than the database, the finding is wrong.",
+        "safety": "safe-on-production",
+        "guard": "A test using assertNumQueries on the detail endpoint for a branching chain.",
+        "commands": []
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "1b6a8b32157d1ec3",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "data-access",
+      "location": { "file": "pokemon_v2/api.py", "line": 376, "symbol": "EvolutionChainResource" },
+      "tags": ["quick-win"],
+      "problem": "The queryset is EvolutionChain.objects.all() with no select_related, so rendering baby_trigger_item costs one extra query when the field is set.",
+      "performance_principle": "Related rows needed for every response should be fetched with the primary row rather than lazily.",
+      "evidence": [
+        { "statement": "queryset = EvolutionChain.objects.all() while the serializer renders baby_trigger_item through ItemSummarySerializer.", "kind": "static", "file": "pokemon_v2/api.py", "line": 376 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": { "position": "critical-path", "frequency": "per-request", "growth": "O(1)", "blast_radius": "endpoint", "amplification": "1x" },
+      "conditions": "One extra query on detail requests for chains that have a baby trigger item; constant, not tied to chain size.",
+      "counter_evidence": [
+        { "statement": "The relation is nullable, so chains without a baby trigger item incur no extra query.", "effect": "bounds-impact", "file": "pokemon_v2/models.py", "line": 1790 }
+      ],
+      "recommendation": "Use EvolutionChain.objects.select_related('baby_trigger_item') on the viewset queryset (other viewsets in api.py already follow this pattern).",
+      "trade_offs": "A join on list requests that do not need the item; the list serializer renders only the url, so apply it only to the detail path if that matters.",
+      "validation": {
+        "metric": "Query count on a detail request for a chain with a baby trigger item",
+        "expectation": "One fewer query.",
+        "falsifier": "No change in query count would mean the item is already loaded elsewhere.",
+        "safety": "safe-on-production",
+        "commands": []
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "In-memory tree building (build_evolution_tree) and next(...) summary lookup",
+      "why_discarded": "Quadratic in chain size but operates on at most 9 species in the seed data; no I/O.",
+      "location": "pokemon_v2/serializers.py:3490",
+      "evidence_checked": ["pokemon_v2/serializers.py:3490-3545", "data/v2/csv/pokemon_species.csv species counts per chain"],
+      "revisit_when": "Chains grow by an order of magnitude."
+    }
+  ],
+  "adjacent_findings": []
+}

@@ -75,6 +75,19 @@ value and `[Unreleased]` accumulates.
   frozen inputs and deviations before registration are in `design.md`. The source-file rule now
   also excludes Django's `tests.py`, `test.py` and `conftest.py`.
 
+- **The backend performance-fix test, run and scored.** Ten real backend fixes, the skill against
+  a plain request on one model, each given a one-line symptom.
+  - The skill named the file the maintainer changed in 9 of 10 cases, so it localizes real
+    backend fixes.
+  - It hit the changed lines in 7 of 10, against the plain request's 6. That is under the
+    pre-registered margin of 2, so it localized no better. Resolving the plain request's
+    abbreviated paths gives 8.
+  - Its reports were narrower: 2.1 findings against 6.6 per run.
+  - It cost 1.5 times the tokens.
+  - In one case it declined the maintainer's target, which the plain request put first.
+
+  Results, deviations and all 20 reports are in `benchmark/backend-fix-transfer/`.
+
 ## [2.3.0] — 2026-11-14
 
 A minor release. `technology/dotnet.md` now says how to score a blocking call in ASP.NET Core

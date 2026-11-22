@@ -1,0 +1,55 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "badge.service.js",
+        "line": 74
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "badge.service.js",
+        "line": 39
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "badge.service.js",
+        "line": 7
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "badge.service.js",
+        "line": 20
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "notificationController.js",
+        "line": 298
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "src/models/Notification.js",
+        "line": 87
+      }
+    },
+    {
+      "id": "F7",
+      "location": {
+        "file": "notificationController.js",
+        "line": 222
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

@@ -1,0 +1,327 @@
+{
+  "schema_version": "1.0",
+  "mode": "full",
+  "reproducibility": {
+    "generated_at": "2026-11-22T00:00:00Z",
+    "skill_version": "2.3.0",
+    "spec": "backend-performance-review/2.0",
+    "detector_version": "detect_stack.py",
+    "model": "claude-sonnet-5-5",
+    "repository": { "name": "astracode-42-treatment" }
+  },
+  "services": [
+    { "name": "judge", "path": "workers/judge", "runtime": ["go"], "brokers": ["kafka"] },
+    { "name": "submission", "path": "services/submission", "runtime": ["go"], "datastores": ["postgres"], "caches": ["redis"], "brokers": ["kafka"] }
+  ],
+  "workload": {
+    "answered": false,
+    "inputs": [
+      {
+        "question": "How many test cases do slow problems have and what is per-case sandbox time?",
+        "answer": "Operators report many test cases; per-case time unknown.",
+        "source": "unanswered",
+        "asked": false,
+        "evidence_checked": ["workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "docker-compose.yml"]
+      }
+    ],
+    "scenarios": ["normal", "high-concurrency", "large-dataset"]
+  },
+  "completeness": {
+    "review_confidence": "Medium",
+    "evidence_available": "uninstrumented",
+    "ranking_method": "structural-signals-only",
+    "repository_coverage": "Official judging path (workers/judge, services/submission outbox and result application, pkg/kafka, compose files) read end to end; other services not reviewed.",
+    "critical_paths_identified": 1,
+    "critical_paths_analyzed": 1,
+    "shared_resources_identified": 4,
+    "shared_resources_analyzed": 4,
+    "technology_support": [
+      { "technology": "go", "tier": "deep", "detection_confidence": 0.99 },
+      { "technology": "kafka", "tier": "deep", "detection_confidence": 0.99 },
+      { "technology": "postgres", "tier": "deep", "detection_confidence": 0.99 }
+    ],
+    "unknowns": [
+      { "subject": "Per-call latency of go-judge /run", "reason": "no-evidence-exists", "what_would_resolve_it": "Timing instrumentation around runBatch" },
+      { "subject": "Whether one go-judge /run request with several cmds runs them concurrently", "reason": "not-examined", "what_would_resolve_it": "go-judge documentation or a staging test" },
+      { "subject": "Production WORKER_POOL_SIZE, CPU limits and bundle sizes", "reason": "no-evidence-exists", "what_would_resolve_it": "Deployed env files and host inspection" }
+    ]
+  },
+  "assumptions": {
+    "known": [
+      "Official jobs use StopOnFirstFailure, forcing batch size 1 (process_judge_job.go:57, go_judge_client.go:74-77)",
+      "Compose defaults WORKER_POOL_SIZE to 1 (docker-compose.yml:337, docker-compose.prod.yml:97)",
+      "Bundle limits are 64 MiB zip and 128 MiB extracted (official_loader.go:29-30)"
+    ],
+    "unknown": [
+      "Test-case count and bundle size distribution",
+      "Sandbox per-run overhead",
+      "Submission arrival rate",
+      "Production worker and sandbox CPU limits"
+    ],
+    "assumed": [
+      "Problems have many test cases, per the operator report",
+      "Production uses the compose defaults for pool size"
+    ],
+    "derived": [
+      "An accepted submission with N test cases makes N sequential /run calls plus one compile call for compiled languages, from go_judge_client.go:56-120"
+    ],
+    "measured": []
+  },
+  "decision_changing_questions": [
+    {
+      "question": "What is the typical wall time of one test-case run in go-judge, and how many test cases do slow problems have?",
+      "what_it_would_change": "PERF-001 severity and window size",
+      "decision_dimensions": ["severity", "recommendation"],
+      "expected_decision_value": "highest",
+      "affects": ["PERF-001", "PERF-002"]
+    },
+    {
+      "question": "What are production WORKER_POOL_SIZE and CPU limits, and what is peak submission concurrency?",
+      "what_it_would_change": "PERF-003 severity",
+      "decision_dimensions": ["severity"],
+      "expected_decision_value": "high",
+      "affects": ["PERF-003"]
+    }
+  ],
+  "root_causes": [
+    { "id": "ROOT-001", "description": "Official test cases are executed strictly serially, one sandbox request each, leaving sandbox capacity idle.", "findings": ["PERF-001"] },
+    { "id": "ROOT-002", "description": "Cached testcase bundle is re-verified and re-read on every job instead of once per version.", "findings": ["PERF-002"] },
+    { "id": "ROOT-003", "description": "Worker job concurrency and CPU are configured far below sandbox capacity.", "findings": ["PERF-003"] },
+    { "id": "ROOT-004", "description": "Outbox relay uses fixed-interval polling with synchronous one-at-a-time publish.", "findings": ["PERF-004"] }
+  ],
+  "findings": [
+    {
+      "id": "PERF-001",
+      "stable_id": "cb6a9e5241105234",
+      "root_cause_id": "ROOT-001",
+      "state": "OPEN",
+      "severity": "High",
+      "confidence": "Medium",
+      "priority": "P1",
+      "category": "concurrency",
+      "location": {
+        "service": "judge",
+        "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go",
+        "line": 74,
+        "symbol": "GoJudgeClient.Execute"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "Official submissions run test cases one per blocking sandbox request, strictly in sequence; accepted submissions always pay for every case.",
+      "performance_principle": "Independent units of work should be overlapped when spare capacity exists; an early-exit optimization must not serialize the whole pipeline.",
+      "evidence": [
+        { "statement": "Batch size is forced to 1 when StopOnFirstFailure is set.", "kind": "static", "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "line": 74 },
+        { "statement": "Sequential loop; each iteration makes one blocking POST /run.", "kind": "static", "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "line": 79 },
+        { "statement": "Official jobs always set StopOnFirstFailure true.", "kind": "static", "file": "workers/judge/internal/application/usecase/judge/process_judge_job.go", "line": 57 },
+        { "statement": "Sandbox is configured with ES_PARALLELISM=8 but this path keeps one run in flight per job. No runtime evidence exists.", "kind": "static", "file": "docker-compose.yml", "line": 218 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-item",
+        "growth": "O(n)",
+        "blast_radius": "service",
+        "amplification": "Nx"
+      },
+      "conditions": "Problems with many test cases and non-trivial per-run sandbox overhead; assumes the sandbox has idle capacity. Small N or small per-run cost makes the effect small.",
+      "counter_evidence": [
+        { "statement": "Searched for concurrency, a test-case pool or pipelining in the loop; none found.", "effect": "no-effect", "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "line": 79 },
+        { "statement": "Early exit on first failure reduces work for failing submissions but not for accepted ones.", "effect": "bounds-impact", "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "line": 108 },
+        { "statement": "Compiled languages compile once, not per case.", "effect": "bounds-impact", "file": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go", "line": 56 }
+      ],
+      "why_this_might_not_matter": "If the sandbox is CPU-bound by one job or the host is small, parallelizing one job only shifts load; serial runs also protect timing fairness.",
+      "recommendation": "Run test cases in windows of K (at or below sandbox parallelism, tuned by measurement), stop issuing windows after the first non-ACCEPTED result, and keep results ordered by index.",
+      "alternatives": [
+        { "option": "Windowed concurrency with stop-after-window", "preferred": true, "why": "Keeps early exit and uses idle sandbox capacity." },
+        { "option": "Keep serial and reduce per-call overhead", "preferred": false, "why": "Does not remove the N-fold sandbox launch cost." },
+        { "option": "Add worker slots only", "preferred": false, "why": "Raises throughput across jobs but does not shorten one job." }
+      ],
+      "trade_offs": "Up to K-1 wasted runs after a failure; possible CPU-time noise from concurrent execution; more complex result ordering.",
+      "validation": {
+        "metric": "End-to-end judge time per job versus test_count for accepted submissions",
+        "expectation": "Judge time falls for accepted submissions with many cases, bounded by sandbox parallelism and CPU; magnitude not claimed.",
+        "falsifier": "Per-job time unchanged because the sandbox is CPU-saturated or per-case time is dominated by program runtime; or time-limit verdicts flip.",
+        "safety": "safe-on-production",
+        "guard": "Benchmark replaying one problem with N cases and a verdict-stability test."
+      }
+    },
+    {
+      "id": "PERF-002",
+      "stable_id": "58ca02eb2dcdc31e",
+      "root_cause_id": "ROOT-002",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "io",
+      "location": {
+        "service": "judge",
+        "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go",
+        "line": 61,
+        "symbol": "OfficialLoader.Load"
+      },
+      "tags": ["needs-measurement"],
+      "problem": "Every job, even on a warm cache, hashes the whole cached zip and re-reads all testcase files; metadata is also fetched per job.",
+      "performance_principle": "Work whose result is invariant between requests should be validated once, not per request.",
+      "evidence": [
+        { "statement": "Cache hit still runs verifiedCachedChecksum, which SHA-256s the entire zip.", "kind": "static", "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go", "line": 72 },
+        { "statement": "bundleFromDir re-reads every input and output file on each call.", "kind": "static", "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go", "line": 346 },
+        { "statement": "Metadata fetched over gRPC on each job with no cache. No runtime evidence exists.", "kind": "static", "file": "workers/judge/internal/application/usecase/judge/process_judge_job.go", "line": 43 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service"
+      },
+      "conditions": "Large bundles (limits allow 64 MiB zip, 128 MiB extracted; actual sizes unknown) or CPU-constrained worker (0.5 CPU in dev compose).",
+      "counter_evidence": [
+        { "statement": "Searched for an in-memory cache keyed by problem and version; none found.", "effect": "no-effect", "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go", "line": 61 },
+        { "statement": "Hash check is a deliberate integrity guard for the shared volume.", "effect": "lowers-confidence", "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go", "line": 154 }
+      ],
+      "why_this_might_not_matter": "With bundles of a few MiB, the page cache makes the work cheap relative to running N sandbox processes.",
+      "recommendation": "Verify the checksum once per (problem, version) per process and keep parsed test cases in a bounded in-memory cache, invalidated on version change.",
+      "alternatives": [
+        { "option": "Bounded in-memory cache keyed by problem, version and checksum", "preferred": true, "why": "Removes disk and hash work from the hot path." },
+        { "option": "Verify checksum on first load and on error only", "preferred": false, "why": "Simpler but still re-reads files." },
+        { "option": "Leave as is", "preferred": false, "why": "Acceptable only if bundles are small." }
+      ],
+      "trade_offs": "Memory held by the cache and weaker detection of volume corruption between verifications.",
+      "validation": {
+        "metric": "Loader duration by cache hit, and bundle sizes on disk",
+        "expectation": "Load stage time drops on hits.",
+        "falsifier": "Bundles are small and load time is a negligible share of job time.",
+        "safety": "safe-on-production",
+        "guard": "Metric on loader duration by hit or miss.",
+        "commands": [
+          { "command": "du -sh /cache/testcases/problem_*/bundle.zip", "purpose": "Find actual cached bundle sizes on the worker host", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-003",
+      "stable_id": "e8dfc13faef4cc97",
+      "root_cause_id": "ROOT-003",
+      "state": "OPEN",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "priority": "P2",
+      "category": "infrastructure",
+      "location": {
+        "service": "judge",
+        "file": "workers/judge/internal/adapter/inbound/kafka/judge_job_consumer.go",
+        "line": 50,
+        "symbol": "NewJudgeJobConsumer"
+      },
+      "tags": ["scalability-risk", "needs-measurement"],
+      "problem": "A shared semaphore limits in-flight jobs per worker; compose defaults it to 1 with a 0.5 CPU dev worker while the sandbox has 2 CPU and parallelism 8, so concurrent submissions queue.",
+      "performance_principle": "A concurrency limit on a shared resource should match the capacity of the bottleneck resource.",
+      "evidence": [
+        { "statement": "Pool size comes from WORKER_POOL_SIZE and is enforced by jobSlots.", "kind": "static", "file": "workers/judge/internal/adapter/inbound/kafka/judge_job_consumer.go", "line": 50 },
+        { "statement": "Compose sets WORKER_POOL_SIZE to 1.", "kind": "static", "file": "docker-compose.yml", "line": 337 },
+        { "statement": "Production compose defaults WORKER_POOL_SIZE to 1. No runtime evidence exists.", "kind": "static", "file": "docker-compose.prod.yml", "line": 97 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(n)",
+        "blast_radius": "service"
+      },
+      "conditions": "More than one submission in flight (contests, classes) with idle sandbox CPU; production overrides unknown, compose defaults assumed.",
+      "counter_evidence": [
+        { "statement": "The limit may be deliberate to keep timing stable on a small host; it is configurable by env var.", "effect": "lowers-confidence", "file": "workers/judge/internal/adapter/inbound/kafka/judge_job_consumer.go", "line": 50 }
+      ],
+      "why_this_might_not_matter": "At low submission rates the queue is empty and only per-job time matters; a low value may protect timing accuracy.",
+      "recommendation": "After PERF-001, measure sandbox and worker CPU under concurrent jobs and set slots and the worker CPU limit accordingly.",
+      "alternatives": [
+        { "option": "Tune WORKER_POOL_SIZE and CPU from measurements", "preferred": true, "why": "Configuration only." },
+        { "option": "Add worker replicas", "preferred": false, "why": "Requires locking of the shared testcase cache." }
+      ],
+      "trade_offs": "More concurrent runs can perturb CPU-time measurements and raise memory; replicas need cache coordination.",
+      "validation": {
+        "metric": "Worker and sandbox CPU and queue wait under several concurrent submissions",
+        "expectation": "If CPU is mostly idle, queue wait falls with more slots.",
+        "falsifier": "CPU is already saturated at one job.",
+        "safety": "safe-on-production",
+        "commands": [
+          { "command": "docker stats judge_worker judge_sandbox", "purpose": "Observe CPU headroom while several submissions run", "safety": "safe-on-production" }
+        ]
+      }
+    },
+    {
+      "id": "PERF-004",
+      "stable_id": "13c0d09aa1bbaba1",
+      "root_cause_id": "ROOT-004",
+      "state": "OPEN",
+      "severity": "Low",
+      "confidence": "High",
+      "priority": "P3",
+      "category": "io",
+      "location": {
+        "service": "submission",
+        "file": "services/submission/internal/adapter/outbound/outbox/relay.go",
+        "line": 30,
+        "symbol": "OutboxRelay.Start"
+      },
+      "problem": "The outbox relay polls on a fixed 2 s ticker and publishes messages one at a time synchronously, adding up to the poll interval to every submission before it reaches Kafka.",
+      "performance_principle": "Fixed-interval polling adds latency proportional to the interval to every item on the critical path.",
+      "evidence": [
+        { "statement": "Relay started with a 2 s poll interval.", "kind": "static", "file": "services/submission/internal/container/app.go", "line": 82 },
+        { "statement": "Ticker loop and per-message synchronous SendMessage. No runtime evidence exists.", "kind": "static", "file": "services/submission/internal/adapter/outbound/outbox/relay.go", "line": 74 }
+      ],
+      "evidence_quality": "Moderate",
+      "impact": {
+        "position": "critical-path",
+        "frequency": "per-request",
+        "growth": "O(1)",
+        "blast_radius": "service"
+      },
+      "conditions": "Constant per submission; independent of test-case count, so it does not explain slowness that grows with test cases.",
+      "counter_evidence": [
+        { "statement": "Batch of up to 100 pending rows per poll bounds backlog; no per-submission cost beyond the interval was found.", "effect": "bounds-impact", "file": "services/submission/internal/adapter/outbound/outbox/relay.go", "line": 49 }
+      ],
+      "recommendation": "If submit-to-start latency matters, shorten the interval or trigger the relay after commit; otherwise leave as is.",
+      "trade_offs": "More frequent polling adds idle database queries.",
+      "validation": {
+        "metric": "Time from submission creation to Kafka publish",
+        "expectation": "Bounded by the poll interval today.",
+        "falsifier": "Measured submit-to-publish time is far below the interval.",
+        "safety": "safe-on-production"
+      }
+    }
+  ],
+  "considered_not_reported": [
+    {
+      "observation": "Result persistence could be per-test-case queries",
+      "why_discarded": "One batch Create for all rows inside a single transaction; no N+1 found.",
+      "location": "services/submission/internal/adapter/outbound/persistence/postgres/submission_result.go:104",
+      "path": "result apply path",
+      "evidence_checked": ["submission_result.go ReplaceBySubmissionIDAndAttemptID", "apply_judge_result.go transaction"],
+      "revisit_when": "Result rows carry large outputs and transaction time shows in Postgres stats."
+    },
+    {
+      "observation": "Official runs ignore per-problem limits and use default 2 s CPU and 256 MiB per case",
+      "why_discarded": "Bounded per case and not a source of growth.",
+      "location": "workers/judge/internal/adapter/outbound/execute/go_judge_client.go:343",
+      "path": "go-judge run",
+      "evidence_checked": ["normalizeLimits", "process_judge_job.go request construction"],
+      "revisit_when": "Per-problem limits are introduced."
+    }
+  ],
+  "adjacent_findings": [
+    {
+      "id": "COR-001",
+      "kind": "correctness",
+      "confidence": "Medium",
+      "risk": "Low",
+      "problem": "Testcase cache refresh does RemoveAll then Rename without an inter-process lock; a concurrent reader on the shared volume could see a missing directory.",
+      "evidence": [
+        { "statement": "Remove and rename sequence with no lock; docs also flag it for multi-replica use.", "kind": "static", "file": "workers/judge/internal/adapter/outbound/testcase/official_loader.go", "line": 137 }
+      ],
+      "recommendation": "Use a per-problem lock or swap through versioned directory names.",
+      "location": "workers/judge/internal/adapter/outbound/testcase/official_loader.go:137",
+      "assessed_properly_by": "A correctness-focused test pass if multiple worker replicas are planned."
+    }
+  ]
+}

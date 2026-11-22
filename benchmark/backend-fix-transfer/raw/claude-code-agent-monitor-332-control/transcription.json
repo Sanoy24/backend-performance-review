@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "server/db.js",
+        "line": 1961
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "server/db.js",
+        "line": 10
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "routes/analytics.js",
+        "line": 27
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "routes/analytics.js",
+        "line": 64
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "db.js",
+        "line": 1970
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "db.js",
+        "line": 539
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

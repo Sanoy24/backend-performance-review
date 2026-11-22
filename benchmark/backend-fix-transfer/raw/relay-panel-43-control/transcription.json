@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "location": {
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 131
+      }
+    },
+    {
+      "id": "F2",
+      "location": {
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 98
+      }
+    },
+    {
+      "id": "F3",
+      "location": {
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 130
+      }
+    },
+    {
+      "id": "F4",
+      "location": {
+        "file": "crates/node/src/forwarder/udp.rs",
+        "line": 246
+      }
+    },
+    {
+      "id": "F5",
+      "location": {
+        "file": "crates/node/src/forwarder/limiter.rs",
+        "line": 92
+      }
+    },
+    {
+      "id": "F6",
+      "location": {
+        "file": "crates/node/src/forwarder/selector.rs",
+        "line": 112
+      }
+    }
+  ],
+  "transcribed_by": "claude-sonnet-5-5 (blind: reports and rule only)",
+  "rule": "transcribe literally, never repair"
+}

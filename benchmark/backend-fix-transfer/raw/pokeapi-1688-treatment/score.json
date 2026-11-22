@@ -1,0 +1,17 @@
+{
+  "source_files": [
+    "pokemon_v2/serializers.py"
+  ],
+  "window": 20,
+  "findings": 2,
+  "file_hit": true,
+  "hunk_hit": true,
+  "file_hits": [
+    "PERF-001"
+  ],
+  "hunk_hits": [
+    "PERF-001"
+  ],
+  "top_finding": "PERF-001",
+  "top_finding_file_hit": true
+}
