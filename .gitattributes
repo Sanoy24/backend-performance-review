@@ -4,3 +4,4 @@ benchmark/swefficiency-transfer/*-prompt.txt -text
 benchmark/swefficiency-transfer/tasks/* -text
 benchmark/backend-fix-transfer/*-prompt.txt -text
 benchmark/backend-fix-transfer/tasks/* -text
+benchmark/backend-fix-nosymptom/*-prompt.txt -text
