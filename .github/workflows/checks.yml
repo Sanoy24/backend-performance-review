@@ -31,7 +31,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # ubuntu-latest moved to 26.04, where setup-python ships no Python 3.8; 22.04 still
+        # does, so the stdlib-only check keeps covering the minimum version SKILL.md states.
+        os: [ubuntu-22.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
