@@ -1,0 +1,283 @@
+diff --git a/go.mod b/go.mod
+index a7553d34..5baf2d60 100644
+--- a/go.mod
++++ b/go.mod
+@@ -43,6 +43,7 @@ require (
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+ 	github.com/pmezard/go-difflib v1.0.0 // indirect
++	github.com/projectbarks/cimap v0.1.1 // indirect
+ 	github.com/quic-go/qpack v0.6.0 // indirect
+ 	github.com/quic-go/quic-go v0.59.0 // indirect
+ 	github.com/tibiadata/tibiadata-api-go/src/tibiamapping v0.0.0-20250818132205-2b0f4da1df36 // indirect
+diff --git a/go.sum b/go.sum
+index ee9aae06..37da3877 100644
+--- a/go.sum
++++ b/go.sum
+@@ -62,6 +62,8 @@ github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0
+ github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
+ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
++github.com/projectbarks/cimap v0.1.1 h1:F9C2UvcjrbRifzcABVZ1tPMSuWq9iZV4NSPMfEmAeQg=
++github.com/projectbarks/cimap v0.1.1/go.mod h1:CuebbhEuH1t2Iktn7QYFCstI6Kb3BAM1cQ/ozp393QE=
+ github.com/quic-go/qpack v0.6.0 h1:g7W+BMYynC1LbYLSqRt8PBg5Tgwxn214ZZR34VIOjz8=
+ github.com/quic-go/qpack v0.6.0/go.mod h1:lUpLKChi8njB4ty2bFLX2x4gzDqXwUpaO1DP9qMDZII=
+ github.com/quic-go/quic-go v0.59.0 h1:OLJkp1Mlm/aS7dpKgTc6cnpynnD2Xg7C1pwL6vy/SAw=
+diff --git a/src/validation/go.mod b/src/validation/go.mod
+index b1287d42..1ff4d275 100644
+--- a/src/validation/go.mod
++++ b/src/validation/go.mod
+@@ -13,6 +13,7 @@ require (
+ 	github.com/davecgh/go-spew v1.1.1 // indirect
+ 	github.com/go-resty/resty/v2 v2.17.2 // indirect
+ 	github.com/pmezard/go-difflib v1.0.0 // indirect
++	github.com/projectbarks/cimap v0.1.1 // indirect
+ 	golang.org/x/net v0.43.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
+diff --git a/src/validation/go.sum b/src/validation/go.sum
+index ccd2f743..c51496ff 100644
+--- a/src/validation/go.sum
++++ b/src/validation/go.sum
+@@ -4,6 +4,8 @@ github.com/go-resty/resty/v2 v2.17.2 h1:FQW5oHYcIlkCNrMD2lloGScxcHJ0gkjshV3qcQAy
+ github.com/go-resty/resty/v2 v2.17.2/go.mod h1:kCKZ3wWmwJaNc7S29BRtUhJwy7iqmn+2mLtQrOyQlVA=
+ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
++github.com/projectbarks/cimap v0.1.1 h1:F9C2UvcjrbRifzcABVZ1tPMSuWq9iZV4NSPMfEmAeQg=
++github.com/projectbarks/cimap v0.1.1/go.mod h1:CuebbhEuH1t2Iktn7QYFCstI6Kb3BAM1cQ/ozp393QE=
+ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+ github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+ golang.org/x/net v0.43.0 h1:lat02VYK2j4aLzMzecihNvTlJNQUq316m2Mr9rnM6YE=
+diff --git a/src/validation/highscore.go b/src/validation/highscore.go
+index b7673b38..6ea09359 100644
+--- a/src/validation/highscore.go
++++ b/src/validation/highscore.go
+@@ -3,20 +3,26 @@ package validation
+ import (
+ 	"errors"
+ 	"strings"
++
++	"github.com/projectbarks/cimap"
+ )
+ 
+ var (
+-	// validHighscoreCatregories stores all valid highscore categories
+-	validHighscoreCategories = []string{"achievements", "achievement", "axe", "axefighting", "charm", "charms", "charmpoints", "charmspoints", "club", "clubfighting", "distance", "distancefighting", "fishing", "fist", "fistfighting", "goshnar", "goshnars", "goshnarstaint", "loyalty", "loyaltypoints", "magic", "mlvl", "magiclevel", "shielding", "shield", "sword", "swordfighting", "drome", "dromescore", "experience", "boss", "bosses", "bosspoints", "bountypoints", "bountypoint", "bountypointsearned", "weeklytasks", "weeklytask", "weeklytaskscompleted"}
++	// validHighscoreCategories stores all valid highscore categories
++	validHighscoreCategories = func() *cimap.CaseInsensitiveMap[bool] {
++		m := cimap.New[bool](38)
++		for _, v := range []string{"achievements", "achievement", "axe", "axefighting", "charm", "charms", "charmpoints", "charmspoints", "club", "clubfighting", "distance", "distancefighting", "fishing", "fist", "fistfighting", "goshnar", "goshnars", "goshnarstaint", "loyalty", "loyaltypoints", "magic", "mlvl", "magiclevel", "shielding", "shield", "sword", "swordfighting", "drome", "dromescore", "experience", "boss", "bosses", "bosspoints", "bountypoints", "bountypoint", "bountypointsearned", "weeklytasks", "weeklytask", "weeklytaskscompleted"} {
++			m.Add(v, true)
++		}
++		return m
++	}()
+ )
+ 
+ // IsHighscoreCategoryValid reports wheter the provided string represents a valid highscore category
+ // Check if error == nil to see whether the highscore category is valid or not
+ func IsHighscoreCategoryValid(hs string) error {
+-	for _, highscore := range validHighscoreCategories {
+-		if strings.EqualFold(hs, highscore) {
+-			return nil
+-		}
++	if _, ok := validHighscoreCategories.Get(hs); ok {
++		return nil
+ 	}
+ 
+ 	return ErrorHighscoreCategoryDoesNotExist
+diff --git a/src/validation/tibia.go b/src/validation/tibia.go
+index 4ba66b43..76c7cca8 100644
+--- a/src/validation/tibia.go
++++ b/src/validation/tibia.go
+@@ -5,6 +5,8 @@ import (
+ 	"strings"
+ 	"unicode"
+ 	"unicode/utf8"
++
++	"github.com/projectbarks/cimap"
+ )
+ 
+ const (
+@@ -24,7 +26,13 @@ var (
+ 	guildNameRegex = regexp.MustCompile(`[^\sa-zA-Z]`)
+ 
+ 	// validVocations stores all valid tibia vocations
+-	validVocations = []string{"none", "knight", "knights", "paladin", "paladins", "sorcerer", "sorcerers", "druid", "druids", "monk", "monks", "all"}
++	validVocations = func() *cimap.CaseInsensitiveMap[bool] {
++		m := cimap.New[bool](12)
++		for _, v := range []string{"none", "knight", "knights", "paladin", "paladins", "sorcerer", "sorcerers", "druid", "druids", "monk", "monks", "all"} {
++			m.Add(v, true)
++		}
++		return m
++	}()
+ )
+ 
+ // IsRestrictionMode reports whether the restriction mode is enabled
+@@ -51,10 +59,8 @@ func IsNewsIDValid(ID int) error {
+ // IsVocationValid reports wheter the provided string represents a valid vocation
+ // Check if error == nil to see whether the vocation is valid or not
+ func IsVocationValid(vocation string) error {
+-	for _, voc := range validVocations {
+-		if strings.EqualFold(vocation, voc) {
+-			return nil
+-		}
++	if _, ok := validVocations.Get(vocation); ok {
++		return nil
+ 	}
+ 
+ 	return ErrorVocationDoesNotExist
+@@ -196,25 +202,12 @@ func IsCreatureNameValid(name string) (string, error) {
+ 		return "", ErrorCreatureNameInvalid
+ 	}
+ 
+-	var (
+-		found    bool
+-		endpoint string
+-	)
+-
+ 	// Check if creature exists
+-	for _, creature := range val.Creatures {
+-		if strings.EqualFold(name, creature.Endpoint) || strings.EqualFold(name, creature.Name) || strings.EqualFold(name, creature.PluralName) {
+-			found = true
+-			endpoint = creature.Endpoint
+-			break
+-		}
++	if endpoint, ok := creatureLookup.Get(name); ok {
++		return endpoint, nil
+ 	}
+ 
+-	if !found {
+-		return "", ErrorCreatureNotFound
+-	}
+-
+-	return endpoint, nil
++	return "", ErrorCreatureNotFound
+ }
+ 
+ // IsSpellNameOrFormulaValid reports wheter the provided string represents a valid spell name or formula
+@@ -263,25 +256,12 @@ func IsSpellNameOrFormulaValid(name string) (string, error) {
+ 		return "", ErrorSpellNameInvalid
+ 	}
+ 
+-	var (
+-		found    bool
+-		endpoint string
+-	)
+-
+ 	// Check if spell exists
+-	for _, spell := range val.Spells {
+-		if strings.EqualFold(name, spell.Endpoint) || strings.EqualFold(name, spell.Name) || strings.EqualFold(name, spell.Formula) {
+-			found = true
+-			endpoint = spell.Endpoint
+-			break
+-		}
++	if endpoint, ok := spellLookup.Get(name); ok {
++		return endpoint, nil
+ 	}
+ 
+-	if !found {
+-		return "", ErrorSpellNotFound
+-	}
+-
+-	return endpoint, nil
++	return "", ErrorSpellNotFound
+ }
+ 
+ // GetWorlds returns a list of all existing worlds
+@@ -303,13 +283,8 @@ func WorldExists(world string) (bool, error) {
+ 	}
+ 
+ 	// Try to find the world
+-	for _, w := range val.Worlds {
+-		if strings.EqualFold(w, world) {
+-			return true, nil
+-		}
+-	}
+-
+-	return false, nil
++	_, found := worldLookup.Get(world)
++	return found, nil
+ }
+ 
+ // GetTowns returns a list of all existing towns
+@@ -334,13 +309,8 @@ func TownExists(town string) (bool, error) {
+ 	town = strings.ReplaceAll(town, "+", " ")
+ 
+ 	// Try to find the town
+-	for _, t := range val.Towns {
+-		if strings.EqualFold(t, town) {
+-			return true, nil
+-		}
+-	}
+-
+-	return false, nil
++	_, found := townLookup.Get(town)
++	return found, nil
+ }
+ 
+ // GetHouses returns a slice of all houses
+diff --git a/src/validation/validation.go b/src/validation/validation.go
+index 41174985..71b7a2ea 100644
+--- a/src/validation/validation.go
++++ b/src/validation/validation.go
+@@ -7,6 +7,7 @@ import (
+ 	"sync"
+ 	"unicode/utf8"
+ 
++	"github.com/projectbarks/cimap"
+ 	"github.com/tibiadata/tibiadata-api-go/src/tibiamapping"
+ )
+ 
+@@ -45,6 +46,12 @@ var (
+ 	sha256sum string           // sha256sum stores the sha256sum of the data.min.json file
+ 	sha512sum string           // sha512sum stores the sha512sum of the data.min.json file
+ 
++	// Lookup maps for O(1) case-insensitive searches
++	creatureLookup *cimap.CaseInsensitiveMap[string] // endpoint/name/plural_name -> endpoint
++	spellLookup    *cimap.CaseInsensitiveMap[string] // endpoint/name/formula -> endpoint
++	worldLookup    *cimap.CaseInsensitiveMap[bool]   // world name -> true
++	townLookup     *cimap.CaseInsensitiveMap[bool]   // town name -> true
++
+ 	smallestCreatureName, biggestCreatureName, smallestCreatureWord, biggestCreatureWord                                           string // smallest and biggest creature names and words
+ 	smallestCreatureNameRuneCount, biggestCreatureNameRuneCount, smallestCreatureWordRuneCount, biggestCreatureWordRuneCount       int    // smallest and biggest creature names and words rune count
+ 	smallestSpellNameOrFormula, biggestSpellNameOrFormula, smallestSpellWord, biggestSpellWord                                     string // smalles and biggest spell names or formulas and words
+@@ -107,6 +114,39 @@ func Initiate(TibiaDataUserAgent string) error {
+ func setVars() {
+ 	setCreaturesVars()
+ 	setSpellsVars()
++	buildLookupMaps()
++}
++
++// buildLookupMaps builds O(1) lookup maps from the slices.
++// Called once during Initiate().
++func buildLookupMaps() {
++	creatureLookup = cimap.New[string](len(val.Creatures) * 3)
++	for _, c := range val.Creatures {
++		creatureLookup.Add(c.Endpoint, c.Endpoint)
++		creatureLookup.Add(c.Name, c.Endpoint)
++		if c.PluralName != "" {
++			creatureLookup.Add(c.PluralName, c.Endpoint)
++		}
++	}
++
++	spellLookup = cimap.New[string](len(val.Spells) * 3)
++	for _, s := range val.Spells {
++		spellLookup.Add(s.Endpoint, s.Endpoint)
++		spellLookup.Add(s.Name, s.Endpoint)
++		if s.Formula != "" {
++			spellLookup.Add(s.Formula, s.Endpoint)
++		}
++	}
++
++	worldLookup = cimap.New[bool](len(val.Worlds))
++	for _, w := range val.Worlds {
++		worldLookup.Add(w, true)
++	}
++
++	townLookup = cimap.New[bool](len(val.Towns))
++	for _, t := range val.Towns {
++		townLookup.Add(t, true)
++	}
+ }
+ 
+ // setCreaturesVars sets creatures vars

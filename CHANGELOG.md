@@ -66,6 +66,15 @@ value and `[Unreleased]` accumulates.
     server-side performance problem. The first pull request per repository that passes, in
     hash order, becomes the case.
 
+- **A pre-registered test on ten real backend performance fixes.**
+  `benchmark/backend-fix-transfer/` fixes ten cases from the service-topic pool, in five
+  languages. Each is a merged PR whose maintainers fixed a server-side performance problem, such
+  as an N+1 in a list endpoint, a missing PostgreSQL index or a contended map on a UDP path. Each
+  case has a one-line symptom written blind from the PR text. The skill and a plain request on
+  the same model will each review the pre-fix commit, given only the symptom. The decision rules,
+  frozen inputs and deviations before registration are in `design.md`. The source-file rule now
+  also excludes Django's `tests.py`, `test.py` and `conftest.py`.
+
 ## [2.3.0] — 2026-11-14
 
 A minor release. `technology/dotnet.md` now says how to score a blocking call in ASP.NET Core

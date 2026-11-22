@@ -1,0 +1,42 @@
+[
+ {
+  "id": "relay-panel-43",
+  "symptom": "UDP traffic relayed through the node gets slow and uses high CPU when many clients send packets at the same time, with throughput degrading as client count grows."
+ },
+ {
+  "id": "tibiadata-api-go-630",
+  "symptom": "API requests that look up names regardless of letter case use more CPU and memory than expected and respond slowly, especially when the underlying lists are large."
+ },
+ {
+  "id": "dnb-backend-508",
+  "symptom": "Awarding badges and loading the notifications list feel slow and put heavy load on the database, especially for users with many badges and notifications."
+ },
+ {
+  "id": "arcane-4106",
+  "symptom": "The project list page loads slowly and hammers the database when many projects are managed from Git, with load time growing with the number of projects."
+ },
+ {
+  "id": "astracode-42",
+  "symptom": "Judging a submission against the official test cases takes a long time, especially when a problem has many test cases to run."
+ },
+ {
+  "id": "pokeapi-1688",
+  "symptom": "Requesting an evolution chain from the API is slow and causes many database queries, especially for chains with many branching species such as Eevee."
+ },
+ {
+  "id": "commafeed-2089",
+  "symptom": "Refreshing feeds puts heavy load on the database and takes a long time, especially for feeds with many entries or when many feeds refresh."
+ },
+ {
+  "id": "flexmeasures-2641",
+  "symptom": "Computing a storage or power schedule spends a surprisingly long time checking device constraints, and it gets slower as the number of devices grows."
+ },
+ {
+  "id": "gatus-1541",
+  "symptom": "The status dashboard page takes many seconds to load and the database server shows high CPU when many past results are stored for each endpoint."
+ },
+ {
+  "id": "claude-code-agent-monitor-332",
+  "symptom": "Opening the analytics tool-usage panel takes tens of seconds and freezes the whole server while it loads, when the activity history table is very large."
+ }
+]

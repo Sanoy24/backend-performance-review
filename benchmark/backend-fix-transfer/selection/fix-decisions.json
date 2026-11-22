@@ -1,0 +1,224 @@
+[
+ {
+  "repo": "MoeShinX/relay-panel",
+  "number": 43,
+  "server_side_fix": true,
+  "reason": "Replaces per-packet global Mutex<HashMap> with sharded DashMap on the UDP forwarding hot path (crates/node/src/forwarder/udp.rs)."
+ },
+ {
+  "repo": "tibiadata/tibiadata-api-go",
+  "number": 630,
+  "server_side_fix": true,
+  "reason": "Converts O(n) allocating case-insensitive lookups into O(1) zero-allocation map lookups in src/validation."
+ },
+ {
+  "repo": "tibiadata/tibiadata-api-go",
+  "number": 644,
+  "server_side_fix": true,
+  "reason": "Shares one resty.Client across requests to cut GC churn, CPU and TLS handshakes in the Go server."
+ },
+ {
+  "repo": "tibiadata/tibiadata-api-go",
+  "number": 629,
+  "server_side_fix": true,
+  "reason": "Title says it avoids a LoadLocation syscall on every TibiaDataDatetime call in server code."
+ },
+ {
+  "repo": "Deen-Bridge/dnb-backend",
+  "number": 508,
+  "server_side_fix": true,
+  "reason": "Removes per-badge findOne N+1 query and parallelizes notification list queries in backend services/controllers."
+ },
+ {
+  "repo": "Deen-Bridge/dnb-backend",
+  "number": 501,
+  "server_side_fix": true,
+  "reason": "Adds missing MongoDB indexes to model schemas to speed high-traffic queries (database load)."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 4106,
+  "server_side_fix": true,
+  "reason": "Batches GitOps compose-path lookups and memoizes compose resolution once per project list request."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3605,
+  "server_side_fix": true,
+  "reason": "Filters unhealthy containers at the Docker daemon in the auto-heal background job instead of listing all."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3819,
+  "server_side_fix": true,
+  "reason": "Consolidates per-client environment stream polling into one shared producer in backend handler."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3276,
+  "server_side_fix": false,
+  "reason": "Parallelizes data loading in frontend/src/routes/+layout.ts, which is browser code."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3821,
+  "server_side_fix": true,
+  "reason": "Replaces per-image Docker inspects and DB queries with batched lookups in imagepatch backend."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3603,
+  "server_side_fix": true,
+  "reason": "Caches validated API keys and debounces last_used_at writes on the auth path to cut CPU and DB writes."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 4110,
+  "server_side_fix": true,
+  "reason": "Replaces repeated linear scans with indexed lookups and grouping in backend update enrichment."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3278,
+  "server_side_fix": false,
+  "reason": "Ambiguous: moves last_used_at writes from a detached goroutine to synchronous request-scoped writes, which is lifecycle/goroutine hygiene and states no performance improvement."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3816,
+  "server_side_fix": true,
+  "reason": "Serves cached token verification state before signature and DB validation in backend auth."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 4109,
+  "server_side_fix": true,
+  "reason": "Dedupes registry lookups, runs container tag checks concurrently and batches cleanup in the image-update scan."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 4108,
+  "server_side_fix": true,
+  "reason": "Defers project-list enrichment until after pagination, reducing work per list request."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3604,
+  "server_side_fix": true,
+  "reason": "Omits the large output column from the build history list query."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3820,
+  "server_side_fix": true,
+  "reason": "Dispatches notification providers concurrently with a bounded errgroup in backend notification service."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3619,
+  "server_side_fix": true,
+  "reason": "Materializes the effective settings snapshot once per refresh, replacing repeated cloning and reflection on reads."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 3277,
+  "server_side_fix": true,
+  "reason": "Preloads API key permission grants in one query instead of per-key lookups (N+1 removal)."
+ },
+ {
+  "repo": "nvawntien/astracode",
+  "number": 41,
+  "server_side_fix": false,
+  "reason": "Deployment and infra config (Envoy nofile limit, Kafka partitions, docs, benchmark tooling), not a code-level performance fix."
+ },
+ {
+  "repo": "nvawntien/astracode",
+  "number": 42,
+  "server_side_fix": true,
+  "reason": "Title 'perf(judge): batch official testcase execution' changes the judge worker's go_judge_client; body is empty so this rests on the title."
+ },
+ {
+  "repo": "PokeAPI/pokeapi",
+  "number": 1688,
+  "server_side_fix": true,
+  "reason": "Fixes N+1 queries in EvolutionChainDetailSerializer with a single batched query."
+ },
+ {
+  "repo": "Athou/commafeed",
+  "number": 2089,
+  "server_side_fix": true,
+  "reason": "Batches per-entry guid existence checks into one query during feed refresh."
+ },
+ {
+  "repo": "Paca-AI/paca",
+  "number": 463,
+  "server_side_fix": false,
+  "reason": "Infinite scroll and board scrolling UX in apps/web frontend; the backend-load remark is incidental."
+ },
+ {
+  "repo": "Paca-AI/paca",
+  "number": 430,
+  "server_side_fix": false,
+  "reason": "Ambiguous: mainly switches the plugin build toolchain to TinyGo and renames an allocator export, with a lowered body-size default; it is build/config change, not a request-path fix."
+ },
+ {
+  "repo": "Paca-AI/paca",
+  "number": 542,
+  "server_side_fix": false,
+  "reason": "Fixes frontend pagination state reset on tab refocus in interaction-layout.tsx, which is a browser bug rather than a performance issue."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2641,
+  "server_side_fix": true,
+  "reason": "Replaces per-check DataFrame.eval with vectorised numpy in planning validation (25.5 ms to 3.3 ms per device), reducing CPU on the scheduling path; the 'found while profiling the test suite' note is incidental."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2282,
+  "server_side_fix": true,
+  "reason": "Scheduler model nonzeros grew quadratically with horizon; the recursive stock balance makes them linear and solves 10-22x faster (linear_optimization.py)."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2173,
+  "server_side_fix": true,
+  "reason": "Sensor stats query timed out on >10M rows; filtering NaNs without a subquery speeds up the server-side query (data/services/sensors.py)."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2565,
+  "server_side_fix": false,
+  "reason": "Defers heavy imports (pyomo, LightGBM, Sentry helpers) to cut boot/import time, not request or job handling cost; ambiguous but it targets startup, so false."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2515,
+  "server_side_fix": true,
+  "reason": "Eager-loads owner/type/child_assets on GET /api/v3_0/assets, removing N+1 queries (409 to 10 queries, about 7x faster)."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2363,
+  "server_side_fix": true,
+  "reason": "Removes an N+1 lazy-load of sensors on the assets listing endpoint with selectinload (about 6-7 s to 3.1 s)."
+ },
+ {
+  "repo": "TwiN/gatus",
+  "number": 1541,
+  "server_side_fix": true,
+  "reason": "Adds missing PostgreSQL indexes in the storage backend so result and condition queries are much faster (page load 15.2 s to 900 ms)."
+ },
+ {
+  "repo": "hoangsonww/Claude-Code-Agent-Monitor",
+  "number": 332,
+  "server_side_fix": true,
+  "reason": "Adds a partial index on events.tool_name in server/db.js so the analytics tool-usage query stops full-scanning (45.7 s to 0.25 s) and blocking the Node thread; the 'Infrastructure' checkbox does not change that it is a server-side query fix."
+ },
+ {
+  "repo": "TNT-Likely/PanWatch",
+  "number": 125,
+  "server_side_fix": false,
+  "reason": "Titled perf(frontend) and mainly restructures frontend load ordering; the backend stocks.py change batches agent display names but the description frames it as a display change, so ambiguous and answered false."
+ }
+]

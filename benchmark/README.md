@@ -22,6 +22,7 @@ benchmark/
 ├── annotation_resolve.py validate human decisions and emit resolved truth
 ├── annotation_resolution_collect.py verify every campaign resolution and freeze truth
 ├── backend_fix_transfer.py select real backend performance-fix PRs and score localization
+├── backend-fix-transfer/ pre-registered test on ten real backend performance fixes
 ├── dataset.json       case split and annotation-version registry
 ├── dataset.py         registry validation and held-out eligibility gate
 ├── ground-truth/     annotations, one file per repository/case

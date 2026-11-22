@@ -1,0 +1,7457 @@
+[
+  {
+    "full_name": "mathpaquette/IQFeed.CSharpApiClient",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 127
+  },
+  {
+    "full_name": "jwdeveloper/TikTokLiveJava",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 213
+  },
+  {
+    "full_name": "nikunjsingh93/react-glass-keep",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 608
+  },
+  {
+    "full_name": "tailscale-dev/ScaleTail",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2306
+  },
+  {
+    "full_name": "gotson/komga",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 6869
+  },
+  {
+    "full_name": "vitalik/django-ninja",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 9252
+  },
+  {
+    "full_name": "hertzg/tesseract-server",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 137
+  },
+  {
+    "full_name": "MoeShinX/relay-panel",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 233
+  },
+  {
+    "full_name": "themartz90/jellydash",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 129
+  },
+  {
+    "full_name": "ScriptSmith/socialreaper",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 668
+  },
+  {
+    "full_name": "saas-js/saas-ui",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1658
+  },
+  {
+    "full_name": "uasoft-indonesia/badaso",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1255
+  },
+  {
+    "full_name": "mkdocstrings/griffe",
+    "license": "isc",
+    "language": "Python",
+    "topic": "api",
+    "stars": 707
+  },
+  {
+    "full_name": "ixartz/SaaS-Boilerplate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 7493
+  },
+  {
+    "full_name": "apioo/fusio",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 2131
+  },
+  {
+    "full_name": "bndr/gojenkins",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 906
+  },
+  {
+    "full_name": "andrewvillazon/pbipy",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 102
+  },
+  {
+    "full_name": "ncanode-kz/NCANode",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 328
+  },
+  {
+    "full_name": "dimonomid/nerdlog",
+    "license": "bsd-2-clause",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1592
+  },
+  {
+    "full_name": "avoylenko/wwebjs-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 271
+  },
+  {
+    "full_name": "jasonacox/tinytuya",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1810
+  },
+  {
+    "full_name": "prest/prest",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 4638
+  },
+  {
+    "full_name": "choyiny/saasmail",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 280
+  },
+  {
+    "full_name": "eko/monday",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 1374
+  },
+  {
+    "full_name": "kiitdev/kiit",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "backend",
+    "stars": 114
+  },
+  {
+    "full_name": "tibiadata/tibiadata-api-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 109
+  },
+  {
+    "full_name": "ivan-borovets/fastapi-clean-example",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 601
+  },
+  {
+    "full_name": "mswjs/data",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1069
+  },
+  {
+    "full_name": "alpacahq/alpaca-trade-api-js",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 606
+  },
+  {
+    "full_name": "sieblyio/binance",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 937
+  },
+  {
+    "full_name": "skyhook-io/radar",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 4195
+  },
+  {
+    "full_name": "siberiacancode/mock-config",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 113
+  },
+  {
+    "full_name": "mswjs/msw",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 18359
+  },
+  {
+    "full_name": "havenweb/haven",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 822
+  },
+  {
+    "full_name": "kriasoft/react-starter-kit",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 23725
+  },
+  {
+    "full_name": "hanami/hanami",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 6433
+  },
+  {
+    "full_name": "DeepL/deepl-python",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1339
+  },
+  {
+    "full_name": "TheDan64/inkwell",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 3052
+  },
+  {
+    "full_name": "swagger-api/swagger-inflector",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 172
+  },
+  {
+    "full_name": "MrMicky-FR/FastBoard",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 582
+  },
+  {
+    "full_name": "goadesign/examples",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 204
+  },
+  {
+    "full_name": "openfaas/of-watchdog",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 268
+  },
+  {
+    "full_name": "Deen-Bridge/dnb-backend",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 165
+  },
+  {
+    "full_name": "istio/api",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 523
+  },
+  {
+    "full_name": "DarkaOnLine/L5-Swagger",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2933
+  },
+  {
+    "full_name": "getarcaneapp/arcane",
+    "license": "bsd-3-clause",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 10294
+  },
+  {
+    "full_name": "tensorflow/quantum",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2205
+  },
+  {
+    "full_name": "nvawntien/astracode",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 142
+  },
+  {
+    "full_name": "ElMassimo/js_from_routes",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 127
+  },
+  {
+    "full_name": "tiaanduplessis/coinmarketcap-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 122
+  },
+  {
+    "full_name": "Mag1cFall/AIStudio2API",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1133
+  },
+  {
+    "full_name": "polius/FileSync",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1929
+  },
+  {
+    "full_name": "graphql-hive/graphql-inspector",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1773
+  },
+  {
+    "full_name": "NpgsqlRest/NpgsqlRest",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 136
+  },
+  {
+    "full_name": "defstudio/telegraph",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 822
+  },
+  {
+    "full_name": "massive-com/client-python",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1526
+  },
+  {
+    "full_name": "cloudflare/chanfana",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 776
+  },
+  {
+    "full_name": "markitosgv/JWTRefreshTokenBundle",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 712
+  },
+  {
+    "full_name": "artilleryio/artillery",
+    "license": "mpl-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 9122
+  },
+  {
+    "full_name": "Mozzo1000/booklogr",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 641
+  },
+  {
+    "full_name": "slothflowlabs/duckle",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1559
+  },
+  {
+    "full_name": "ultracontext/ultracontext",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 443
+  },
+  {
+    "full_name": "zuihou/lamp-util",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "saas",
+    "stars": 335
+  },
+  {
+    "full_name": "docmd-io/docmd",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 2568
+  },
+  {
+    "full_name": "nginx/agent",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 375
+  },
+  {
+    "full_name": "dipdup-io/dipdup",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 274
+  },
+  {
+    "full_name": "xpenatan/gdx-teavm",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 180
+  },
+  {
+    "full_name": "Sensinum/strapi-plugin-comments",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 436
+  },
+  {
+    "full_name": "sharat87/httpbun",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 187
+  },
+  {
+    "full_name": "yezz123/ai-template",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 259
+  },
+  {
+    "full_name": "Azure/data-api-builder",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 1546
+  },
+  {
+    "full_name": "api-bricks/api-bricks-sdk",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 533
+  },
+  {
+    "full_name": "WebDecoy/FCaptcha",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 271
+  },
+  {
+    "full_name": "eracle/OpenOutreach",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 3812
+  },
+  {
+    "full_name": "duyanming/Anno.Core",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 483
+  },
+  {
+    "full_name": "opexdev/core",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "microservice",
+    "stars": 138
+  },
+  {
+    "full_name": "BackendStack21/restana",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 469
+  },
+  {
+    "full_name": "nitrictech/nitric",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 2017
+  },
+  {
+    "full_name": "onflow/flow-go-sdk",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 213
+  },
+  {
+    "full_name": "jeffknupp/sandman2",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 2041
+  },
+  {
+    "full_name": "projectdiscovery/cdncheck",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1000
+  },
+  {
+    "full_name": "Waifu-im/waifu-api",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 108
+  },
+  {
+    "full_name": "manbearwiz/youtube-dl-server",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 933
+  },
+  {
+    "full_name": "Rain120/qq-music-api",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1140
+  },
+  {
+    "full_name": "ForestAdmin/forest-express-sequelize",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 188
+  },
+  {
+    "full_name": "Pluviobyte/saas-growth-agents",
+    "license": "mit",
+    "language": "Python",
+    "topic": "saas",
+    "stars": 552
+  },
+  {
+    "full_name": "lemed99/nightowl-agent",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 126
+  },
+  {
+    "full_name": "sfast/zeronode",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "microservice",
+    "stars": 125
+  },
+  {
+    "full_name": "reshaprio/reshapr",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 180
+  },
+  {
+    "full_name": "grpc-ecosystem/grpc-gateway",
+    "license": "bsd-3-clause",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 20017
+  },
+  {
+    "full_name": "pingooio/pingoo",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 1043
+  },
+  {
+    "full_name": "sameerk27/vigil365",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 285
+  },
+  {
+    "full_name": "madong-code/madong-admin",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 1028
+  },
+  {
+    "full_name": "go-goyave/goyave",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 1786
+  },
+  {
+    "full_name": "kcal-app/kcal",
+    "license": "mpl-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 358
+  },
+  {
+    "full_name": "netwo-io/apistos",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 216
+  },
+  {
+    "full_name": "flugg/laravel-responder",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 887
+  },
+  {
+    "full_name": "danielgtaylor/huma",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 4550
+  },
+  {
+    "full_name": "zelloptt/zello-channel-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 116
+  },
+  {
+    "full_name": "air-go/rpc",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 133
+  },
+  {
+    "full_name": "webreinvent/vaahcms",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 572
+  },
+  {
+    "full_name": "spatie/laravel-blade-javascript",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 619
+  },
+  {
+    "full_name": "DigitalOceanPHP/Client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 728
+  },
+  {
+    "full_name": "spatie/laravel-query-builder",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 4468
+  },
+  {
+    "full_name": "tastyeffectco/sandboxd",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1001
+  },
+  {
+    "full_name": "dopbase/dopbase",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 206
+  },
+  {
+    "full_name": "ergo-services/ergo",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 4702
+  },
+  {
+    "full_name": "ironcalc/IronCalc",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 4284
+  },
+  {
+    "full_name": "frankframework/frankframework",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 168
+  },
+  {
+    "full_name": "OWASP/crAPI",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1641
+  },
+  {
+    "full_name": "alextnetto/res",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 314
+  },
+  {
+    "full_name": "romanzipp/Laravel-Twitch",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 112
+  },
+  {
+    "full_name": "RobinTail/express-zod-api",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 837
+  },
+  {
+    "full_name": "wasi-master/13ft",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 4617
+  },
+  {
+    "full_name": "backenly/backenly",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 100
+  },
+  {
+    "full_name": "coollabsio/orbit",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 690
+  },
+  {
+    "full_name": "TriPSs/nestjs-query",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 197
+  },
+  {
+    "full_name": "jsdoc/jsdoc",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 15477
+  },
+  {
+    "full_name": "waynesutton/builder-skills",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 405
+  },
+  {
+    "full_name": "NeteaseCloudMusicApiEnhanced/api-enhanced",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2280
+  },
+  {
+    "full_name": "harryzcy/mailbox",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 253
+  },
+  {
+    "full_name": "PokeAPI/pokeapi",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "api",
+    "stars": 5482
+  },
+  {
+    "full_name": "theapache64/retrosheet",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "rest-api",
+    "stars": 1003
+  },
+  {
+    "full_name": "yannicklamprecht/WorldBorderAPI",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 125
+  },
+  {
+    "full_name": "membrane/api-gateway",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 660
+  },
+  {
+    "full_name": "marshmallow-code/apispec",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1221
+  },
+  {
+    "full_name": "carousell/Orion",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 158
+  },
+  {
+    "full_name": "Athou/commafeed",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 3653
+  },
+  {
+    "full_name": "henne49/dbus-opendtu",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 158
+  },
+  {
+    "full_name": "PGYER/codefever",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 2747
+  },
+  {
+    "full_name": "httpcats/http.cat",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 3746
+  },
+  {
+    "full_name": "vultr/govultr",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 259
+  },
+  {
+    "full_name": "tr7zw/Item-NBT-API",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 687
+  },
+  {
+    "full_name": "tableau/server-client-python",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 717
+  },
+  {
+    "full_name": "ebogdum/callfs",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 406
+  },
+  {
+    "full_name": "tommyrot/superseriousstats",
+    "license": "isc",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 104
+  },
+  {
+    "full_name": "Paca-AI/paca",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 2091
+  },
+  {
+    "full_name": "CryptoMorin/XSeries",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 534
+  },
+  {
+    "full_name": "rameshsunkara/go-rest-api-example",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 438
+  },
+  {
+    "full_name": "colinlet/PHP-Interview-QA",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 2963
+  },
+  {
+    "full_name": "sudorandom/fauxrpc",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 133
+  },
+  {
+    "full_name": "spatie/fractalistic",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 383
+  },
+  {
+    "full_name": "spatie/flysystem-dropbox",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 364
+  },
+  {
+    "full_name": "pine-vm/pine",
+    "license": "mit",
+    "language": "C#",
+    "topic": "backend",
+    "stars": 259
+  },
+  {
+    "full_name": "zofe/rapyd-admin",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "saas",
+    "stars": 863
+  },
+  {
+    "full_name": "Universalis-FFXIV/Universalis",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 208
+  },
+  {
+    "full_name": "bugkeep/ai-draw",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 989
+  },
+  {
+    "full_name": "b4fun/sqlite-rest",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 106
+  },
+  {
+    "full_name": "spatie/laravel-prefixed-ids",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 177
+  },
+  {
+    "full_name": "pathwaycom/serviette",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 58685
+  },
+  {
+    "full_name": "APIDevTools/swagger-parser",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 1210
+  },
+  {
+    "full_name": "prod-forge/backend",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 486
+  },
+  {
+    "full_name": "noel-mugisha/Identity-Provider",
+    "license": "mit",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 186
+  },
+  {
+    "full_name": "spatie/laravel-json-api-paginate",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 644
+  },
+  {
+    "full_name": "amir-the-h/okex",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 106
+  },
+  {
+    "full_name": "valeriansaliou/constellation",
+    "license": "mpl-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 136
+  },
+  {
+    "full_name": "TryGhost/SDK",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 135
+  },
+  {
+    "full_name": "tailscale/setec",
+    "license": "bsd-3-clause",
+    "language": "Go",
+    "topic": "api",
+    "stars": 492
+  },
+  {
+    "full_name": "LifeArchiveProject/HistoryHub",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1233
+  },
+  {
+    "full_name": "huseyinstif/oculos",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "rest-api",
+    "stars": 135
+  },
+  {
+    "full_name": "chaosblade-io/chaosblade",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 6477
+  },
+  {
+    "full_name": "sparckles/Robyn",
+    "license": "bsd-2-clause",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 7432
+  },
+  {
+    "full_name": "dedoc/scramble",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2239
+  },
+  {
+    "full_name": "jsynowiec/node-typescript-boilerplate",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 2965
+  },
+  {
+    "full_name": "goravel/goravel",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 4912
+  },
+  {
+    "full_name": "andes90/collabmd",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 292
+  },
+  {
+    "full_name": "depado/goploader",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 304
+  },
+  {
+    "full_name": "ryanmeowy/anchr-app",
+    "license": "mit",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 109
+  },
+  {
+    "full_name": "AayushBharti/ai-saas-landing-starter",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 147
+  },
+  {
+    "full_name": "falconry/falcon",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 9821
+  },
+  {
+    "full_name": "vladkens/ghstats",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 204
+  },
+  {
+    "full_name": "twurple/twurple",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 753
+  },
+  {
+    "full_name": "zenstackhq/zenstack",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 2965
+  },
+  {
+    "full_name": "ankitjha67/product-architect",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 118
+  },
+  {
+    "full_name": "wwebjs/whatsapp-web.js",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 22952
+  },
+  {
+    "full_name": "summer-rs/summer-rs",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "microservice",
+    "stars": 1031
+  },
+  {
+    "full_name": "intelligo-dev/intelligo",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 433
+  },
+  {
+    "full_name": "ArtalkJS/Artalk",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 2368
+  },
+  {
+    "full_name": "turkraft/springfilter",
+    "license": "mit",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 290
+  },
+  {
+    "full_name": "Hosteroid/domain-monitor",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 270
+  },
+  {
+    "full_name": "Mohamed-Badry/statui",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 118
+  },
+  {
+    "full_name": "spatie/laravel-twitter-streaming-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 204
+  },
+  {
+    "full_name": "aimeos/pagible",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 604
+  },
+  {
+    "full_name": "isso-comments/isso",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 5314
+  },
+  {
+    "full_name": "alibahmanyar/simon",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 162
+  },
+  {
+    "full_name": "apache/apisix-ingress-controller",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1153
+  },
+  {
+    "full_name": "teddy-vltn/vinted-discord-bot",
+    "license": "unlicense",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 198
+  },
+  {
+    "full_name": "FlexMeasures/flexmeasures",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 218
+  },
+  {
+    "full_name": "erda-project/erda",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 2756
+  },
+  {
+    "full_name": "chubbyphp/chubbyphp-framework",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 136
+  },
+  {
+    "full_name": "Dotnet-Boxed/Templates",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 3484
+  },
+  {
+    "full_name": "aldinokemal/go-whatsapp-web-multidevice",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 5079
+  },
+  {
+    "full_name": "TwiN/gatus",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 12863
+  },
+  {
+    "full_name": "co-cddo/api-catalogue",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 193
+  },
+  {
+    "full_name": "lantunnel/lantunnel",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 192
+  },
+  {
+    "full_name": "igorkasyanchuk/fake_api",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 142
+  },
+  {
+    "full_name": "QVerisAI/qveris-agent-toolkit",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 263
+  },
+  {
+    "full_name": "Amm1rr/WebAI-to-API",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1414
+  },
+  {
+    "full_name": "devops-rob/terraform-provider-terracurl",
+    "license": "mpl-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 166
+  },
+  {
+    "full_name": "graphile/crystal",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 12937
+  },
+  {
+    "full_name": "juggleim/im-server",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 3544
+  },
+  {
+    "full_name": "blacksky-algorithms/rsky",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 722
+  },
+  {
+    "full_name": "hoangsonww/Claude-Code-Agent-Monitor",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 1199
+  },
+  {
+    "full_name": "AlexStocks/getty",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 958
+  },
+  {
+    "full_name": "open-telemetry/opentelemetry-js",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 3537
+  },
+  {
+    "full_name": "nodevault/node-vault",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 556
+  },
+  {
+    "full_name": "kinduff/dogapi.dog",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 185
+  },
+  {
+    "full_name": "tobiasehlert/teslamateapi",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 262
+  },
+  {
+    "full_name": "guillevc/yubal",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1763
+  },
+  {
+    "full_name": "flippercloud/flipper",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 3972
+  },
+  {
+    "full_name": "AsyncFuncAI/deepwiki-open",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 18473
+  },
+  {
+    "full_name": "juhaku/utoipa",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "rest-api",
+    "stars": 4154
+  },
+  {
+    "full_name": "tmseidel/ai-git-bot",
+    "license": "mit",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 202
+  },
+  {
+    "full_name": "matze/wastebin",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 893
+  },
+  {
+    "full_name": "YOLOW92/pagesift",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 303
+  },
+  {
+    "full_name": "0xfurai/peekaping",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1232
+  },
+  {
+    "full_name": "lwsjs/local-web-server",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 1267
+  },
+  {
+    "full_name": "builderz-labs/mission-control",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 6514
+  },
+  {
+    "full_name": "KevinEdry/nestjs-trpc",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 354
+  },
+  {
+    "full_name": "flaviuse/mern-authentication",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 506
+  },
+  {
+    "full_name": "johnbillion/wp-json-schemas",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 161
+  },
+  {
+    "full_name": "sajya/server",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 242
+  },
+  {
+    "full_name": "Javis603/token-monitor",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 3806
+  },
+  {
+    "full_name": "schemathesis/schemathesis",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 3799
+  },
+  {
+    "full_name": "oapi-codegen/oapi-codegen",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 8669
+  },
+  {
+    "full_name": "home-assistant-libs/pytradfri",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 960
+  },
+  {
+    "full_name": "remult/remult",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 3219
+  },
+  {
+    "full_name": "brufdev/many-notes",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 1100
+  },
+  {
+    "full_name": "izhaorui/Zr.Admin.NET",
+    "license": "mit",
+    "language": "C#",
+    "topic": "saas",
+    "stars": 1660
+  },
+  {
+    "full_name": "hellofresh/health-go",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 588
+  },
+  {
+    "full_name": "SebastienMelki/sebuf",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 122
+  },
+  {
+    "full_name": "TNT-Likely/PanWatch",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2558
+  },
+  {
+    "full_name": "LaravelRUS/SleepingOwlAdmin",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 803
+  },
+  {
+    "full_name": "fcambus/telize",
+    "license": "bsd-2-clause",
+    "language": "Go",
+    "topic": "api",
+    "stars": 876
+  },
+  {
+    "full_name": "EasyCorp/EasyAdminBundle",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 4305
+  },
+  {
+    "full_name": "atlassian-api/atlassian-python-api",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1685
+  },
+  {
+    "full_name": "swagger-api/swagger-parser",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 873
+  },
+  {
+    "full_name": "doorman-dev/doorman",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 245
+  },
+  {
+    "full_name": "imbo/imbo",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 332
+  },
+  {
+    "full_name": "iib0011/omni-tools",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 10772
+  },
+  {
+    "full_name": "hyperf/hyperf",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "microservice",
+    "stars": 6916
+  },
+  {
+    "full_name": "symisc/pixlab",
+    "license": "bsd-2-clause",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 127
+  },
+  {
+    "full_name": "saschagrunert/webapp.rs",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 2253
+  },
+  {
+    "full_name": "meysamhadeli/booking-microservices",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 1411
+  },
+  {
+    "full_name": "apache/logging-flume",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 2569
+  },
+  {
+    "full_name": "htdangkhoa/pure-http",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 214
+  },
+  {
+    "full_name": "seanpmaxwell/express-generator-typescript",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 945
+  },
+  {
+    "full_name": "indeedeng/iwf",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 663
+  },
+  {
+    "full_name": "Darkdragon14/VolumeVault",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 107
+  },
+  {
+    "full_name": "microlinkhq/async-ratelimiter",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 335
+  },
+  {
+    "full_name": "onch-at/onchat",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 150
+  },
+  {
+    "full_name": "DokiDoki1103/tikuAdapter",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 566
+  },
+  {
+    "full_name": "dapr/go-sdk",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 477
+  },
+  {
+    "full_name": "m1k1o/neko",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 22707
+  },
+  {
+    "full_name": "skatesham/fastapi-bigger-application",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 110
+  },
+  {
+    "full_name": "microcks/microcks",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 2091
+  },
+  {
+    "full_name": "electrikhq/electrik",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "saas",
+    "stars": 311
+  },
+  {
+    "full_name": "seuros/action_mcp",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "rest-api",
+    "stars": 125
+  },
+  {
+    "full_name": "BlackHatDevX/openspot-music-app",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 3104
+  },
+  {
+    "full_name": "Calabonga/Microservice-Template",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 287
+  },
+  {
+    "full_name": "jorge07/symfony-7-es-cqrs-boilerplate",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 1083
+  },
+  {
+    "full_name": "Ntarasiuk/glass",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 237
+  },
+  {
+    "full_name": "twilio/twilio-csharp",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 714
+  },
+  {
+    "full_name": "ruby-grape/grape-entity",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 729
+  },
+  {
+    "full_name": "shahradelahi/node-cronstack",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "microservice",
+    "stars": 115
+  },
+  {
+    "full_name": "abydahana/aksara",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 117
+  },
+  {
+    "full_name": "polkadot-js/api",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1117
+  },
+  {
+    "full_name": "falcondev-oss/github-actions-cache-server",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 471
+  },
+  {
+    "full_name": "wechat-miniprogram/miniprogram-demo",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 7264
+  },
+  {
+    "full_name": "huggingface/llm-ls",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 887
+  },
+  {
+    "full_name": "axe-api/axe-api",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 473
+  },
+  {
+    "full_name": "anacrolix/confluence",
+    "license": "mpl-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 265
+  },
+  {
+    "full_name": "bullet-train-co/bullet_train",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "saas",
+    "stars": 1894
+  },
+  {
+    "full_name": "dnsimple/dnsimple-ruby",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 189
+  },
+  {
+    "full_name": "GuanYixuan/pyJianYingDraft",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 4972
+  },
+  {
+    "full_name": "BMW-InnovationLab/BMW-TensorFlow-Inference-API-GPU",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 311
+  },
+  {
+    "full_name": "869413421/ai-moive-studio",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1667
+  },
+  {
+    "full_name": "tinyhttp/tinyhttp",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 2911
+  },
+  {
+    "full_name": "theoephraim/awesome-cloudflare-selfhosted",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1294
+  },
+  {
+    "full_name": "SkytAsul/GlowingEntities",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 139
+  },
+  {
+    "full_name": "dograh-hq/dograh",
+    "license": "bsd-2-clause",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 6242
+  },
+  {
+    "full_name": "imtaqin/waxum",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "rest-api",
+    "stars": 139
+  },
+  {
+    "full_name": "av/harbor",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 3280
+  },
+  {
+    "full_name": "hsa00000/urocissa",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 299
+  },
+  {
+    "full_name": "yh-zero/go-zero-admin",
+    "license": "mit",
+    "language": "Go",
+    "topic": "saas",
+    "stars": 107
+  },
+  {
+    "full_name": "deeplethe/utopia",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 8692
+  },
+  {
+    "full_name": "TNTcraftHIM/Piik",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 4753
+  },
+  {
+    "full_name": "apache/logging-log4net",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "api",
+    "stars": 936
+  },
+  {
+    "full_name": "karust/openserp",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1608
+  },
+  {
+    "full_name": "RFS-ADRENO/zca-js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 747
+  },
+  {
+    "full_name": "KKKKhazix/agent-autoloop",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 6276
+  },
+  {
+    "full_name": "mayswind/ezbookkeeping",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 6116
+  },
+  {
+    "full_name": "atareao/self-hosted",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 160
+  },
+  {
+    "full_name": "rs/rest-layer",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1242
+  },
+  {
+    "full_name": "benavlabs/fastcrud",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 1601
+  },
+  {
+    "full_name": "hummingbird-me/kitsu-server",
+    "license": "apache-2.0",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 189
+  },
+  {
+    "full_name": "i18next/i18next-fs-backend",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 117
+  },
+  {
+    "full_name": "iamtraction/google-translate",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 565
+  },
+  {
+    "full_name": "GoogleCloudPlatform/esp-v2",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 312
+  },
+  {
+    "full_name": "zeabur-oss/zeabur",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 696
+  },
+  {
+    "full_name": "graphql-hive/SOFA",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1119
+  },
+  {
+    "full_name": "webonyx/graphql-php",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 4704
+  },
+  {
+    "full_name": "cloudflare/cloudflare-go",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 2123
+  },
+  {
+    "full_name": "aserto-dev/topaz",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1369
+  },
+  {
+    "full_name": "php-curl-class/php-curl-class",
+    "license": "unlicense",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 3293
+  },
+  {
+    "full_name": "SpongePowered/SpongeAPI",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1173
+  },
+  {
+    "full_name": "go-chi/chi",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 23144
+  },
+  {
+    "full_name": "shijistar/enum-plus",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 206
+  },
+  {
+    "full_name": "gogf/gf",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 13314
+  },
+  {
+    "full_name": "hisabi-app/hisabi",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 461
+  },
+  {
+    "full_name": "FlareSolverr/FlareSolverrSharp",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 264
+  },
+  {
+    "full_name": "apptension/saas-boilerplate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 3032
+  },
+  {
+    "full_name": "saloonphp/saloon",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2452
+  },
+  {
+    "full_name": "i18next/i18next-http-backend",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 523
+  },
+  {
+    "full_name": "dittofeed/dittofeed",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 3081
+  },
+  {
+    "full_name": "DEEIX-AI/DEEIX-Chat",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1639
+  },
+  {
+    "full_name": "quantumlib/Cirq",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 5105
+  },
+  {
+    "full_name": "madiele/vod2pod-rss",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 394
+  },
+  {
+    "full_name": "gensecaihq/pfsense-mcp-server",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 121
+  },
+  {
+    "full_name": "TailAdmin/free-react-tailwind-admin-dashboard",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 1308
+  },
+  {
+    "full_name": "docker-java/docker-java",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 3194
+  },
+  {
+    "full_name": "rasadov/EcommerceAPI",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 698
+  },
+  {
+    "full_name": "veliovgroup/mail-time",
+    "license": "bsd-3-clause",
+    "language": "JavaScript",
+    "topic": "microservice",
+    "stars": 143
+  },
+  {
+    "full_name": "APIs-guru/awesome-openapi3",
+    "license": "bsd-3-clause",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 709
+  },
+  {
+    "full_name": "elliothux/open-compute",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 4065
+  },
+  {
+    "full_name": "chanify/chanify",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 1321
+  },
+  {
+    "full_name": "mariostoev/finviz",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1373
+  },
+  {
+    "full_name": "javinizer/javinizer-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 194
+  },
+  {
+    "full_name": "ynab/ynab-sdk-js",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 240
+  },
+  {
+    "full_name": "bolt/core",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 593
+  },
+  {
+    "full_name": "traccar/traccar",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 8174
+  },
+  {
+    "full_name": "apache/eventmesh",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 1759
+  },
+  {
+    "full_name": "micronaut-projects/micronaut-openapi",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 114
+  },
+  {
+    "full_name": "leepeuker/movary",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 789
+  },
+  {
+    "full_name": "GoogleCloudPlatform/nodejs-docs-samples",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2996
+  },
+  {
+    "full_name": "Osmantic/ODS",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 7900
+  },
+  {
+    "full_name": "Erudika/scoold",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 920
+  },
+  {
+    "full_name": "swe-labs/the-go-engineer",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 176
+  },
+  {
+    "full_name": "php-censor/php-censor",
+    "license": "bsd-2-clause",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 686
+  },
+  {
+    "full_name": "devmikets/hyperliquid-sdk",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 486
+  },
+  {
+    "full_name": "benjaminjonard/koillection",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 1358
+  },
+  {
+    "full_name": "vardius/go-api-boilerplate",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 967
+  },
+  {
+    "full_name": "PaddleHQ/paddle-nextjs-starter-kit",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 359
+  },
+  {
+    "full_name": "api-platform/demo",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 317
+  },
+  {
+    "full_name": "Anil-matcha/awesome-muse-connectors",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1482
+  },
+  {
+    "full_name": "twilio/twilio-java",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 527
+  },
+  {
+    "full_name": "LuanRT/YouTube.js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 5432
+  },
+  {
+    "full_name": "AndriyKalashnykov/spring-microservices-k8s",
+    "license": "mit",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 146
+  },
+  {
+    "full_name": "plainheart/bing-translate-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 228
+  },
+  {
+    "full_name": "sunscrapers/djoser",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 2678
+  },
+  {
+    "full_name": "goniszewski/grimoire",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 2898
+  },
+  {
+    "full_name": "tuwukee/jwt_sessions",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 594
+  },
+  {
+    "full_name": "api-platform/api-platform",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 9200
+  },
+  {
+    "full_name": "NTag/lyrics.ovh",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 347
+  },
+  {
+    "full_name": "swagger-api/swagger-core",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 7537
+  },
+  {
+    "full_name": "octokit/rest.js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 666
+  },
+  {
+    "full_name": "eolinker/apinto",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1684
+  },
+  {
+    "full_name": "authorizerdev/authorizer",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 2127
+  },
+  {
+    "full_name": "lissy93/who-dat",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 331
+  },
+  {
+    "full_name": "spatie/dropbox-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 307
+  },
+  {
+    "full_name": "BEagle1984/silverback",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 284
+  },
+  {
+    "full_name": "Hecate2/Ignareo-ISML-auto-voter",
+    "license": "mit",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 194
+  },
+  {
+    "full_name": "davidteather/TikTok-Api",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 6765
+  },
+  {
+    "full_name": "dogxii/iFace",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 154
+  },
+  {
+    "full_name": "oxidecomputer/omicron",
+    "license": "mpl-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 630
+  },
+  {
+    "full_name": "whiteguo233/OpenBiliClaw",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 3793
+  },
+  {
+    "full_name": "nktkas/hyperliquid",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 455
+  },
+  {
+    "full_name": "usekaneo/kaneo",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 9862
+  },
+  {
+    "full_name": "Jakeschincariol/replica-skill",
+    "license": "mit",
+    "language": "Python",
+    "topic": "saas",
+    "stars": 10314
+  },
+  {
+    "full_name": "leafsphp/leaf",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1332
+  },
+  {
+    "full_name": "notion-dotnet/notion-sdk-net",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 221
+  },
+  {
+    "full_name": "PhlexPlexico/G5API",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 124
+  },
+  {
+    "full_name": "sourcegraph/src-cli",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 363
+  },
+  {
+    "full_name": "the-momentum/open-wearables",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2812
+  },
+  {
+    "full_name": "DeepL/deepl-php",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 260
+  },
+  {
+    "full_name": "certimate-go/certimate",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 9460
+  },
+  {
+    "full_name": "David-Crty/databasement",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 2632
+  },
+  {
+    "full_name": "pocket-id/pocket-id",
+    "license": "bsd-2-clause",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 10422
+  },
+  {
+    "full_name": "RoastSlav/quickdrop",
+    "license": "mit",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 434
+  },
+  {
+    "full_name": "nelmio/NelmioApiDocBundle",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2384
+  },
+  {
+    "full_name": "twitch4j/twitch4j",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 413
+  },
+  {
+    "full_name": "api7/aisix",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 231
+  },
+  {
+    "full_name": "henrygd/beszel",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 27553
+  },
+  {
+    "full_name": "kmesh-net/kmesh",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 768
+  },
+  {
+    "full_name": "hetznercloud/hcloud-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 515
+  },
+  {
+    "full_name": "JMPerez/promise-throttle",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 153
+  },
+  {
+    "full_name": "qor/qor",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 5349
+  },
+  {
+    "full_name": "workos/workos-node",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 229
+  },
+  {
+    "full_name": "gotenberg/gotenberg",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 13648
+  },
+  {
+    "full_name": "jeangatto/ASP.NET-Core-Clean-Architecture-CQRS-Event-Sourcing",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 567
+  },
+  {
+    "full_name": "noboomu/proteus",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 200
+  },
+  {
+    "full_name": "Python-roborock/local_roborock_server",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1367
+  },
+  {
+    "full_name": "metalbear-co/mirrord",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 5426
+  },
+  {
+    "full_name": "keepchen/go-sail",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 181
+  },
+  {
+    "full_name": "gazbert/bxbot",
+    "license": "mit",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 861
+  },
+  {
+    "full_name": "ForestAdmin/forest-rails",
+    "license": "apache-2.0",
+    "language": "Ruby",
+    "topic": "backend",
+    "stars": 385
+  },
+  {
+    "full_name": "octokit/request-action",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 454
+  },
+  {
+    "full_name": "rust-dd/tako",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 182
+  },
+  {
+    "full_name": "Sev7eNup/NodePilot",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 205
+  },
+  {
+    "full_name": "collinbarrett/FilterLists",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 1668
+  },
+  {
+    "full_name": "arabcoders/ytptube",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1067
+  },
+  {
+    "full_name": "yihui-dev/how-profitable-startups-grow",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 184
+  },
+  {
+    "full_name": "tbphp/gpt-load",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 7245
+  },
+  {
+    "full_name": "ruby-grape/grape",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 10005
+  },
+  {
+    "full_name": "vaporz/turbo",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 304
+  },
+  {
+    "full_name": "lineofflight/frankfurter",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 2129
+  },
+  {
+    "full_name": "opengeospatial/geoapi",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 141
+  },
+  {
+    "full_name": "nanovms/ops",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 1530
+  },
+  {
+    "full_name": "cakephp/cakephp",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 8798
+  },
+  {
+    "full_name": "android-sms-gateway/server",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 209
+  },
+  {
+    "full_name": "authorjapps/zerocode",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1017
+  },
+  {
+    "full_name": "UnipiTechnology/evok",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 105
+  },
+  {
+    "full_name": "NARUBROWN/spine",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 110
+  },
+  {
+    "full_name": "janko/tus-ruby-server",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "backend",
+    "stars": 239
+  },
+  {
+    "full_name": "encoredev/encore",
+    "license": "mpl-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 12734
+  },
+  {
+    "full_name": "getstation/desktop-app",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1685
+  },
+  {
+    "full_name": "IcaliaLabs/sepomex",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 110
+  },
+  {
+    "full_name": "kci-lnk/fn-knock-turborepo",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 214
+  },
+  {
+    "full_name": "kora-projects/kora",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 170
+  },
+  {
+    "full_name": "api-platform/api-doc-parser",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 113
+  },
+  {
+    "full_name": "HKUDS/nanobot",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 50269
+  },
+  {
+    "full_name": "Johnserf-Seed/f2",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2747
+  },
+  {
+    "full_name": "portofcontext/pctx",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 289
+  },
+  {
+    "full_name": "vstorm-co/pydantic-ai-backend",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 136
+  },
+  {
+    "full_name": "screentinker/screentinker",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 275
+  },
+  {
+    "full_name": "hub4j/github-api",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1262
+  },
+  {
+    "full_name": "saasyland/saasyland.com",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 441
+  },
+  {
+    "full_name": "mugnavo/cove",
+    "license": "unlicense",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1405
+  },
+  {
+    "full_name": "leshchenko1979/fast_bitrix24",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 200
+  },
+  {
+    "full_name": "yyjeqhc/webcodex",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 2518
+  },
+  {
+    "full_name": "Art-of-WiFi/UniFi-API-client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1353
+  },
+  {
+    "full_name": "cle-b/httpdbg",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 906
+  },
+  {
+    "full_name": "typemill/typemill",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 623
+  },
+  {
+    "full_name": "markt-de/zabbixapi",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 132
+  },
+  {
+    "full_name": "craftcms/element-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 500
+  },
+  {
+    "full_name": "proxmoxer/proxmoxer",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 825
+  },
+  {
+    "full_name": "webrpc/webrpc",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 831
+  },
+  {
+    "full_name": "connectrpc/connect-kotlin",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 149
+  },
+  {
+    "full_name": "sonilo-ai/skills",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 118
+  },
+  {
+    "full_name": "newrelic/nri-flex",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 123
+  },
+  {
+    "full_name": "ankorstore/yokai",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 839
+  },
+  {
+    "full_name": "apache/camel-examples",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 487
+  },
+  {
+    "full_name": "Mteheran/api-colombia",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 361
+  },
+  {
+    "full_name": "middleapi/orpc",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 5781
+  },
+  {
+    "full_name": "pilinux/gorest",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 507
+  },
+  {
+    "full_name": "binwiederhier/ntfy",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 35690
+  },
+  {
+    "full_name": "madong-code/madong-mono",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 105
+  },
+  {
+    "full_name": "karlomikus/bar-assistant",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1118
+  },
+  {
+    "full_name": "xyTom/Url-Shorten-Worker",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1787
+  },
+  {
+    "full_name": "archtechx/tenancy",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "saas",
+    "stars": 4432
+  },
+  {
+    "full_name": "vaquarkhan/microservices-recipes-a-free-gitbook",
+    "license": "mit",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 610
+  },
+  {
+    "full_name": "nanocoai/nanoclaw",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 31144
+  },
+  {
+    "full_name": "benzino77/clamav-rest-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 209
+  },
+  {
+    "full_name": "tarlepp/symfony-flex-backend",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 286
+  },
+  {
+    "full_name": "nutgram/nutgram",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 759
+  },
+  {
+    "full_name": "kanboard/kanboard",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 9971
+  },
+  {
+    "full_name": "Fast-Editor/Lynkr",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 643
+  },
+  {
+    "full_name": "wso2/product-integrator-mi",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 291
+  },
+  {
+    "full_name": "open-multi-agent/open-multi-agent",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 7070
+  },
+  {
+    "full_name": "zer0tonin/Mikochi",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 382
+  },
+  {
+    "full_name": "OpenLigaDB/OpenLigaDB-Samples",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 179
+  },
+  {
+    "full_name": "coollabsio/coolify",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 66361
+  },
+  {
+    "full_name": "razvandimescu/numa",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1982
+  },
+  {
+    "full_name": "ajnart/self-host",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1599
+  },
+  {
+    "full_name": "OpenAPITools/openapi-diff",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1103
+  },
+  {
+    "full_name": "AashishH15/Lexicon",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 230
+  },
+  {
+    "full_name": "discordeno/discordeno",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 944
+  },
+  {
+    "full_name": "cot-rs/cot",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 1111
+  },
+  {
+    "full_name": "tinbase/tinbase",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 363
+  },
+  {
+    "full_name": "emanuelef/daily-stars-explorer",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 413
+  },
+  {
+    "full_name": "MatthewTheCoder1218/princejs",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 182
+  },
+  {
+    "full_name": "phalapi/phalapi",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1600
+  },
+  {
+    "full_name": "mytechnotalent/Go-Hacking",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 381
+  },
+  {
+    "full_name": "anvilco/spectaql",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1234
+  },
+  {
+    "full_name": "supabase-community/postgrest-go",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 232
+  },
+  {
+    "full_name": "cooklang/cookcli",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1449
+  },
+  {
+    "full_name": "basdijkstra/rest-assured-net",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "api",
+    "stars": 191
+  },
+  {
+    "full_name": "Anil-matcha/suparagent",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 7150
+  },
+  {
+    "full_name": "ubisoft/NGitLab",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 173
+  },
+  {
+    "full_name": "vitormarcal/chatvault",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 238
+  },
+  {
+    "full_name": "santoshshinde2012/node-boilerplate",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 462
+  },
+  {
+    "full_name": "rapina-rs/rapina",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 186
+  },
+  {
+    "full_name": "boxlite-ai/boxlite",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 2683
+  },
+  {
+    "full_name": "azuyalabs/yasumi",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1105
+  },
+  {
+    "full_name": "TRUEPIC/queryql",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 123
+  },
+  {
+    "full_name": "as-a-service/pdf",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 171
+  },
+  {
+    "full_name": "lakernote/easy-postman",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 738
+  },
+  {
+    "full_name": "DeepL/deepl-mcp-server",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 120
+  },
+  {
+    "full_name": "foxminchan/BookWorm",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 506
+  },
+  {
+    "full_name": "artifact-keeper/artifact-keeper",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1314
+  },
+  {
+    "full_name": "yuzutech/kroki",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 4412
+  },
+  {
+    "full_name": "fastly/pushpin",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 3868
+  },
+  {
+    "full_name": "makenotion/notion-sdk-js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 5690
+  },
+  {
+    "full_name": "benlamiro/ShipGenAI",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 259
+  },
+  {
+    "full_name": "Erudika/para",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 575
+  },
+  {
+    "full_name": "clidey/whodb",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 5066
+  },
+  {
+    "full_name": "taichuy/1flowbase",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 296
+  },
+  {
+    "full_name": "super-phenix/superphenix",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "saas",
+    "stars": 149
+  },
+  {
+    "full_name": "octokit/plugin-rest-endpoint-methods.js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 135
+  },
+  {
+    "full_name": "rkoshak/sensorReporter",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 109
+  },
+  {
+    "full_name": "daledavies/jump",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 604
+  },
+  {
+    "full_name": "yybmion/public-apis-4Kr",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 3579
+  },
+  {
+    "full_name": "songzhibin97/gkit",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 339
+  },
+  {
+    "full_name": "clawdotnet/openclaw.net",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 538
+  },
+  {
+    "full_name": "DotHarness/dotcraft",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 403
+  },
+  {
+    "full_name": "Finnhub-Stock-API/finnhub-python",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1101
+  },
+  {
+    "full_name": "guzzle/guzzle-services",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 254
+  },
+  {
+    "full_name": "fogbender/b2b-saaskit",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 685
+  },
+  {
+    "full_name": "api-platform/core",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2582
+  },
+  {
+    "full_name": "ArnasDon/wacrm",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 2766
+  },
+  {
+    "full_name": "swaggest/rest",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 487
+  },
+  {
+    "full_name": "WendellAdriel/laravel-idempotency",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 167
+  },
+  {
+    "full_name": "LeCoupa/awesome-cheatsheets",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 46696
+  },
+  {
+    "full_name": "ClaudioDrews/memory-os",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1398
+  },
+  {
+    "full_name": "watscho/express-graphql-mongodb-boilerplate",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 348
+  },
+  {
+    "full_name": "next-hat/nanocl",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1004
+  },
+  {
+    "full_name": "zexadev/gemini-web2api-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 990
+  },
+  {
+    "full_name": "ythx-101/grok-bridge",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 163
+  },
+  {
+    "full_name": "eazybytes/microservices",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 1311
+  },
+  {
+    "full_name": "hyeonsangjeon/youtube-dl-nas",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 202
+  },
+  {
+    "full_name": "SteeltoeOSS/Samples",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 647
+  },
+  {
+    "full_name": "oasdiff/oasdiff",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 1473
+  },
+  {
+    "full_name": "ollaya-dev/ollaya",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1474
+  },
+  {
+    "full_name": "chenqimiao/qm-music",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 588
+  },
+  {
+    "full_name": "emersonfelipesp/netbox-proxbox",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 615
+  },
+  {
+    "full_name": "josStorer/RWKV-Runner",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 6503
+  },
+  {
+    "full_name": "zidniryi/unbagrnd",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 195
+  },
+  {
+    "full_name": "SpectoLabs/hoverfly",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 2534
+  },
+  {
+    "full_name": "wppconnect-team/wppconnect-server",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 1070
+  },
+  {
+    "full_name": "lintangtimur/ovoid",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 171
+  },
+  {
+    "full_name": "nyblnet/bento",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 5683
+  },
+  {
+    "full_name": "tfranzel/drf-spectacular",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 2873
+  },
+  {
+    "full_name": "atenfyr/UAssetAPI",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 521
+  },
+  {
+    "full_name": "AtalayaLabs/OxiCloud",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 3738
+  },
+  {
+    "full_name": "2muchcoffeecom/ngx-restangular",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 773
+  },
+  {
+    "full_name": "zalando/zally",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 948
+  },
+  {
+    "full_name": "taiga-family/ng-web-apis",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 828
+  },
+  {
+    "full_name": "LukeMathWalker/pavex",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 2073
+  },
+  {
+    "full_name": "samber/invoice-as-a-service",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 218
+  },
+  {
+    "full_name": "moov-io/paygate",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 133
+  },
+  {
+    "full_name": "paimonsoror/telltaledns",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 542
+  },
+  {
+    "full_name": "Anjaliavv51/Retro",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 172
+  },
+  {
+    "full_name": "MaskingTechnology/jitar",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 169
+  },
+  {
+    "full_name": "go-swagger/go-swagger",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 10010
+  },
+  {
+    "full_name": "ProtonMail/go-proton-api",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 290
+  },
+  {
+    "full_name": "odota/core",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1640
+  },
+  {
+    "full_name": "xemle/home-gallery",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1215
+  },
+  {
+    "full_name": "dongri/openai-api-rs",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 485
+  },
+  {
+    "full_name": "postmanlabs/httpbin",
+    "license": "isc",
+    "language": "Python",
+    "topic": "api",
+    "stars": 13639
+  },
+  {
+    "full_name": "tom-draper/api-analytics",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 655
+  },
+  {
+    "full_name": "TikHub/TikHub-API-Python-SDK",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 945
+  },
+  {
+    "full_name": "wuhan005/NekoBox",
+    "license": "mit",
+    "language": "Go",
+    "topic": "saas",
+    "stars": 297
+  },
+  {
+    "full_name": "mathematic-inc/ts-japi",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 238
+  },
+  {
+    "full_name": "sklinkert/go-ddd",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 828
+  },
+  {
+    "full_name": "slive777/OpenAver",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 369
+  },
+  {
+    "full_name": "291-Group/LAN-Orangutan",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1168
+  },
+  {
+    "full_name": "westacks/telebot",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 310
+  },
+  {
+    "full_name": "justscrapeme/tiktok-web-reverse-engineering",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 187
+  },
+  {
+    "full_name": "mavlink/mavlink2rest",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "rest-api",
+    "stars": 134
+  },
+  {
+    "full_name": "codelibs/fess",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 1152
+  },
+  {
+    "full_name": "GMGNAI/gmgn-skills",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 734
+  },
+  {
+    "full_name": "mcpjungle/MCPJungle",
+    "license": "mpl-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1636
+  },
+  {
+    "full_name": "darrenburns/posting",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 12650
+  },
+  {
+    "full_name": "dhax/go-base",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1691
+  },
+  {
+    "full_name": "graphiti-api/graphiti",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 1070
+  },
+  {
+    "full_name": "deedy5/ddgs",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 3078
+  },
+  {
+    "full_name": "hungry-detective/downloadcraft",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 172
+  },
+  {
+    "full_name": "bailinghub/bailinghub",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 130
+  },
+  {
+    "full_name": "GitLabPHP/Client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 952
+  },
+  {
+    "full_name": "quick-perf/quickperf",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 540
+  },
+  {
+    "full_name": "rest-assured/rest-assured",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 7150
+  },
+  {
+    "full_name": "guobao2333/DeepLX-Serverless",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 570
+  },
+  {
+    "full_name": "mehdihadeli/food-delivery-microservices",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 1015
+  },
+  {
+    "full_name": "HarnessRouter/harnessrouter",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 4406
+  },
+  {
+    "full_name": "fastify/aws-lambda-fastify",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 560
+  },
+  {
+    "full_name": "dwgx/WindsurfAPI",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 3159
+  },
+  {
+    "full_name": "spatie/laravel-onboard",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "saas",
+    "stars": 849
+  },
+  {
+    "full_name": "Jwuthri/Tracely-ai",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1122
+  },
+  {
+    "full_name": "DeepL/deepl-node",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 440
+  },
+  {
+    "full_name": "twinnydotdev/twinny",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 3706
+  },
+  {
+    "full_name": "Termix-SSH/Termix",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 16092
+  },
+  {
+    "full_name": "deeplethe/sandstorm",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 6102
+  },
+  {
+    "full_name": "apache/dubbo-go-pixiu",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 577
+  },
+  {
+    "full_name": "giuseppe99barchetta/SuggestArr",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1395
+  },
+  {
+    "full_name": "andreaselia/laravel-analytics",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 198
+  },
+  {
+    "full_name": "codewithmukesh/dotnet-webapi-zero-to-hero-course",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 597
+  },
+  {
+    "full_name": "usememos/memos",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 64641
+  },
+  {
+    "full_name": "Laravel-Backpack/CRUD",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 3381
+  },
+  {
+    "full_name": "microsoft/kiota",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 3848
+  },
+  {
+    "full_name": "restify/node-restify",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 10691
+  },
+  {
+    "full_name": "daya0576/beaverhabits",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1865
+  },
+  {
+    "full_name": "redf0x1/camofox-browser",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 453
+  },
+  {
+    "full_name": "lemony-ai/cascadeflow",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 3921
+  },
+  {
+    "full_name": "Enveloppe/obsidian-enveloppe",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 912
+  },
+  {
+    "full_name": "agconti/cookiecutter-django-rest",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1603
+  },
+  {
+    "full_name": "TickDB/tickdb-unified-realtime-marketdata-api",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 938
+  },
+  {
+    "full_name": "fcambus/rrda",
+    "license": "bsd-2-clause",
+    "language": "Go",
+    "topic": "api",
+    "stars": 228
+  },
+  {
+    "full_name": "valeriansaliou/sonic",
+    "license": "mpl-2.0",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 21388
+  },
+  {
+    "full_name": "pushingkarmaorg/python-plexapi",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1293
+  },
+  {
+    "full_name": "lissy93/portainer-templates",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2935
+  },
+  {
+    "full_name": "EternalNight996/memory-eternal",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 218
+  },
+  {
+    "full_name": "revokslab/ShipFree",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1713
+  },
+  {
+    "full_name": "psviderski/uncloud",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 5630
+  },
+  {
+    "full_name": "ppmpreetham/fastrapi",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 151
+  },
+  {
+    "full_name": "Quenary/tugtainer",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1558
+  },
+  {
+    "full_name": "BeyteFlow/ReadmeGenAI",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 148
+  },
+  {
+    "full_name": "L-Blondy/up-fetch",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1410
+  },
+  {
+    "full_name": "MakcRe/KuGouMusicApi",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1111
+  },
+  {
+    "full_name": "onury/docma",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 339
+  },
+  {
+    "full_name": "getpaykit/paykit",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1074
+  },
+  {
+    "full_name": "apify/apify-client-python",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 105
+  },
+  {
+    "full_name": "AhmedElTabarani/dorar-hadith-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 127
+  },
+  {
+    "full_name": "TommyLemon/APIAuto",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2221
+  },
+  {
+    "full_name": "ogen-go/ogen",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 2177
+  },
+  {
+    "full_name": "jonashackt/spring-boot-vuejs",
+    "license": "mit",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 2115
+  },
+  {
+    "full_name": "watscho/express-mongodb-rest-api-boilerplate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 650
+  },
+  {
+    "full_name": "LearningCircuit/local-deep-research",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 9619
+  },
+  {
+    "full_name": "umputun/remark42",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 5653
+  },
+  {
+    "full_name": "workos/workos-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 107
+  },
+  {
+    "full_name": "mosparo/mosparo",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 318
+  },
+  {
+    "full_name": "inference-gateway/inference-gateway",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 210
+  },
+  {
+    "full_name": "eclaire-labs/eclaire",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 925
+  },
+  {
+    "full_name": "savvyagents/larasend",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 498
+  },
+  {
+    "full_name": "louislam/dockge",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 24881
+  },
+  {
+    "full_name": "holon-run/uxc",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 119
+  },
+  {
+    "full_name": "dotnetcore/AgileConfig",
+    "license": "mit",
+    "language": "C#",
+    "topic": "microservice",
+    "stars": 1627
+  },
+  {
+    "full_name": "anyproto/anytype-cli",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 143
+  },
+  {
+    "full_name": "aplus-framework/http-client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 231
+  },
+  {
+    "full_name": "axsddlr/vlrggapi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 229
+  },
+  {
+    "full_name": "Zackriya-Solutions/meetily",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 32962
+  },
+  {
+    "full_name": "swagger-api/swagger-client",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 2698
+  },
+  {
+    "full_name": "wp-cli/restful",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 155
+  },
+  {
+    "full_name": "kittors/CliRelay",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1064
+  },
+  {
+    "full_name": "3241288994/AImanager",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 213
+  },
+  {
+    "full_name": "blakmatrix/node-zendesk",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 376
+  },
+  {
+    "full_name": "mtownsend5512/xml-to-array",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 116
+  },
+  {
+    "full_name": "andreaselia/laravel-api-to-postman",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1054
+  },
+  {
+    "full_name": "NichtStudioCode/InvUI",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 432
+  },
+  {
+    "full_name": "testingisdocumenting/znai",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 280
+  },
+  {
+    "full_name": "coroot/coroot",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 8029
+  },
+  {
+    "full_name": "mosn/layotto",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 850
+  },
+  {
+    "full_name": "metarhia/impress",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 983
+  },
+  {
+    "full_name": "VoidenHQ/voiden",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 1840
+  },
+  {
+    "full_name": "darkzOGx/youtube-automation-agent",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 5316
+  },
+  {
+    "full_name": "meichthys/foss_photo_libraries",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2827
+  },
+  {
+    "full_name": "rapi-doc/RapiDoc",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1915
+  },
+  {
+    "full_name": "salsita/node-pg-migrate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1496
+  },
+  {
+    "full_name": "error311/FileRise",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1029
+  },
+  {
+    "full_name": "danikf/tik4net",
+    "license": "apache-2.0",
+    "language": "C#",
+    "topic": "api",
+    "stars": 199
+  },
+  {
+    "full_name": "zeromicro/go-zero",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 33439
+  },
+  {
+    "full_name": "RARgames/4gaBoards",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 740
+  },
+  {
+    "full_name": "vercel/micro",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "microservice",
+    "stars": 10634
+  },
+  {
+    "full_name": "maurobonfietti/rest-api-slim-php",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 302
+  },
+  {
+    "full_name": "Chocapikk/wpprobe",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 977
+  },
+  {
+    "full_name": "johnwarne/upvote-rss",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 525
+  },
+  {
+    "full_name": "overblog/GraphQLBundle",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 795
+  },
+  {
+    "full_name": "nanotaboada/python-samples-fastapi-restful",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 142
+  },
+  {
+    "full_name": "discord-jda/JDA",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 4691
+  },
+  {
+    "full_name": "0x2E/fusion",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 2430
+  },
+  {
+    "full_name": "heygen-com/heygen-cli",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 181
+  },
+  {
+    "full_name": "leolabs/ableton-js",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 537
+  },
+  {
+    "full_name": "shazamio/ShazamIO",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1022
+  },
+  {
+    "full_name": "suyuan32/simple-admin-core",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 2069
+  },
+  {
+    "full_name": "graphql-dotnet/conventions",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 228
+  },
+  {
+    "full_name": "gtalarico/pyairtable",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 892
+  },
+  {
+    "full_name": "helldivers-2/api",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 299
+  },
+  {
+    "full_name": "fastapi/fastapi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 105030
+  },
+  {
+    "full_name": "mswjs/msw-storybook-addon",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 498
+  },
+  {
+    "full_name": "Grazulex/laravel-apiroute",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 112
+  },
+  {
+    "full_name": "moke-game/platform",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 132
+  },
+  {
+    "full_name": "blackcandy-org/blackcandy",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 4436
+  },
+  {
+    "full_name": "yezz123/authx",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 1202
+  },
+  {
+    "full_name": "javalin/javalin",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "rest-api",
+    "stars": 8379
+  },
+  {
+    "full_name": "Krillsson/monitee-agent",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 190
+  },
+  {
+    "full_name": "zxysilent/blog",
+    "license": "bsd-3-clause",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 714
+  },
+  {
+    "full_name": "geopython/pygeoapi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 632
+  },
+  {
+    "full_name": "graphql-dotnet/graphql-dotnet",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 5984
+  },
+  {
+    "full_name": "imbo/behat-api-extension",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 110
+  },
+  {
+    "full_name": "golangid/candi",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 148
+  },
+  {
+    "full_name": "spatie/packagist-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 132
+  },
+  {
+    "full_name": "Authula/authula",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 283
+  },
+  {
+    "full_name": "surishortlink/suri",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 395
+  },
+  {
+    "full_name": "apache/apisix-dashboard",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1220
+  },
+  {
+    "full_name": "joeltelling/print-farm-manager",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 224
+  },
+  {
+    "full_name": "scalar-labs/scalardb",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 643
+  },
+  {
+    "full_name": "metowolf/Meting",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2224
+  },
+  {
+    "full_name": "ttskch/jp-postal-code-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 483
+  },
+  {
+    "full_name": "Suwayomi/Suwayomi-Server",
+    "license": "mpl-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 8091
+  },
+  {
+    "full_name": "rodyherrera/Quantum",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 483
+  },
+  {
+    "full_name": "antoniopaya22/go-rest-template",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 176
+  },
+  {
+    "full_name": "oqtane/oqtane.framework",
+    "license": "mit",
+    "language": "C#",
+    "topic": "saas",
+    "stars": 2264
+  },
+  {
+    "full_name": "OdyseeTeam/odysee-api",
+    "license": "mit",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 246
+  },
+  {
+    "full_name": "go-kratos/kratos",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 26042
+  },
+  {
+    "full_name": "spr-networks/super",
+    "license": "bsd-3-clause",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 905
+  },
+  {
+    "full_name": "getnora-io/nora",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 409
+  },
+  {
+    "full_name": "maize-tech/laravel-searchable",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 113
+  },
+  {
+    "full_name": "emissary-ingress/emissary",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 4524
+  },
+  {
+    "full_name": "cloudflare/cloudflare-typescript",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 835
+  },
+  {
+    "full_name": "spatie/array-to-xml",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1199
+  },
+  {
+    "full_name": "ClickDevTech/CELERITY-panel",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 233
+  },
+  {
+    "full_name": "databasifylabs/databasify",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 128
+  },
+  {
+    "full_name": "SinTan1729/chhoto-url",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 1020
+  },
+  {
+    "full_name": "krakend/krakend-ce",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 2703
+  },
+  {
+    "full_name": "usetrmnl/larapaper",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 460
+  },
+  {
+    "full_name": "inbjo/MirrorProxy",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 330
+  },
+  {
+    "full_name": "go-kratos/gateway",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 825
+  },
+  {
+    "full_name": "citrusframework/citrus",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 487
+  },
+  {
+    "full_name": "chigwell/telegram-mcp",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2081
+  },
+  {
+    "full_name": "rhinobase/hono-rate-limiter",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 656
+  },
+  {
+    "full_name": "jamebal/jmal-cloud-view",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 881
+  },
+  {
+    "full_name": "zmh-program/next-whois",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 596
+  },
+  {
+    "full_name": "muety/wakapi",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 4480
+  },
+  {
+    "full_name": "vxcontrol/pentagi",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 34801
+  },
+  {
+    "full_name": "jeremydaly/lambda-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1468
+  },
+  {
+    "full_name": "Django-CRM/Django-CRM",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2471
+  },
+  {
+    "full_name": "gofr-dev/gofr",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 20787
+  },
+  {
+    "full_name": "Lomkit/laravel-rest-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 654
+  },
+  {
+    "full_name": "sums001/Windows-Copilot-API",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1271
+  },
+  {
+    "full_name": "sigmavirus24/github3.py",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 1260
+  },
+  {
+    "full_name": "aimeos/prisma",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 245
+  },
+  {
+    "full_name": "dotnet/WatsonTcp",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 675
+  },
+  {
+    "full_name": "openapi-generators/openapi-python-client",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 2002
+  },
+  {
+    "full_name": "saintedlama/restify-mongoose",
+    "license": "bsd-2-clause",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 110
+  },
+  {
+    "full_name": "orangecoding/fredy",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1649
+  },
+  {
+    "full_name": "mistval/unofficial-jisho-api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 173
+  },
+  {
+    "full_name": "skydoves/sandwich",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 1778
+  },
+  {
+    "full_name": "acrogenesis/API-Codigos-Postales",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 145
+  },
+  {
+    "full_name": "nelthaarion/breeze",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 203
+  },
+  {
+    "full_name": "pneumaticapp/pneumaticworkflow",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "saas",
+    "stars": 320
+  },
+  {
+    "full_name": "LeanMeanCleanApps/CleanMinimalApi",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 401
+  },
+  {
+    "full_name": "derhuerst/db-rest",
+    "license": "isc",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 125
+  },
+  {
+    "full_name": "perber/leafwiki",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1240
+  },
+  {
+    "full_name": "noelportugal/wyze-node",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 177
+  },
+  {
+    "full_name": "maurobonfietti/slim4-api-skeleton",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 140
+  },
+  {
+    "full_name": "distr-sh/distr",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1251
+  },
+  {
+    "full_name": "Gururagavendra/gmail-cleaner",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2156
+  },
+  {
+    "full_name": "mdiri-ai/SoduWork",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 6799
+  },
+  {
+    "full_name": "desec-io/desec-stack",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 705
+  },
+  {
+    "full_name": "urlaubsverwaltung/urlaubsverwaltung",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "self-hosted",
+    "stars": 304
+  },
+  {
+    "full_name": "mat/besticon",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 1006
+  },
+  {
+    "full_name": "Soodok/Deepseek-Harness-Local-Android",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 578
+  },
+  {
+    "full_name": "0xERR0R/blocky",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 7121
+  },
+  {
+    "full_name": "hanami/hanami-api",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 367
+  },
+  {
+    "full_name": "spring-petclinic/spring-petclinic-rest",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 643
+  },
+  {
+    "full_name": "BitbucketPHP/Client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 103
+  },
+  {
+    "full_name": "MichalLytek/type-graphql",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 8095
+  },
+  {
+    "full_name": "posva/mande",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1336
+  },
+  {
+    "full_name": "uvwt/agentdock",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1302
+  },
+  {
+    "full_name": "Julien-cpsn/ATAC",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 3756
+  },
+  {
+    "full_name": "DevLoversTeam/devlovers.net",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 261
+  },
+  {
+    "full_name": "crivion/laranode",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 746
+  },
+  {
+    "full_name": "CottonMC/LibGui",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 311
+  },
+  {
+    "full_name": "getkirby/kql",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 150
+  },
+  {
+    "full_name": "antoinezambelli/forge",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2268
+  },
+  {
+    "full_name": "jzero-io/jzero",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 180
+  },
+  {
+    "full_name": "unkn0wn-root/resterm",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 2017
+  },
+  {
+    "full_name": "temporalio/api",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 136
+  },
+  {
+    "full_name": "Art-of-WiFi/UniFi-API-browser",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1269
+  },
+  {
+    "full_name": "ahx/openapi_first",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "rest-api",
+    "stars": 224
+  },
+  {
+    "full_name": "faucetdb/faucet",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 177
+  },
+  {
+    "full_name": "xerrors/Yuxi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 7720
+  },
+  {
+    "full_name": "benavlabs/crudadmin",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 454
+  },
+  {
+    "full_name": "apitally/apitally-py",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 224
+  },
+  {
+    "full_name": "DeepL/deepl-dotnet",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 211
+  },
+  {
+    "full_name": "XRPLF/xrpl.js",
+    "license": "isc",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1337
+  },
+  {
+    "full_name": "babybuddy/babybuddy",
+    "license": "bsd-2-clause",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2951
+  },
+  {
+    "full_name": "tmux-python/libtmux",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1218
+  },
+  {
+    "full_name": "madong-code/madong-admin-saas",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 1055
+  },
+  {
+    "full_name": "ConduitPlatform/Conduit",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 928
+  },
+  {
+    "full_name": "goatplatform/goatdb",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 583
+  },
+  {
+    "full_name": "CloudDetail/apo",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 374
+  },
+  {
+    "full_name": "halcy/Mastodon.py",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 957
+  },
+  {
+    "full_name": "goadesign/goa",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 6123
+  },
+  {
+    "full_name": "mojolicious/mojo.js",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 509
+  },
+  {
+    "full_name": "zhouaini528/exchanges-php",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 256
+  },
+  {
+    "full_name": "stefanprodan/podinfo",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 6050
+  },
+  {
+    "full_name": "benavlabs/FastAPI-boilerplate",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2115
+  },
+  {
+    "full_name": "Stellar-Sentinel/sentinel-backend",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 130
+  },
+  {
+    "full_name": "apache/apisix-website",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "microservice",
+    "stars": 148
+  },
+  {
+    "full_name": "duyet/pricetrack",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 141
+  },
+  {
+    "full_name": "gofiber/fiber",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 40316
+  },
+  {
+    "full_name": "Guard-Core/fastapi-guard",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 829
+  },
+  {
+    "full_name": "mateaix/matecloud",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "saas",
+    "stars": 1711
+  },
+  {
+    "full_name": "vas3k/TaxHacker",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 6896
+  },
+  {
+    "full_name": "zeenie-ai/OpenCompany",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1107
+  },
+  {
+    "full_name": "senatroxx/OpenKos",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 126
+  },
+  {
+    "full_name": "Tony133/fastify-api-boilerplate-jwt",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 596
+  },
+  {
+    "full_name": "readmeio/api",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 699
+  },
+  {
+    "full_name": "Vexa-ai/vexa",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 3003
+  },
+  {
+    "full_name": "Anil-matcha/Open-AI-Design-Agent",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 489
+  },
+  {
+    "full_name": "smocker-dev/smocker",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1288
+  },
+  {
+    "full_name": "spatie/laravel-fractal",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1902
+  },
+  {
+    "full_name": "OpenMacroBoard/StreamDeckSharp",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 397
+  },
+  {
+    "full_name": "networknt/light-4j",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 3674
+  },
+  {
+    "full_name": "digitalocean/openapi",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 141
+  },
+  {
+    "full_name": "keeleycenc/cc-our-story",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 242
+  },
+  {
+    "full_name": "graphql-nexus/nexus-prisma",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 555
+  },
+  {
+    "full_name": "Cornutum/tcases",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 240
+  },
+  {
+    "full_name": "apache/incubator-seata",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 26005
+  },
+  {
+    "full_name": "santimattius/kmp-resilient",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "backend",
+    "stars": 150
+  },
+  {
+    "full_name": "abbosaliboev/free-ai-bible",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 227
+  },
+  {
+    "full_name": "bayang/jelu",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 754
+  },
+  {
+    "full_name": "JeanExtreme002/FlightRadarAPI",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 442
+  },
+  {
+    "full_name": "mrmps/classifier-dev",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 441
+  },
+  {
+    "full_name": "rmyndharis/OpenWA",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 17198
+  },
+  {
+    "full_name": "openai-php/client",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 5836
+  },
+  {
+    "full_name": "dgtlmoon/changedetection.io",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 35961
+  },
+  {
+    "full_name": "opensolon/solon",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 2807
+  },
+  {
+    "full_name": "akmamun/gin-boilerplate",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 110
+  },
+  {
+    "full_name": "keyshade-xyz/keyshade",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 772
+  },
+  {
+    "full_name": "Lightning-AI/LitServe",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 4016
+  },
+  {
+    "full_name": "ku9nov/faynoSync",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 159
+  },
+  {
+    "full_name": "KKKKhazix/AIHOT",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 11230
+  },
+  {
+    "full_name": "guillaumebriday/laravel-blog",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1789
+  },
+  {
+    "full_name": "mgks/GitHubTree",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 200
+  },
+  {
+    "full_name": "c410-f3r/wtx",
+    "license": "mpl-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 406
+  },
+  {
+    "full_name": "Sija/garb",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 148
+  },
+  {
+    "full_name": "mrifqidaffaaditya/WA-AKG",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 907
+  },
+  {
+    "full_name": "datarhei/core",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 283
+  },
+  {
+    "full_name": "techgaun/active-forks",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2436
+  },
+  {
+    "full_name": "lunemec/nanny",
+    "license": "bsd-3-clause",
+    "language": "Go",
+    "topic": "api",
+    "stars": 165
+  },
+  {
+    "full_name": "msgbyte/tianji",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 3123
+  },
+  {
+    "full_name": "CatCoderr/ProtocolSidebar",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 202
+  },
+  {
+    "full_name": "hwi/HWIOAuthBundle",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 2357
+  },
+  {
+    "full_name": "praw-dev/praw",
+    "license": "bsd-2-clause",
+    "language": "Python",
+    "topic": "api",
+    "stars": 4306
+  },
+  {
+    "full_name": "bubbuild/bub",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1704
+  },
+  {
+    "full_name": "thedevdojo/wave",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "saas",
+    "stars": 6548
+  },
+  {
+    "full_name": "standard-webhooks/standard-webhooks",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1809
+  },
+  {
+    "full_name": "iMerica/dj-rest-auth",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 1878
+  },
+  {
+    "full_name": "stoplightio/elements",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 2474
+  },
+  {
+    "full_name": "mevdschee/php-crud-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 3735
+  },
+  {
+    "full_name": "frappe/frappe_docker",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 2638
+  },
+  {
+    "full_name": "JunWan666/astrbot-for-android",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 421
+  },
+  {
+    "full_name": "Hexagon/pup",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 197
+  },
+  {
+    "full_name": "DragonKingpin/Hydra",
+    "license": "mit",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 406
+  },
+  {
+    "full_name": "Aetherinox/ntfy-desktop",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 231
+  },
+  {
+    "full_name": "siemens/simatic-s7-webserver-api",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 194
+  },
+  {
+    "full_name": "illacloud/illa-builder",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 12360
+  },
+  {
+    "full_name": "stratdev3/SimpleW",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 107
+  },
+  {
+    "full_name": "easegress-io/easegress",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 5870
+  },
+  {
+    "full_name": "Treblle/treblle-laravel",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "backend",
+    "stars": 135
+  },
+  {
+    "full_name": "postmanlabs/postman-mcp-server",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 332
+  },
+  {
+    "full_name": "navig-me/telert",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 287
+  },
+  {
+    "full_name": "level09/readykit",
+    "license": "mit",
+    "language": "Python",
+    "topic": "saas",
+    "stars": 249
+  },
+  {
+    "full_name": "GeneBO98/tradetally",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 358
+  },
+  {
+    "full_name": "TwitchIO/TwitchIO",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 893
+  },
+  {
+    "full_name": "ccxt/go-binance",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 1907
+  },
+  {
+    "full_name": "BinarCode/laravel-restify",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 683
+  },
+  {
+    "full_name": "scanapi/scanapi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1584
+  },
+  {
+    "full_name": "tryatlas/atlas",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 9183
+  },
+  {
+    "full_name": "douyu/jupiter",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 4566
+  },
+  {
+    "full_name": "opnsense/core",
+    "license": "bsd-2-clause",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 4817
+  },
+  {
+    "full_name": "MaxMiksa/Autonomous-Company",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 3208
+  },
+  {
+    "full_name": "Endava/cats",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1380
+  },
+  {
+    "full_name": "Giton22/kyllene",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 308
+  },
+  {
+    "full_name": "networknt/light-rest-4j",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 122
+  },
+  {
+    "full_name": "piashcse/ktor-E-Commerce",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "rest-api",
+    "stars": 171
+  },
+  {
+    "full_name": "aden-hive/hive",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 11167
+  },
+  {
+    "full_name": "json-api-dotnet/JsonApiDotNetCore",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 714
+  },
+  {
+    "full_name": "wise-old-man/wise-old-man",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 361
+  },
+  {
+    "full_name": "workos/workos-python",
+    "license": "mit",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 110
+  },
+  {
+    "full_name": "howie6879/owllook_api",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 138
+  },
+  {
+    "full_name": "withmarfa/marfa",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 214
+  },
+  {
+    "full_name": "smgdkngt/dobase",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 180
+  },
+  {
+    "full_name": "hoppscotch/hoppscotch",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 80866
+  },
+  {
+    "full_name": "omarciovsena/abibliadigital",
+    "license": "bsd-2-clause",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 1007
+  },
+  {
+    "full_name": "specta-rs/rspc",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 1391
+  },
+  {
+    "full_name": "travisghansen/kubernetes-pfsense-controller",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 215
+  },
+  {
+    "full_name": "Adyen/adyen-java-api-library",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 147
+  },
+  {
+    "full_name": "Claviz/bellboy",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 107
+  },
+  {
+    "full_name": "sonirico/go-hyperliquid",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 128
+  },
+  {
+    "full_name": "Anil-matcha/open-genjutsu",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1173
+  },
+  {
+    "full_name": "ntthanh2603/gemini-web-to-api",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 681
+  },
+  {
+    "full_name": "yantrikos/yantrikdb-server",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 180
+  },
+  {
+    "full_name": "loco-rs/loco",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 9657
+  },
+  {
+    "full_name": "however-yir/knowledgeops-agent",
+    "license": "mit",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 167
+  },
+  {
+    "full_name": "Pouzor/homelable",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 5270
+  },
+  {
+    "full_name": "helallao/perplexity-ai",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2019
+  },
+  {
+    "full_name": "capcom6/android-sms-gateway",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 6044
+  },
+  {
+    "full_name": "gmsec/gmsec",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 182
+  },
+  {
+    "full_name": "Noveum/ai-gateway",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 100
+  },
+  {
+    "full_name": "LinuxSuRen/api-testing",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 369
+  },
+  {
+    "full_name": "GerardPaligot/Confily",
+    "license": "apache-2.0",
+    "language": "Kotlin",
+    "topic": "backend",
+    "stars": 151
+  },
+  {
+    "full_name": "snykk/go-rest-boilerplate",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 161
+  },
+  {
+    "full_name": "qaiu/netdisk-fast-download",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 3494
+  },
+  {
+    "full_name": "uselotus/lotus",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1843
+  },
+  {
+    "full_name": "mostafa-wahied/portracker",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 2526
+  },
+  {
+    "full_name": "VoiceBlender/voiceblender",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 143
+  },
+  {
+    "full_name": "Bearisbug/imbo",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 147
+  },
+  {
+    "full_name": "enroute-sh/enroute",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 444
+  },
+  {
+    "full_name": "xtrime-ru/TelegramApiServer",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "microservice",
+    "stars": 650
+  },
+  {
+    "full_name": "mike-works/sql-fundamentals",
+    "license": "bsd-3-clause",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 172
+  },
+  {
+    "full_name": "surajverma/homehub",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1258
+  },
+  {
+    "full_name": "Hithink-Tech-Org/Financial-API",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 4570
+  },
+  {
+    "full_name": "samyak2403/RepoStore",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 1409
+  },
+  {
+    "full_name": "trueleaf/apiflow",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 643
+  },
+  {
+    "full_name": "agentscope-ai/QwenPaw",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 38104
+  },
+  {
+    "full_name": "giovantenne/lastsignal",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 772
+  },
+  {
+    "full_name": "apache/linkis",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 3417
+  },
+  {
+    "full_name": "marshmallow-code/flask-smorest",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 716
+  },
+  {
+    "full_name": "moleculerjs/moleculer",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "microservice",
+    "stars": 6385
+  },
+  {
+    "full_name": "imgproxy/imgproxy",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 11208
+  },
+  {
+    "full_name": "github-aws-runners/terraform-aws-github-runner",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 3187
+  },
+  {
+    "full_name": "coflyn/scrapr",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 128
+  },
+  {
+    "full_name": "cwendt94/espn-api",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1006
+  },
+  {
+    "full_name": "getkin/kin-openapi",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 3327
+  },
+  {
+    "full_name": "LibreChat-AI/rag-api",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 928
+  },
+  {
+    "full_name": "gumslone/GumCP",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 172
+  },
+  {
+    "full_name": "pricorephp/pricore",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 162
+  },
+  {
+    "full_name": "timmo001/system-bridge",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 366
+  },
+  {
+    "full_name": "leosuncin/nest-auth-example",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 488
+  },
+  {
+    "full_name": "thejaustin/ShizukuPlus-API",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 111
+  },
+  {
+    "full_name": "Panelica/pnlcs",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 139
+  },
+  {
+    "full_name": "roomi-fields/gemini-notebook-mcp",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 242
+  },
+  {
+    "full_name": "ZL154/JellyfinSecurity",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 337
+  },
+  {
+    "full_name": "vicanso/cyberapi",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 581
+  },
+  {
+    "full_name": "sergigp/yarrtube",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 226
+  },
+  {
+    "full_name": "chaunsin/netease-cloud-music",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 426
+  },
+  {
+    "full_name": "FOSSBilling/FOSSBilling",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 1757
+  },
+  {
+    "full_name": "anyproto/anytype-mcp",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 546
+  },
+  {
+    "full_name": "velobase/velobase-harness",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 624
+  },
+  {
+    "full_name": "leepokai/Codync",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 2408
+  },
+  {
+    "full_name": "Johell1NS/browser-search",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 550
+  },
+  {
+    "full_name": "Ahoo-Wang/CosId",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 651
+  },
+  {
+    "full_name": "jellydn/fastify-starter",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 126
+  },
+  {
+    "full_name": "cefjoeii/mern-crud",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 763
+  },
+  {
+    "full_name": "LumePart/Explo",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 2105
+  },
+  {
+    "full_name": "Ladysnake/Cardinal-Components-API",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 214
+  },
+  {
+    "full_name": "springdoc/springdoc-openapi",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "rest-api",
+    "stars": 3751
+  },
+  {
+    "full_name": "MervinPraison/PraisonAI",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 9380
+  },
+  {
+    "full_name": "instant-dev/api",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 254
+  },
+  {
+    "full_name": "blockvisionhq/sui-go-sdk",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 197
+  },
+  {
+    "full_name": "dotnet/WatsonWebserver",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 505
+  },
+  {
+    "full_name": "AfricasTalkingLtd/africastalking-node.js",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 168
+  },
+  {
+    "full_name": "svix/svix-webhooks",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 3488
+  },
+  {
+    "full_name": "api-platform/admin",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 515
+  },
+  {
+    "full_name": "OpenByteInc/QuantDinger",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 13910
+  },
+  {
+    "full_name": "labstack/echo",
+    "license": "mit",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 32827
+  },
+  {
+    "full_name": "kepelrs/nestjs-prisma-crud",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 166
+  },
+  {
+    "full_name": "ActivityWatch/aw-server-rust",
+    "license": "mpl-2.0",
+    "language": "Rust",
+    "topic": "rest-api",
+    "stars": 322
+  },
+  {
+    "full_name": "samchon/nestia",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 2181
+  },
+  {
+    "full_name": "study8677/awesome-architecture",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 2549
+  },
+  {
+    "full_name": "microwind/design-patterns",
+    "license": "mit",
+    "language": "Java",
+    "topic": "microservice",
+    "stars": 306
+  },
+  {
+    "full_name": "vercube/vercube",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 114
+  },
+  {
+    "full_name": "aidanpark/openclaw-android",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 1815
+  },
+  {
+    "full_name": "rootstrap/rails_api_base",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 635
+  },
+  {
+    "full_name": "uniswap-python/uniswap-python",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1019
+  },
+  {
+    "full_name": "Kikobeats/tom",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "saas",
+    "stars": 156
+  },
+  {
+    "full_name": "hbakri/django-ninja-crud",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 646
+  },
+  {
+    "full_name": "trpc/trpc",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 40850
+  },
+  {
+    "full_name": "NextJSTemplates/solid-nextjs",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 265
+  },
+  {
+    "full_name": "graphql-python/graphql-core",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 535
+  },
+  {
+    "full_name": "8treenet/freedom",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "microservice",
+    "stars": 2268
+  },
+  {
+    "full_name": "tsedio/tsed",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 3092
+  },
+  {
+    "full_name": "xtrime-ru/TelegramRSS",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 298
+  },
+  {
+    "full_name": "apideck-libraries/portman",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 688
+  },
+  {
+    "full_name": "flawiddsouza/Restfox",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 2784
+  },
+  {
+    "full_name": "microsoft/azure-devops-python-api",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 684
+  },
+  {
+    "full_name": "ActivityWatch/aw-server",
+    "license": "mpl-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 129
+  },
+  {
+    "full_name": "simpleiot/simpleiot",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "backend",
+    "stars": 228
+  },
+  {
+    "full_name": "0xb4lamx/nestjs-boilerplate-microservice",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "microservice",
+    "stars": 634
+  },
+  {
+    "full_name": "convex/convex-saas",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 377
+  },
+  {
+    "full_name": "vytskalt/scoreboard-library",
+    "license": "mit",
+    "language": "Java",
+    "topic": "api",
+    "stars": 237
+  },
+  {
+    "full_name": "XCO-Agency/Laravel-SAAS-Starter",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 256
+  },
+  {
+    "full_name": "aws/serverless-java-container",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 1564
+  },
+  {
+    "full_name": "express-rate-limit/express-rate-limit",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 3318
+  },
+  {
+    "full_name": "lissy93/domain-locker",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1566
+  },
+  {
+    "full_name": "eliasbiondo/antirion",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 429
+  },
+  {
+    "full_name": "KatrielMoses/voidaccess",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1095
+  },
+  {
+    "full_name": "AgenticResourceRegistry/AgenticResourceRegistry",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 4168
+  },
+  {
+    "full_name": "EvilFreelancer/openapi-to-cli",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 268
+  },
+  {
+    "full_name": "wuzf/2fa",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 464
+  },
+  {
+    "full_name": "gamosoft/NoteDiscovery",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 2889
+  },
+  {
+    "full_name": "dpgaspar/Flask-AppBuilder",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 4961
+  },
+  {
+    "full_name": "ClickHouse/ClickStack",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 10063
+  },
+  {
+    "full_name": "louislam/uptime-kuma",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 94767
+  },
+  {
+    "full_name": "noodle-rest/noodle",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 407
+  },
+  {
+    "full_name": "sergix44/xbackbone",
+    "license": "apache-2.0",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 1172
+  },
+  {
+    "full_name": "luthermonson/go-proxmox",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 293
+  },
+  {
+    "full_name": "owen282000/life-dashboard-companion-app",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 107
+  },
+  {
+    "full_name": "apiflask/apiflask",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1140
+  },
+  {
+    "full_name": "rundeck/rundeck-cli",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 141
+  },
+  {
+    "full_name": "iklobato/lightapi",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 115
+  },
+  {
+    "full_name": "ForestAdmin/forest-express-mongoose",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "backend",
+    "stars": 196
+  },
+  {
+    "full_name": "vikiboss/60s",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 5950
+  },
+  {
+    "full_name": "spatie/guzzle-rate-limiter-middleware",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 168
+  },
+  {
+    "full_name": "safebucket/safebucket",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 997
+  },
+  {
+    "full_name": "hanami/hanami-router",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "rest-api",
+    "stars": 364
+  },
+  {
+    "full_name": "devSquad-study/2023-CS-Study",
+    "license": "mit",
+    "language": "Java",
+    "topic": "backend",
+    "stars": 1391
+  },
+  {
+    "full_name": "Evil0ctal/Douyin_TikTok_Download_API",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 21518
+  },
+  {
+    "full_name": "xpublish-community/xpublish",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 210
+  },
+  {
+    "full_name": "rupeshs/fastsdcpu",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2218
+  },
+  {
+    "full_name": "dlesbre/bibtex-autocomplete",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 112
+  },
+  {
+    "full_name": "marshmallow-code/flask-marshmallow",
+    "license": "mit",
+    "language": "Python",
+    "topic": "rest-api",
+    "stars": 887
+  },
+  {
+    "full_name": "code-chat-br/whatsapp-api",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1297
+  },
+  {
+    "full_name": "almeidapaulopt/tsdproxy",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 1735
+  },
+  {
+    "full_name": "TailAdmin/free-nextjs-admin-dashboard",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 2598
+  },
+  {
+    "full_name": "recyclarr/recyclarr",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 2168
+  },
+  {
+    "full_name": "blue-idea/linkit",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 356
+  },
+  {
+    "full_name": "spatie/twitter-streaming-api",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 174
+  },
+  {
+    "full_name": "APIParkLab/APIPark",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1826
+  },
+  {
+    "full_name": "kuzzleio/kuzzle",
+    "license": "apache-2.0",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 1667
+  },
+  {
+    "full_name": "GlobalArtInc/astrum-repository",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 315
+  },
+  {
+    "full_name": "SuperioOne/nut_webgui",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 442
+  },
+  {
+    "full_name": "FlareSolverr/FlareSolverr",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 16283
+  },
+  {
+    "full_name": "realworld-apps/golang-gin-realworld-example-app",
+    "license": "mit",
+    "language": "Go",
+    "topic": "api",
+    "stars": 2727
+  },
+  {
+    "full_name": "ccfos/nightingale",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 13512
+  },
+  {
+    "full_name": "punitarani/fli",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 3510
+  },
+  {
+    "full_name": "AkkalDhami/servercn",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 315
+  },
+  {
+    "full_name": "mockoon/mockoon",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 8493
+  },
+  {
+    "full_name": "tsirysndr/music-player",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 534
+  },
+  {
+    "full_name": "DSharpPlus/DSharpPlus",
+    "license": "mit",
+    "language": "C#",
+    "topic": "api",
+    "stars": 1342
+  },
+  {
+    "full_name": "respanai/respan-gateway",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 994
+  },
+  {
+    "full_name": "sillohq/core",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "backend",
+    "stars": 273
+  },
+  {
+    "full_name": "pglombardo/PasswordPusher",
+    "license": "apache-2.0",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 3253
+  },
+  {
+    "full_name": "keijack/python-eureka-client",
+    "license": "mit",
+    "language": "Python",
+    "topic": "microservice",
+    "stars": 194
+  },
+  {
+    "full_name": "aallam/openai-kotlin",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "api",
+    "stars": 1851
+  },
+  {
+    "full_name": "mirumee/ariadne",
+    "license": "bsd-3-clause",
+    "language": "Python",
+    "topic": "api",
+    "stars": 2347
+  },
+  {
+    "full_name": "usebruno/bruno",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "rest-api",
+    "stars": 48501
+  },
+  {
+    "full_name": "cdimascio/express-openapi-validator",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "rest-api",
+    "stars": 1006
+  },
+  {
+    "full_name": "Codename-11/hermes-relay",
+    "license": "mit",
+    "language": "Kotlin",
+    "topic": "self-hosted",
+    "stars": 459
+  },
+  {
+    "full_name": "jikan-me/jikan-rest",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 571
+  },
+  {
+    "full_name": "wemake-services/django-modern-rest",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 1561
+  },
+  {
+    "full_name": "Finb/bark-server",
+    "license": "mit",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 3723
+  },
+  {
+    "full_name": "NextJSTemplates/startup-nextjs",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1687
+  },
+  {
+    "full_name": "fronzbot/blinkpy",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 821
+  },
+  {
+    "full_name": "rufftruffles/spameater",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 229
+  },
+  {
+    "full_name": "cozystack/cozystack",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "self-hosted",
+    "stars": 2407
+  },
+  {
+    "full_name": "ipinfo/java",
+    "license": "apache-2.0",
+    "language": "Java",
+    "topic": "api",
+    "stars": 136
+  },
+  {
+    "full_name": "sissbruecker/linkding",
+    "license": "mit",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 11445
+  },
+  {
+    "full_name": "yagop/node-telegram-bot-api",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 9217
+  },
+  {
+    "full_name": "supabase/pg_graphql",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 3364
+  },
+  {
+    "full_name": "thetahealth/mirobody",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1661
+  },
+  {
+    "full_name": "holon-run/holon",
+    "license": "apache-2.0",
+    "language": "Rust",
+    "topic": "self-hosted",
+    "stars": 199
+  },
+  {
+    "full_name": "nager/Nager.Date",
+    "license": "mit",
+    "language": "C#",
+    "topic": "rest-api",
+    "stars": 1441
+  },
+  {
+    "full_name": "fastdlabs/fastD",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 420
+  },
+  {
+    "full_name": "anthropics/anthropic-cli",
+    "license": "apache-2.0",
+    "language": "Go",
+    "topic": "api",
+    "stars": 738
+  },
+  {
+    "full_name": "obsei/obsei",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "self-hosted",
+    "stars": 1454
+  },
+  {
+    "full_name": "polterguy/magic",
+    "license": "mit",
+    "language": "C#",
+    "topic": "self-hosted",
+    "stars": 1254
+  },
+  {
+    "full_name": "ecyrbe/zodios",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 1918
+  },
+  {
+    "full_name": "aipotheosis-labs/aci",
+    "license": "apache-2.0",
+    "language": "Python",
+    "topic": "api",
+    "stars": 4940
+  },
+  {
+    "full_name": "marcoturi/fastify-boilerplate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "backend",
+    "stars": 475
+  },
+  {
+    "full_name": "hanami/hanami-action",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 242
+  },
+  {
+    "full_name": "jikan-me/jikan",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 1095
+  },
+  {
+    "full_name": "deividfortuna/fipe",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 415
+  },
+  {
+    "full_name": "readur/readur",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 816
+  },
+  {
+    "full_name": "alan345/AI-Fullstack-SaaS-Boilerplate",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "saas",
+    "stars": 1439
+  },
+  {
+    "full_name": "public-apis/public-apis",
+    "license": "mit",
+    "language": "Python",
+    "topic": "api",
+    "stars": 500796
+  },
+  {
+    "full_name": "as-a-service/screenshot",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "microservice",
+    "stars": 105
+  },
+  {
+    "full_name": "yiisoft/app-api",
+    "license": "bsd-3-clause",
+    "language": "PHP",
+    "topic": "api",
+    "stars": 107
+  },
+  {
+    "full_name": "massive-com/client-go",
+    "license": "mit",
+    "language": "Go",
+    "topic": "rest-api",
+    "stars": 201
+  },
+  {
+    "full_name": "lsfusion-solutions/mycompany",
+    "license": "apache-2.0",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 384
+  },
+  {
+    "full_name": "meme-search/meme-search",
+    "license": "apache-2.0",
+    "language": "Ruby",
+    "topic": "self-hosted",
+    "stars": 776
+  },
+  {
+    "full_name": "roccomuso/termux",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 191
+  },
+  {
+    "full_name": "joeseesun/qmreader",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 266
+  },
+  {
+    "full_name": "shlinkio/shlink",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "rest-api",
+    "stars": 5437
+  },
+  {
+    "full_name": "mainmatter/gerust",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "backend",
+    "stars": 186
+  },
+  {
+    "full_name": "wallabag/wallabag",
+    "license": "mit",
+    "language": "PHP",
+    "topic": "self-hosted",
+    "stars": 13072
+  },
+  {
+    "full_name": "facundoolano/google-play-scraper",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 3005
+  },
+  {
+    "full_name": "actionhero/keryx",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "api",
+    "stars": 619
+  },
+  {
+    "full_name": "infinitered/apisauce",
+    "license": "mit",
+    "language": "JavaScript",
+    "topic": "api",
+    "stars": 2885
+  },
+  {
+    "full_name": "cargo-public-api/cargo-public-api",
+    "license": "mit",
+    "language": "Rust",
+    "topic": "api",
+    "stars": 585
+  },
+  {
+    "full_name": "ueberdosis/hocuspocus",
+    "license": "mit",
+    "language": "TypeScript",
+    "topic": "self-hosted",
+    "stars": 2665
+  },
+  {
+    "full_name": "ruby-grape/grape-swagger",
+    "license": "mit",
+    "language": "Ruby",
+    "topic": "api",
+    "stars": 1102
+  },
+  {
+    "full_name": "DialmasterOrg/Youtarr",
+    "license": "isc",
+    "language": "JavaScript",
+    "topic": "self-hosted",
+    "stars": 1831
+  }
+]

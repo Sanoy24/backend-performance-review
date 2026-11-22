@@ -60,7 +60,8 @@ class SourceFileRules(unittest.TestCase):
     def test_tests_docs_generated_vendored_and_migrations_never_count(self):
         for path in ("internal/store/orders_test.go", "tests/test_orders.py",
                      "src/orders/service.spec.ts", "src/test/java/com/x/OrderServiceTest.java",
-                     "spec/models/order_spec.rb", "docs/perf.md", "vendor/lib/x.go",
+                     "spec/models/order_spec.rb", "pokemon_v2/tests.py", "app/test.py",
+                     "conftest.py", "docs/perf.md", "vendor/lib/x.go",
                      "node_modules/a/index.js", "db/migrations/0001_init.sql",
                      "api/orders.pb.go", "web/dist/app.min.js", "types/index.d.ts",
                      "package-lock.json", "go.sum"):
