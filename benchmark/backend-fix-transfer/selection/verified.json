@@ -1,0 +1,1259 @@
+[
+ {
+  "repo": "MoeShinX/relay-panel",
+  "number": 43,
+  "rank": 0,
+  "title": "perf(node/udp): shard session map + throttle tracker touch",
+  "body": "\u6d88\u9664 UDP \u70ed\u8def\u5f84\u4e0a\u7684\u9010\u5305\u9501\u70ed\u70b9(codex \u6307\u51fa\u7684 \u2460\u2461),\u5e76\u6309\u540e\u7eed\u9ad8\u5f3a\u5ea6\u5ba1\u8ba1\u505a\u4e86\u66f4\u6df1\u7684\u4fee\u6cd5\u3002\u542b\u4e24\u4e2a\u63d0\u4ea4,\u5efa\u8bae squash \u5408\u5e76\u3002\n\n## \u6700\u7ec8\u4ee3\u7801\u505a\u4e86\u4ec0\u4e48\n\n### \u4f1a\u8bdd\u8868\u5206\u7247(\u6bcf\u76d1\u542c\u5668)\n\u6bcf\u76d1\u542c\u5668\u7684 UDP \u4f1a\u8bdd\u8868\u7531 `Mutex<HashMap>` \u6539\u4e3a **DashMap**(\u6309\u5ba2\u6237\u7aef\u5730\u5740\u5206\u7247)\u3002\u9010\u5305\u67e5\u4f1a\u8bdd\u53ea\u53d6\u5206\u7247\u540c\u6b65\u9501(await \u524d\u91ca\u653e),\u4e0d\u540c\u5ba2\u6237\u7aef\u7684\u5305\u4e0d\u518d\u4e92\u76f8\u4e32\u884c\u3002\u65b0\u4f1a\u8bdd\u8d70 entry API + \u53cc\u68c0\u7ade\u6001\u3002\n\n### tracker \u4e5f\u5206\u7247(\u8fdb\u7a0b\u7ea7\u9501\u5f7b\u5e95\u6d88\u9664)\n`ConnectionTracker` \u7684 UDP \u4f1a\u8bdd\u8868(\u6309 client+rule \u952e)\u540c\u6837\u7531**\u8fdb\u7a0b\u7ea7 `Mutex<HashMap>` \u6539\u4e3a DashMap**\u3002`udp_touch`/`udp_close` \u53ea\u53d6\u76ee\u6807\u5206\u7247\u7684\u9501\u2014\u2014\u8fde\u65b0\u4f1a\u8bdd\u5f00\u542f/\u5173\u95ed\u90fd\u4e0d\u518d\u6253\u5168\u5c40\u9501\u3002\n\n> \u6ce8:\u6700\u521d\u7248\u672c\u662f\u7528\"\u6bcf 15s \u6700\u591a touch \u4e00\u6b21\"\u7684\u8282\u6d41\u6765\u56de\u907f\u8fdb\u7a0b\u7ea7\u9501;\u5ba1\u8ba1\u540e\u6539\u4e3a\u76f4\u63a5\u628a tracker \u5206\u7247,\u4e8e\u662f**\u8282\u6d41\u903b\u8f91\u6574\u4e2a\u5220\u9664**(`last_touch` \u5b57\u6bb5\u3001\u95f4\u9694\u5e38\u91cf\u3001\u4e24\u5904\u91cd\u590d\u4ee3\u7801\u90fd\u6ca1\u4e86),\u6062\u590d\"\u6bcf\u5305\u53cc\u5411\u65e0\u6761\u4ef6 touch\",\u4ee3\u7801\u66f4\u7b80\u5355\u4e14\u8fde\u63a5\u6570\u8ba1\u6570\u66f4\u51c6\u3002\n\n## \u5ba1\u8ba1\u4fee\u590d(#1\u2013#4)\n- **#1** sweeper \u4e0e tracker prune \u7528 `saturating_sub`:DashMap `len()` \u8de8\u5206\u7247\u8bfb\u53d6\u65e0\u5168\u5c40\u9501,\u5e76\u53d1\u63d2\u5165\u843d\u5728\u4e24\u6b21\u8bfb\u4e4b\u95f4\u4e0d\u80fd\u8ba9 usize \u4e0b\u6ea2(\u539f\u672c debug \u6784\u5efa\u4f1a panic \u6740\u6b7b\u6e05\u7406\u4efb\u52a1\u2192socket \u6cc4\u6f0f;release \u51fa\u5783\u573e\u65e5\u5fd7)\u3002\n- **#2** \u4f1a\u8bdd\u4e2d\u9014\u88ab\u6e05\u540e\u4ecd\u6301\u7eed\u8ba1\u6570:\u6539\u56de\u6bcf\u5305\u65e0\u6761\u4ef6 touch,\u4e0d\u518d\u5c11\u8ba1\u3002\n- **#3** tracker \u8fdb\u7a0b\u7ea7\u9501:\u5df2\u5206\u7247\u6d88\u9664\u3002\n- **#4** \u91cd\u590d\u7684\u8282\u6d41\u903b\u8f91:\u968f\u8282\u6d41\u5220\u9664\u800c\u6d88\u5931\u3002\n\n## \u4e0d\u505a(\u2462,\u5355\u72ec\u8bc4\u4f30)\n\u5165\u53e3\u4ecd\u662f\u5355 `recv\u2192send` \u5faa\u73af\u3002\u4e0d\u9650\u901f\u573a\u666f send \u6781\u5c11\u771f\u963b\u585e,\u771f\u6b63\u6210\u672c\u662f\u4e0a\u9762\u8fd9\u4e9b\u9501(\u5df2\u6d88\u9664);\u62c6\u5206\u6536\u53d1\u9700\u6709\u754c\u961f\u5217/\u80cc\u538b/\u4fdd\u5e8f\u8bbe\u8ba1,\u5e94\u7b49\u5b9e\u9645 UDP \u538b\u6d4b\u786e\u8ba4\u74f6\u9888\u540e\u518d\u505a\u3002\n\n## \u9a8c\u8bc1\n\u65b0\u589e `dashmap` \u4f9d\u8d56;`cargo clippy -p relay-node` 0 \u8b66\u544a;node \u6d4b\u8bd5 84+4 \u5168\u8fc7;fmt \u5e72\u51c0\u3002\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)",
+  "base_commit": "bf12e5d8bb5abf64c1320f478ebbc019529ffc3d",
+  "merge_commit": "38d45c2ce79417e97f36e11f263629328b99ec3a",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "Cargo.lock",
+   "crates/node/Cargo.toml",
+   "crates/node/src/forwarder/udp.rs",
+   "crates/node/src/reporter.rs"
+  ],
+  "source_files": [
+   "crates/node/src/forwarder/udp.rs",
+   "crates/node/src/reporter.rs"
+  ],
+  "review_files": 130,
+  "detected": [
+   "docker",
+   "node",
+   "postgres",
+   "rest",
+   "rust",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "mkdocstrings/griffe",
+  "number": 489,
+  "rank": 0,
+  "title": "perf: Prune function bodies from source before building AST",
+  "body": "We use a Rust/Ruff-based lexer to prune function bodies in cases where we're sure we won't visit them. This makes `compile()` much faster since it has much less code to parse and compile into an AST. Line numbers are kept correct by adding blank lines before a final `pass`. See https://github.com/pawamoy/prune-source/.",
+  "base_commit": "8b94205f2db13f02553aa8c1a28e47897e14edc9",
+  "merge_commit": "657ce96a609a691aa85096506de22a0ec1b413b6",
+  "license": "isc",
+  "changed_paths": [
+   ".github/workflows/ci.yml",
+   "docs/installation.md",
+   "packages/griffelib/pyproject.toml",
+   "packages/griffelib/src/griffe/_internal/agents/parser.py",
+   "packages/griffelib/src/griffe/_internal/agents/visitor.py",
+   "packages/griffelib/src/griffe/_internal/debug.py",
+   "packages/griffelib/tests/test_parser.py",
+   "pyproject.toml"
+  ],
+  "source_files": [
+   "packages/griffelib/src/griffe/_internal/agents/parser.py",
+   "packages/griffelib/src/griffe/_internal/agents/visitor.py",
+   "packages/griffelib/src/griffe/_internal/debug.py"
+  ],
+  "review_files": 50,
+  "detected": [
+   "python",
+   "redis",
+   "rest"
+  ]
+ },
+ {
+  "repo": "ncanode-kz/NCANode",
+  "number": 231,
+  "rank": 0,
+  "title": "perf: cache parsed CRL as a compact revocation index",
+  "body": "# perf: cache parsed CRL as a compact revocation index\r\n\r\n## \u0427\u0442\u043e \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u043e\r\n\r\n\u041f\u0440\u0438 `POST /xml/verify` \u0441 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u043e\u0439 \u0447\u0435\u0440\u0435\u0437 CRL \u043a\u0430\u0436\u0434\u044b\u0439 \u0437\u0430\u043f\u0440\u043e\u0441 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u043b \u0432\u0441\u0435 CRL-\u0444\u0430\u0439\u043b\u044b. \u041e\u0441\u043d\u043e\u0432\u043d\u043e\u0439 GOST CRL \u0440\u0430\u0437\u043c\u0435\u0440\u043e\u043c \u043e\u043a\u043e\u043b\u043e 19 \u041c\u0411:\r\n\r\n- \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u043b\u0441\u044f \u0437\u0430\u043d\u043e\u0432\u043e \u043d\u0430 \u043a\u0430\u0436\u0434\u043e\u043c \u0437\u0430\u043f\u0440\u043e\u0441\u0435;\r\n- \u0437\u0430\u043d\u0438\u043c\u0430\u043b \u043e\u043a\u043e\u043b\u043e 218 \u041c\u0411 \u0432 \u0432\u0438\u0434\u0435 `X509CRL`;\r\n- \u0441\u043e\u0437\u0434\u0430\u0432\u0430\u043b \u043e\u0441\u043d\u043e\u0432\u043d\u0443\u044e \u0437\u0430\u0434\u0435\u0440\u0436\u043a\u0443 \u043f\u0440\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0435 \u043f\u043e\u0434\u043f\u0438\u0441\u0438.\r\n\r\n\u0422\u0435\u043f\u0435\u0440\u044c `CrlService` \u043e\u0434\u0438\u043d \u0440\u0430\u0437 \u0441\u0442\u0440\u043e\u0438\u0442 \u0434\u043b\u044f \u043a\u0430\u0436\u0434\u043e\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 CRL \u043a\u043e\u043c\u043f\u0430\u043a\u0442\u043d\u044b\u0439 `CrlWrapper` \u2014 \u0438\u043d\u0434\u0435\u043a\u0441:\r\n\r\n```text\r\n\u0438\u0437\u0434\u0430\u0442\u0435\u043b\u044c \u2192 \u043e\u0442\u0441\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0435 \u0441\u0435\u0440\u0438\u0439\u043d\u044b\u0435 \u043d\u043e\u043c\u0435\u0440\u0430 + \u0434\u0430\u0442\u0430 \u0438 \u043f\u0440\u0438\u0447\u0438\u043d\u0430 \u043e\u0442\u0437\u044b\u0432\u0430\r\n```\r\n\r\n\u041f\u043e\u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0435 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e\u0442\u0441\u044f \u0431\u0438\u043d\u0430\u0440\u043d\u044b\u043c \u043f\u043e\u0438\u0441\u043a\u043e\u043c \u0431\u0435\u0437 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u0433\u043e \u0440\u0430\u0437\u0431\u043e\u0440\u0430 DER. \u0420\u0430\u0437\u043c\u0435\u0440 \u0438\u043d\u0434\u0435\u043a\u0441\u0430 \u2014 \u043e\u043a\u043e\u043b\u043e 34 \u041c\u0411 \u0432\u043c\u0435\u0441\u0442\u043e 218 \u041c\u0411.\r\n\r\n## \u0418\u043d\u0432\u0430\u043b\u0438\u0434\u0430\u0446\u0438\u044f \u043a\u044d\u0448\u0430\r\n\r\n\u0412\u0435\u0440\u0441\u0438\u044f \u0444\u0430\u0439\u043b\u0430 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u044f\u0435\u0442\u0441\u044f \u043f\u043e:\r\n\r\n- \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u0443;\r\n- \u0438\u043c\u0435\u043d\u0438;\r\n- \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f;\r\n- \u0440\u0430\u0437\u043c\u0435\u0440\u0443.\r\n\r\n\u041f\u0440\u0438 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0438 \u0438\u043b\u0438 \u0443\u0441\u043f\u0435\u0448\u043d\u043e\u0439 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0438\u0441\u0438 CRL \u0438\u043d\u0434\u0435\u043a\u0441 \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0438\u043d\u0432\u0430\u043b\u0438\u0434\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u044f\u0432\u043d\u043e. \u0418\u043d\u0434\u0435\u043a\u0441\u044b \u0443\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0445 \u0438 \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0445 \u0444\u0430\u0439\u043b\u043e\u0432 \u043e\u0447\u0438\u0449\u0430\u044e\u0442\u0441\u044f.\r\n\r\n## \u0421\u043e\u0432\u043c\u0435\u0441\u0442\u0438\u043c\u043e\u0441\u0442\u044c\r\n\r\n\u041f\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u0435 `X509CRL` \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e:\r\n\r\n- \u043f\u043e\u0438\u0441\u043a \u043f\u043e \u0438\u0437\u0434\u0430\u0442\u0435\u043b\u044e \u0438 \u0441\u0435\u0440\u0438\u0439\u043d\u043e\u043c\u0443 \u043d\u043e\u043c\u0435\u0440\u0443;\r\n- \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 `certificateIssuer` \u0434\u043b\u044f indirect CRL;\r\n- \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0434\u0430\u0442\u044b \u0438 \u043f\u0440\u0438\u0447\u0438\u043d\u044b \u043e\u0442\u0437\u044b\u0432\u0430;\r\n- \u043f\u0440\u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u044f\u044e\u0449\u0435\u0439\u0441\u044f \u043f\u0430\u0440\u0435 \u00ab\u0438\u0437\u0434\u0430\u0442\u0435\u043b\u044c + \u0441\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440\u00bb \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u043f\u0440\u0435\u0436\u043d\u0438\u0439 \u043f\u0443\u0442\u044c \u0447\u0435\u0440\u0435\u0437 `X509CRL`, \u0447\u0442\u043e\u0431\u044b \u043d\u0435 \u043c\u0435\u043d\u044f\u0442\u044c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0432 \u043d\u0435\u043e\u0434\u043d\u043e\u0437\u043d\u0430\u0447\u043d\u043e\u043c \u0441\u043b\u0443\u0447\u0430\u0435.\r\n\r\nAPI \u0438 \u0444\u043e\u0440\u043c\u0430\u0442 \u043e\u0442\u0432\u0435\u0442\u0430 \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u044f\u043b\u0438\u0441\u044c.\r\n\r\n## \u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u044b A/B-\u0442\u0435\u0441\u0442\u0430\r\n\r\n```text\r\n\u0421\u0442\u0430\u0440\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f:\r\n2.048, 1.912, 1.531, 1.500, 1.554 \u0441\r\n\r\n\u041d\u043e\u0432\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f:\r\n2.980, 0.080, 0.066, 0.061, 0.077 \u0441\r\n```\r\n\r\n\u041f\u0435\u0440\u0432\u044b\u0439 \u0437\u0430\u043f\u0440\u043e\u0441 \u043d\u043e\u0432\u043e\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 \u0441\u0442\u0440\u043e\u0438\u0442 \u0438\u043d\u0434\u0435\u043a\u0441, \u043f\u043e\u044d\u0442\u043e\u043c\u0443 \u0437\u0430\u043d\u0438\u043c\u0430\u0435\u0442 \u043e\u043a\u043e\u043b\u043e 3 \u0441\u0435\u043a\u0443\u043d\u0434. \u041f\u043e\u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0435 \u0437\u0430\u043f\u0440\u043e\u0441\u044b \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u044e\u0442 \u0433\u043e\u0442\u043e\u0432\u044b\u0439 \u0438\u043d\u0434\u0435\u043a\u0441.\r\n\r\n\u041c\u0435\u0434\u0438\u0430\u043d\u0430 \u043f\u0440\u043e\u0433\u0440\u0435\u0442\u044b\u0445 \u0437\u0430\u043f\u0440\u043e\u0441\u043e\u0432:\r\n\r\n```text\r\n1.55 \u0441 \u2192 0.071 \u0441\r\n```\r\n\r\n\u0423\u0441\u043a\u043e\u0440\u0435\u043d\u0438\u0435 \u2014 \u043f\u0440\u0438\u043c\u0435\u0440\u043d\u043e \u0432 22 \u0440\u0430\u0437\u0430.\r\n\r\n\u041e\u0431\u0435 \u0432\u0435\u0440\u0441\u0438\u0438 \u0432\u0435\u0440\u043d\u0443\u043b\u0438 \u043e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442: \u043f\u043e\u0434\u043f\u0438\u0441\u044c \u0432\u0430\u043b\u0438\u0434\u043d\u0430, \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442 \u043d\u0435 \u043e\u0442\u043e\u0437\u0432\u0430\u043d.\r\n\r\n## \u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430\r\n\r\n- \u041f\u043e\u043b\u043d\u044b\u0439 `./gradlew test` \u043f\u0440\u043e\u0445\u043e\u0434\u0438\u0442.\r\n- \u0414\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u044b \u0442\u0435\u0441\u0442\u044b \u043d\u0430:\r\n  - \u044d\u043a\u0432\u0438\u0432\u0430\u043b\u0435\u043d\u0442\u043d\u043e\u0441\u0442\u044c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u0432 `X509CRL`;\r\n  - \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0435 \u0438\u043d\u0434\u0435\u043a\u0441\u0430;\r\n  - \u0437\u0430\u043c\u0435\u043d\u0443 \u0438 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435 CRL;\r\n  - \u044f\u0432\u043d\u0443\u044e \u0438\u043d\u0432\u0430\u043b\u0438\u0434\u0438\u0437\u0430\u0446\u0438\u044e \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0438\u0441\u0438;\r\n  - indirect CRL \u0447\u0435\u0440\u0435\u0437 `certificateIssuer`;\r\n  - fallback \u043f\u0440\u0438 \u0434\u0443\u0431\u043b\u0438\u0440\u0443\u044e\u0449\u0438\u0445\u0441\u044f \u0437\u0430\u043f\u0438\u0441\u044f\u0445.\r\n\r\n\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 \u043b\u043e\u043a\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043e \u0432 `CrlService` \u0438 \u043d\u043e\u0432\u043e\u043c `CrlWrapper`; \u0432\u043d\u0435\u0448\u043d\u0435\u0435 \u043f\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u0435 \u0441\u0435\u0440\u0432\u0438\u0441\u0430 \u043d\u0435 \u043c\u0435\u043d\u044f\u0435\u0442\u0441\u044f.\r\n\r\n## \u0414\u043e\r\n\r\n<img width=\"1624\" height=\"1013\" alt=\"Screenshot 2026-09-16 at 14 31 22\" src=\"https://github.com/user-attachments/assets/c073cf2a-3dd9-4058-991a-2f213b50c062\" />\r\n\r\n## \u041f\u043e\u0441\u043b\u0435\r\n\r\n<img width=\"1624\" height=\"1013\" alt=\"Screenshot 2026-09-16 at 14 31 46\" src=\"https://github.com/user-attachments/assets/59af0c0b-227d-4222-b688-c9ef38030971\" />\r\n",
+  "base_commit": "01d65fdf3c1c3300a71a311e5c418c4dc189e0e9",
+  "merge_commit": "305148a49910f68f3302f4d691eaa214111d36f2",
+  "license": "mit",
+  "changed_paths": [
+   "AGENTS.md",
+   "src/main/java/kz/ncanode/service/CrlService.java",
+   "src/main/java/kz/ncanode/wrapper/CrlWrapper.java",
+   "src/test/groovy/kz/ncanode/unit/service/CrlServiceExtraTest.groovy",
+   "src/test/groovy/kz/ncanode/unit/wrapper/CrlWrapperTest.groovy"
+  ],
+  "source_files": [
+   "src/main/java/kz/ncanode/service/CrlService.java",
+   "src/main/java/kz/ncanode/wrapper/CrlWrapper.java"
+  ],
+  "review_files": 123,
+  "detected": [
+   "docker",
+   "jvm",
+   "node",
+   "rest",
+   "ruby"
+  ],
+  "excluded": "detector routes no web framework with a datastore or cache"
+ },
+ {
+  "repo": "tibiadata/tibiadata-api-go",
+  "number": 630,
+  "rank": 0,
+  "title": "perf: use cimap to case insensitively look into maps with 0 allocations",
+  "body": "use cimap to case insensitively lookup using a map\r\nconvert many O(n) lookups (with allocations) into O(1) lookups (with 0 allocations)",
+  "base_commit": "d2df2d68d6e507b509884aa617bbd65cac1a9e9d",
+  "merge_commit": "3471da9b08aed016f6b2436336d67f6a6ceed164",
+  "license": "mit",
+  "changed_paths": [
+   "go.mod",
+   "go.sum",
+   "src/validation/go.mod",
+   "src/validation/go.sum",
+   "src/validation/highscore.go",
+   "src/validation/tibia.go",
+   "src/validation/validation.go"
+  ],
+  "source_files": [
+   "src/validation/highscore.go",
+   "src/validation/tibia.go",
+   "src/validation/validation.go"
+  ],
+  "review_files": 30,
+  "detected": [
+   "docker",
+   "go",
+   "grpc",
+   "kubernetes",
+   "mongodb",
+   "rest"
+  ]
+ },
+ {
+  "repo": "skyhook-io/radar",
+  "number": 1043,
+  "rank": 0,
+  "title": "perf(timeline): reuse the cache-computed diff instead of recomputing per update",
+  "body": "## Summary\n\nEvery resource update was computing its diff **twice**. The informer cache computes `change.Diff` (consumed by the SSE change feed) before firing `OnChange`, but the timeline path (`recordToTimelineStore`) discarded it and recomputed the identical `ComputeDiff`. On high-churn kinds \u2014 Pod/Deployment/ReplicaSet status updates, the busiest traffic on an active cluster \u2014 the diff is the heaviest per-event operation (for generic CRDs it's a DeepCopy of both objects + a recursive normalize + `reflect.DeepEqual` over the full trees), and it was paid twice for zero added information.\n\n## What changed\n\n`recordToTimelineStore` now accepts the already-computed diff and reuses it on the hot path:\n- Both production callers (typed cache `OnChange` and dynamic/CRD cache `OnChange`) pass `change.Diff` \u2014 which the cache layer already computed via the same `ComputeDiff(kind, oldObj, newObj)` over the same objects.\n- Callers without a precomputed diff (tests, any non-cache path) pass `diffPrecomputed=false` and compute as before \u2014 behavior unchanged.\n\nThe result is **identical on the normal path**: the reused diff is the same `ComputeDiff` over the same old/new objects (verified for both the typed and dynamic caches), and the downstream conversion to `timeline.DiffInfo`, the no-diff generation-bump fallback, and the recreate-join path are all untouched.\n\nOne deliberate edge: if a dynamic/CRD differ *panics*, the cache layer's `safeCallback` leaves `change.Diff` nil and the timeline now records the generation-bump fallback instead of recomputing. Previously the recompute would panic again and the whole record was dropped \u2014 so this degrades to **more** information, not less. (Differ panics are a bug-only path; this is a strict robustness improvement, not a regression.)\n\nThis is the first of a set of audited hot-path optimizations; scope is deliberately just this one change.\n\n## Testing\n\n- `go build ./...` \u2713 \u00b7 `go test ./internal/k8s/... ./internal/server/...` \u2713 \u00b7 `go test -race ./internal/k8s/...` (timeline/diff/recreate paths) \u2713\n- New focused regression test `TestRecordToTimelineStore_PrecomputedDiffMatchesRecompute` asserts the precomputed-diff timeline entry is identical to the recompute path.\n- visual-test: n/a (backend-only, no UI change).\n\n<!-- CURSOR_SUMMARY -->\n---\n\n> [!NOTE]\n> **Low Risk**\n> Performance-only refactor with a fallback path and a regression test asserting identical timeline output; no API or UI changes.\n> \n> **Overview**\n> **Avoids double `ComputeDiff` on informer updates** by threading the diff the cache already built for the change feed into timeline recording instead of computing it again inside `recordToTimelineStore`.\n> \n> `recordToTimelineStore` now takes `precomputedDiff` and `diffPrecomputed`. Typed and dynamic `OnChange` handlers pass `change.Diff` with `diffPrecomputed=true`; tests and other callers pass `nil` and `false` so behavior matches the old recompute path. Recreate-join and generation-bump fallbacks are unchanged.",
+  "base_commit": "5d1b75ced475cd8fd317719d0980213d5f273e83",
+  "merge_commit": "353aa6909406421f4a47380162f2db6b689f1b52",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "internal/k8s/cache.go",
+   "internal/k8s/dedup_diff_test.go",
+   "internal/k8s/dynamic_cache.go",
+   "internal/k8s/noisy_filter_audit_test.go",
+   "internal/k8s/recreate_stash_test.go"
+  ],
+  "source_files": [
+   "internal/k8s/cache.go",
+   "internal/k8s/dynamic_cache.go"
+  ],
+  "review_files": 985,
+  "detected": [
+   "docker",
+   "go",
+   "grpc",
+   "kafka",
+   "kubernetes",
+   "mysql",
+   "node",
+   "postgres",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "Deen-Bridge/dnb-backend",
+  "number": 508,
+  "rank": 0,
+  "title": "perf: remove N+1 populate patterns in list endpoints",
+  "body": "Closes #464\n\n## Summary\nAudit of `src/controllers` and `src/services` for per-item queries / populate in loops, plus list queries missing `.lean()`. Most list endpoints (courses, reels, books, reading groups, notifications) already use a single query-level `populate()`, so the clear wins were small.\n\n### Fixed\n- `badge.service.js` `checkAndAwardBadges`: replaced a `UserBadge.findOne()` per eligible badge (loop) with one batched `UserBadge.find({user}).select('badge')` and a Set lookup. Added `.lean()` to the read-only `CourseProgress` (populate course) and `Badge` reads; none are saved or use methods/virtuals. Returned `newlyAwarded` docs are unchanged.\n- `notificationController.js` list: the list query and two `countDocuments` ran sequentially; now `Promise.all`. Response shape unchanged.\n\n### Not fixed (follow-up)\n| Location | Observation |\n|---|---|\n| `services/reading-group.service.js` getGroups/getGroup | no `.lean()`; need to confirm toJSON/virtuals not relied on |\n| `controllers/stellar/pledgeController.js` listPledgeCycles | no `.lean()` |\n| `controllers/stellar/paymentController.js` ~1114/1157 transaction lists | no `.lean()`; check consumers |\n| `controllers/courses/courseController.js`, `books/bookController.js`, `categoryController.js` | list queries without `.lean()` |\n| `services/badge.service.js` | `UserBadge.findById().populate('badge')` after each create (could reuse already-loaded badge doc) |\n| `controllers/stellar/scholarshipController.js:42`, `services/analytics/courseAnalyticsService.js:201` | per-item async map; not inspected in depth |\n\n## Testing\n`npm test -- test/badge.test.js test/notification.test.js test/bulkNotification.test.js`: 3 suites, 16 tests pass. No new test added (existing badge test covers the award path).\n\nNote: query counts / latency were not measured locally; the improvement is by inspection (fewer round trips), not benchmarked.\n",
+  "base_commit": "18c3a43b085a19fbef85935501937827726eb2d6",
+  "merge_commit": "f6d5230bfa06849d0e956267e02f4c06299a9ed6",
+  "license": "mit",
+  "changed_paths": [
+   "src/controllers/notificationController.js",
+   "src/services/badge.service.js"
+  ],
+  "source_files": [
+   "src/controllers/notificationController.js",
+   "src/services/badge.service.js"
+  ],
+  "review_files": 400,
+  "detected": [
+   "docker",
+   "kubernetes",
+   "mongodb",
+   "node",
+   "redis",
+   "rest",
+   "rust",
+   "serverless"
+  ]
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "number": 4106,
+  "rank": 0,
+  "title": "perf(project): resolve GitOps compose paths once per list request",
+  "body": "## Checklist\n\n- [ ] This PR is **not** opened from my fork\u2019s `main` branch\n- [ ] All new user-facing strings are translated via Paraglide (`m.*()`)\n\n## What This PR Implements\n\n<!-- Overview of this change -->\n\n<!-- All PRs should reference an existing issue. Use \u201cFixes #1234\u201d or \u201cAddresses #1234\u201d. -->\n<!-- For minor documentation fixes, explain why the change is needed. -->\n\nFixes:\n\n## Changes Made\n\n## Testing Done\n\n## AI Tool Used (if applicable)\n\n<!-- If you used AI coding assistance, disclose it here. See AI_POLICY.md for details. -->\n\n## Additional Context\n\n<!-- Any additional information reviewers should know -->\n\n\n\n\n\n\n<!-- greptile_comment -->\n\n<!-- greptile_summary -->\n\n**Disclaimer** Greptiles Reviews use AI, make sure to check over its work.\n\nTo better help train Greptile on our codebase, if the comment is useful and valid **Like** the comment, if its not helpful or invalid **Dislike**\n\nTo have Greptile Re-Review the changes, mention `greptileai`.\n\n<h2><a href=\"https://app.greptile.com/api/retrigger?id=65618808\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://greptile-static-assets.s3.amazonaws.com/badges/RetriggerDark.svg?v=2\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://greptile-static-assets.s3.amazonaws.com/badges/Retrigger.svg?v=2\"><img alt=\"Retrigger\" src=\"https://greptile-static-assets.s3.amazonaws.com/badges/Retrigger.svg?v=2\" align=\"right\"></picture></a>Confidence Score: 5/5</h2>\n\nThe PR appears safe to merge; the prior transient-error caching concern is fixed and the test suite now follows the required table-driven structure.\n\n<details open><summary>Summary</summary>\n\nThis PR improves project-list performance by creating a request-scoped metadata environment that batches GitOps compose-path lookups and shares successful compose-file resolutions between metadata and update enrichment.\n- Preloads GitOps compose paths for listed projects in one database query, with per-project fallback if batching fails.\n- Memoizes successful compose-file resolutions while retrying transient failures.\n- Reuses a settings snapshot and compose-resolution environment throughout each list request.\n- Refactors memoization coverage into table-driven parallel subtests.\n</details>\n\n<sub>Reviews (3) \u00b7 Last reviewed commit: [\"perf(project): resolve GitOps compose pa...\"](https://github.com/getarcaneapp/arcane/commit/bea599c6a005e923c78281d7e8cc61164f7d50a8)</sub>\n\n<!-- /greptile_comment -->",
+  "base_commit": "423cd549b74271f8a4b3992cf04e5920d6a06dc5",
+  "merge_commit": "f5d6f37dba1c9cab72271d6e9d183cbe1f7fd79e",
+  "license": "bsd-3-clause",
+  "changed_paths": [
+   "backend/internal/project/compose_file_memo_test.go",
+   "backend/internal/project/project.go",
+   "backend/internal/project/project_details.go",
+   "backend/internal/project/project_listing.go",
+   "backend/internal/project/service_test.go"
+  ],
+  "source_files": [
+   "backend/internal/project/project.go",
+   "backend/internal/project/project_details.go",
+   "backend/internal/project/project_listing.go"
+  ],
+  "review_files": 1010,
+  "detected": [
+   "clickhouse",
+   "docker",
+   "elasticsearch",
+   "go",
+   "graphql",
+   "grpc",
+   "node",
+   "object-storage",
+   "postgres",
+   "rest",
+   "sqlite",
+   "task-queue"
+  ]
+ },
+ {
+  "repo": "nvawntien/astracode",
+  "number": 41,
+  "rank": 0,
+  "title": "perf: harden production ingress and align deployment config",
+  "body": "## Summary\r\n\r\nThis PR prepares the next production release by reconciling production-tested infrastructure settings with the repository and cleaning up release documentation.\r\n\r\n## Changes\r\n\r\n### Envoy ingress\r\n\r\n- Increase Envoy `nofile` limit to:\r\n\r\n```yaml\r\nulimits:\r\n  nofile:\r\n    soft: 65536\r\n    hard: 65536\r\n```\r\n\r\n- This addresses the confirmed production failure during the 1K massive-burst benchmark where Envoy logged:\r\n\r\n```text\r\nsocket(2) failed, got error: Too many open files\r\nClient socket failure\r\n```\r\n\r\n- No changes were made to:\r\n  - Envoy routing\r\n  - worker concurrency\r\n  - connection pools\r\n  - circuit breakers\r\n  - SSE timeout\r\n  - KrakenD topology\r\n\r\n### Kafka topology\r\n\r\nAlign fresh/bootstrap Kafka configuration with the current production topology:\r\n\r\n| Topic | Before | After |\r\n|---|---:|---:|\r\n| `judge.submission.jobs` | 3 | 6 |\r\n| `judge.submission.results` | 3 | 6 |\r\n| `judge.submission.jobs.dlt` | 1 | 1 |\r\n\r\nReplication factor remains `1`.\r\n\r\nExisting topics are not resized because the bootstrap remains idempotent with `--create --if-not-exists`.\r\n\r\n### Documentation\r\n\r\n- Update Kafka topology documentation to reflect the current `6 / 6 / 1` partition layout.\r\n- Remove release/tag-specific descriptions from `README.md`.\r\n- Keep release notes and version history in GitHub Releases instead of duplicating them in the README.\r\n\r\n## Production configuration ownership\r\n\r\nJudge production configuration remains node-owned and is not duplicated into Git:\r\n\r\n```text\r\n/etc/astracode/judge-node.compose.yml\r\n/etc/astracode/judge/config.yaml\r\n```\r\n\r\nThe deployment model remains unchanged.\r\n\r\n## Scope\r\n\r\nThis PR does **not** change:\r\n\r\n- Judge execution behavior\r\n- `WORKER_POOL_SIZE`\r\n- `ES_PARALLELISM`\r\n- Judge concurrency logic\r\n- application business logic\r\n- KrakenD\r\n- database schema\r\n- benchmark semantics\r\n\r\n## Validation\r\n\r\nValidated with:\r\n\r\n```bash\r\ngit diff --check\r\nbash -n infra/kafka/kafka-init.sh\r\ndocker compose ... config --quiet\r\n```\r\n\r\nRelevant local/unit validation completed successfully.\r\n\r\n## Production follow-up\r\n\r\nAfter release deployment:\r\n\r\n1. Verify Envoy effective `nofile`:\r\n\r\n```bash\r\ndocker inspect judge_envoy --format '{{json .HostConfig.Ulimits}}'\r\n\r\npid=\"$(docker inspect -f '{{.State.Pid}}' judge_envoy)\"\r\ngrep '^Max open files' \"/proc/$pid/limits\"\r\n```\r\n\r\nExpected:\r\n\r\n```text\r\nMax open files            65536                65536                files\r\n```\r\n\r\n2. Verify Judge node-owned runtime tuning remains unchanged.\r\n3. Re-run the same 1K massive-burst benchmark for a clean before/after comparison.",
+  "base_commit": "bca56e4037de5bc17f3213e8faf16f8df21df1f8",
+  "merge_commit": "7ee3e2dcc476506beba0eeb27735259f25b8ad6c",
+  "license": "mit",
+  "changed_paths": [
+   ".gitignore",
+   "README.md",
+   "docker-compose.yml",
+   "docs/DEPLOYMENT.md",
+   "docs/codebase/DATA.md",
+   "infra/kafka/kafka-init.sh",
+   "services/auth/cmd/provision-benchmark-users/main.go",
+   "services/auth/internal/application/usecase/benchmark/provision_users.go",
+   "services/auth/internal/application/usecase/benchmark/provision_users_test.go",
+   "tools/benchmark/api/README.md",
+   "tools/benchmark/api/api.js",
+   "tools/benchmark/api/run.sh",
+   "tools/benchmark/judge/README.md",
+   "tools/benchmark/judge/analysis/README.md",
+   "tools/benchmark/judge/analysis/judge_analysis/api.py",
+   "tools/benchmark/judge/analysis/judge_analysis/capacity.py",
+   "tools/benchmark/judge/analysis/judge_analysis/cli.py",
+   "tools/benchmark/judge/analysis/judge_analysis/compare.py",
+   "tools/benchmark/judge/analysis/judge_analysis/metrics.py",
+   "tools/benchmark/judge/analysis/judge_analysis/plots.py",
+   "tools/benchmark/judge/analysis/judge_analysis/report.py",
+   "tools/benchmark/judge/analysis/judge_analysis/unified.py",
+   "tools/benchmark/judge/analysis/tests/conftest.py",
+   "tools/benchmark/judge/analysis/tests/test_analysis.py",
+   "tools/benchmark/judge/cmd/bootstrap-sessions/main.go",
+   "tools/benchmark/judge/internal/bootstrap/bootstrap.go",
+   "tools/benchmark/judge/internal/bootstrap/bootstrap_test.go",
+   "tools/benchmark/judge/internal/client/client.go",
+   "tools/benchmark/judge/internal/client/client_test.go",
+   "tools/benchmark/judge/internal/command/command.go",
+   "tools/benchmark/judge/internal/command/command_test.go",
+   "tools/benchmark/judge/internal/config/config.go",
+   "tools/benchmark/judge/internal/config/config_test.go",
+   "tools/benchmark/judge/internal/credentials/credentials.go",
+   "tools/benchmark/judge/internal/credentials/credentials_test.go",
+   "tools/benchmark/judge/internal/model/model.go",
+   "tools/benchmark/judge/internal/report/report.go",
+   "tools/benchmark/judge/internal/resources/nofile.go",
+   "tools/benchmark/judge/internal/resources/nofile_test.go",
+   "tools/benchmark/judge/internal/runner/runner.go",
+   "tools/benchmark/judge/internal/runner/runner_test.go",
+   "tools/benchmark/judge/internal/scheduler/scheduler.go",
+   "tools/benchmark/judge/internal/scheduler/scheduler_test.go",
+   "tools/benchmark/judge/internal/stats/stats.go",
+   "tools/benchmark/judge/internal/systemconfig/systemconfig.go",
+   "tools/benchmark/judge/internal/systemconfig/systemconfig_test.go",
+   "tools/benchmark/judge/users-10k.local.json",
+   "tools/benchmark/system-config.example.json",
+   "tools/benchmark/system-config.local.json"
+  ],
+  "source_files": [
+   "services/auth/cmd/provision-benchmark-users/main.go"
+  ],
+  "review_files": 334,
+  "detected": [
+   "docker",
+   "go",
+   "grpc",
+   "kafka",
+   "node",
+   "object-storage",
+   "postgres",
+   "python",
+   "redis",
+   "rest"
+  ]
+ },
+ {
+  "repo": "Mag1cFall/AIStudio2API",
+  "number": 25,
+  "rank": 0,
+  "title": "perf(webui): \u4f18\u5316\u7ba1\u7406\u9875\u65e5\u5fd7\u6e32\u67d3\u6027\u80fd\u4e0e\u521d\u59cb\u540c\u6b65\u5206\u5757\uff0c\u907f\u514d\u65e5\u5fd7\u5806\u79ef\u5361\u6b7b",
+  "body": "### \ud83c\udfaf \u89e3\u51b3\u7684\u95ee\u9898\n\n\u5f53\u670d\u52a1\u6301\u7eed\u8fd0\u884c\u6216\u8bf7\u6c42\u8f83\u591a\u65f6\uff0c\u670d\u52a1\u5185\u5b58\u65e5\u5fd7\u4f1a\u9010\u6b65\u7d2f\u79ef\uff08\u9ed8\u8ba4\u4e0a\u9650 2000 ~ 2200 \u6761\uff09\u3002\u6b64\u65f6\u7528\u6237\u6253\u5f00\u6216\u5237\u65b0\u7ba1\u7406\u9875\u9762\uff0c\u5e38\u5e38\u51fa\u73b0\u6d4f\u89c8\u5668\u4e3b\u7ebf\u7a0b\u88ab\u5360\u6b7b\u3001\u754c\u9762\u5361\u987f\u6570\u79d2\u751a\u81f3\u65e0\u54cd\u5e94\u5d29\u6e83\u7684\u95ee\u9898\u3002\n\n**\u6839\u672c\u539f\u56e0\u5b9a\u4f4d\uff1a**\n1. **\u540e\u7aef\u521d\u59cb\u5168\u91cf\u503e\u6cfb**\uff1a`/api/events` (SSE) \u5efa\u7acb\u8ba2\u9605\u65f6\uff0c\u76f4\u63a5\u628a\u5f53\u524d\u5168\u90e8\u7684 `registry.logs`\uff08\u591a\u8fbe 2000 \u6761\uff09\u65e0\u8282\u5236\u5730\u4e00\u6b21\u6027\u704c\u7ed9\u5ba2\u6237\u7aef\uff1b\n2. **\u524d\u7aef\u65e0\u8282\u6d41\u54cd\u5e94\u5f0f\u6296\u52a8**\uff1a\u524d\u7aef\u6bcf\u6536\u5230\u4e00\u6761 `log` \u4e8b\u4ef6\u5c31\u76f4\u63a5 push \u5230\u54cd\u5e94\u5f0f\u6570\u7ec4\uff0c\u5e76\u53d1\u8bf7\u6c42\u6216\u521d\u59cb\u8fde\u63a5\u65f6\u5f15\u53d1\u6210\u767e\u4e0a\u5343\u6b21\u8fde\u7eed\u5fae\u4efb\u52a1\u66f4\u65b0\u4e0e\u91cd\u6392\uff1b\n3. **DOM \u8282\u70b9\u77ac\u95f4\u8fc7\u8f7d**\uff1a`LogsPanel.vue` \u76f4\u63a5\u901a\u8fc7 `v-for` \u5168\u91cf\u6e32\u67d3\u6240\u6709\u65e5\u5fd7\uff08\u6bcf\u6761\u5361\u7247\u5305\u542b\u72b6\u6001\u5fbd\u6807\u3001\u8be6\u7ec6\u7528\u91cf\u6307\u6807\u6298\u53e0\u6846\u3001\u65f6\u95f4\u7ebf\u6b65\u9aa4\u3001JSON \u6811\u7b49\uff09\uff0c\u77ac\u95f4\u751f\u6210\u4e0a\u4e07\u4e2a\u771f\u5b9e DOM \u8282\u70b9\uff1b\n4. **\u8fc7\u6ee4\u6027\u80fd\u5f00\u9500\u8fc7\u5927**\uff1a\u8ba1\u7b97\u5c5e\u6027\u5bf9\u6bcf\u4e00\u6761\u65e5\u5fd7\u90fd\u6267\u884c\u5168\u91cf `JSON.stringify` \u68c0\u7d22\uff0c\u5728\u5927\u91cf\u6570\u636e\u4e0b\u4e25\u91cd\u6d6a\u8d39 CPU\uff1b\n5. **\u9ed8\u8ba4\u56fa\u5b9a\u9996\u5c4f**\uff1a\u6bcf\u6b21\u8fdb\u5165\u6216\u5237\u65b0\u7ba1\u7406\u9875\u9ed8\u8ba4\u5f3a\u5236\u843d\u5728\u300c\u65e5\u5fd7\u300d\u9875\uff0c\u653e\u5927\u4e0a\u8ff0\u95ee\u9898\u3002\n\n---\n\n### \ud83d\udee0\ufe0f \u4f18\u5316\u65b9\u6848\n\n1. **\u540e\u7aef\uff1a\u521d\u59cb\u4e0b\u53d1\u5206\u5757\u7ea6\u675f**\n   - \u5f15\u5165 `adminLogInitialEvents = 200` \u5e38\u91cf\uff0c\u65b0\u8fde\u63a5\u5efa\u7acb\u65f6\u4ec5\u63a8\u9001\u6700\u8fd1 200 \u6761\u521d\u59cb\u65e5\u5fd7\uff0c\u65e2\u4fdd\u8bc1\u8fdb\u5165\u9875\u9762\u65f6\u80fd\u770b\u5230\u4e0a\u4e0b\u6587\uff0c\u53c8\u907f\u514d\u77ac\u95f4\u5835\u585e\u7f51\u7edc\u4e0e\u4e3b\u7ebf\u7a0b\u3002\n2. **\u524d\u7aef\uff1a\u5fae\u4efb\u52a1\u65e5\u5fd7\u5408\u5e76\u7f13\u51b2 (40ms Batching)**\n   - \u5728 `App.vue` \u4e2d\u5bf9\u5b9e\u65f6\u8fdb\u5165\u7684\u65e5\u5fd7\u505a\u8f7b\u91cf\u7f13\u51b2\uff0c\u9ad8\u9891\u5230\u6765\u65f6\u5408\u5e76\u6279\u6b21\u66f4\u65b0\u54cd\u5e94\u5f0f\u6570\u636e\uff0c\u6d88\u9664\u754c\u9762\u9891\u7e41\u91cd\u6392\u3002\n3. **\u524d\u7aef\uff1aDOM \u6e32\u67d3\u5207\u7247\u4e0e\u6309\u9700\u7ffb\u9605**\n   - `LogsPanel.vue` \u9650\u5236 DOM \u4ec5\u6302\u8f7d\u6700\u65b0\u7684 200 \u6761\u65e5\u5fd7\uff0c\u8d85\u8fc7\u90e8\u5206\u63d0\u4f9b\u300c\u52a0\u8f7d\u66f4\u65e9\u65e5\u5fd7\u300d\u6309\u94ae\u4f9b\u7528\u6237\u6309\u9700\u5c55\u5f00\uff0c\u5185\u5b58\u4e2d\u4fdd\u7559\u5b8c\u6574\u6570\u636e\u4f9b\u68c0\u7d22\uff0c\u5f7b\u5e95\u675c\u7edd DOM \u8282\u70b9\u7206\u70b8\u3002\n4. **\u524d\u7aef\uff1a\u8f7b\u91cf\u5b57\u6bb5\u5339\u914d\u66ff\u4ee3\u5168\u91cf\u5e8f\u5217\u5316**\n   - \u68c0\u7d22\u65f6\u9488\u5bf9 `message`\u3001`source`\u3001`event`\u3001`request.id/model/path/status/error` \u7b49\u6838\u5fc3\u5b57\u6bb5\u76f4\u63a5\u505a\u5b57\u7b26\u4e32\u5339\u914d\uff0c\u79fb\u9664\u6602\u8d35\u4e14\u91cd\u590d\u7684 `JSON.stringify`\u3002\n5. **\u524d\u7aef\uff1a\u8bb0\u5fc6\u5f53\u524d\u6807\u7b7e\u9875 (Tab Persistence)**\n   - \u901a\u8fc7 `localStorage` \u8bb0\u5f55\u5f53\u524d\u9009\u4e2d\u7684 Tab\uff0c\u9875\u9762\u5237\u65b0\u6216\u65ad\u7ebf\u91cd\u8fde\u65f6\u4fdd\u6301\u5728\u539f\u754c\u9762\uff08\u5982\u8d26\u53f7\u6216\u8bf7\u6c42\u9875\uff09\uff0c\u4e0d\u518d\u65e0\u6761\u4ef6\u5f3a\u5236\u5207\u6362\u8fdb\u5b9e\u65f6\u65e5\u5fd7\u6d41\u3002\n6. **\u591a\u8bed\u8a00\u4e0e\u89c4\u8303**\n   - \u8865\u9f50\u4e2d\u82f1\u6587\u591a\u8bed\u8a00\u952e\u503c\uff1b\u901a\u8fc7 `npm run lint`\u3001`npm run build`\u3001`go vet` \u4ee5\u53ca\u4ea4\u53c9\u7f16\u8bd1\u9a8c\u8bc1\u3002",
+  "base_commit": "07a686897c17bcabfb004972d80f9821bb11d3d8",
+  "merge_commit": "c4ebe111cd7aa74871cd3e87c2343d63c2175011",
+  "license": "mit",
+  "changed_paths": [
+   "internal/app/admin.go",
+   "web/src/App.vue",
+   "web/src/components/LogsPanel.vue",
+   "web/src/i18n.ts"
+  ],
+  "source_files": [
+   "internal/app/admin.go",
+   "web/src/i18n.ts"
+  ],
+  "review_files": 96,
+  "detected": [
+   "go",
+   "grpc",
+   "node",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "artilleryio/artillery",
+  "number": 3717,
+  "rank": 0,
+  "title": "perf: shrink worker Docker image from ~1.7GB to ~700MB",
+  "body": "## Description\r\n\r\nA set of optimizations for the worker image to reduce its size.\r\n\r\nMulti-stage build: compile aws-lambda-ric in builder stage, discard ~500MB build toolchain (g++, cmake, headers) from final image.\r\n\r\nBase image: swap mcr.microsoft.com/playwright:v1.58.1 (~2GB, all 3 browsers + all system deps) for node:24.14.1-bookworm-slim + targeted `npx playwright install --with-deps chromium` (~560MB). Saves ~900MB.\r\n\r\nAWS CLI: pip-installed v1 (~350MB, botocore JSON bloat) replaced with v2 standalone installer (~200MB, bundles own Python).\r\n\r\nAzure CLI: full azure-cli==2.76.0 (~800MB, 200+ transitive packages) replaced with azure-storage-blob + azure-storage-queue + azure-identity SDKs (~6MB). A new azure-storage-helper Python script wraps the 6 az subcommands actually used by loadgen-worker.\r\n\r\n## Pre-merge checklist\r\n\r\n**This is for use by the Artillery team. Please leave this in if you're contributing to Artillery.**\r\n\r\n- [ ] Does this require an update to the docs?\r\n- [ ] Does this require a changelog entry?\r\n",
+  "base_commit": "73e28adf2403063345cc4ce40b8449009ba6e04b",
+  "merge_commit": "37061d0b2206c6638b9cd436dc29d4a10e7fc9d8",
+  "license": "mpl-2.0",
+  "changed_paths": [
+   "packages/artillery/lib/platform/aws-ecs/worker/Dockerfile",
+   "packages/artillery/lib/platform/aws-ecs/worker/azure-storage-helper",
+   "packages/artillery/lib/platform/aws-ecs/worker/loadgen-worker",
+   "packages/artillery/lib/platform/aws-lambda/index.js"
+  ],
+  "source_files": [
+   "packages/artillery/lib/platform/aws-lambda/index.js"
+  ],
+  "review_files": 145,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "graphql",
+   "grpc",
+   "influxdb",
+   "kubernetes",
+   "node",
+   "object-storage",
+   "redis",
+   "rest",
+   "serverless",
+   "sqlite",
+   "sqs",
+   "task-queue"
+  ]
+ },
+ {
+  "repo": "opexdev/core",
+  "number": 712,
+  "rank": 0,
+  "title": "Optimize wallet and api",
+  "body": "",
+  "base_commit": "86ab7833fff9ee662b944c861055d1ecf77fb9e6",
+  "merge_commit": "6331770a182f53341fbe61983e60c924b641b114",
+  "license": "mit",
+  "changed_paths": [
+   "accountant/accountant-app/src/main/resources/application.yml",
+   "accountant/accountant-ports/accountant-wallet-proxy/src/main/kotlin/co/nilin/opex/accountant/ports/walletproxy/config/WebClientConfig.kt",
+   "api/api-app/src/main/kotlin/co/nilin/opex/api/app/config/RateLimitConfig.kt",
+   "wallet/wallet-app/src/main/resources/application.yml"
+  ],
+  "source_files": [
+   "accountant/accountant-ports/accountant-wallet-proxy/src/main/kotlin/co/nilin/opex/accountant/ports/walletproxy/config/WebClientConfig.kt",
+   "api/api-app/src/main/kotlin/co/nilin/opex/api/app/config/RateLimitConfig.kt"
+  ],
+  "review_files": null,
+  "detected": [],
+  "excluded": "base commit could not be fetched",
+  "fetch_error": "could not fetch opexdev/core@86ab7833fff9ee662b944c861055d1ecf77fb9e6: error: The following untracked working tree files would be overwritten by checkout:\n\t.github/ISSUE_TEMPLATE/bug_report.md\n\t.github/ISSUE_TEMPLATE/feature_request.md\n\t.github/workflows/dev-otc.yml\n\t.github/workflows/dev.yml\n\t.gith"
+ },
+ {
+  "repo": "danielgtaylor/huma",
+  "number": 931,
+  "rank": 0,
+  "title": "perf(schema): optimize convertType with fast paths for compatible types",
+  "body": "Implement fast paths in convertType to avoid expensive slice traversal when types are identical or have compatible underlying types (e.g. `json.RawMessage` to `[]byte`).",
+  "base_commit": "88c6cda0a475a83c8bd1697b7010ce7913d9586b",
+  "merge_commit": "b4a4ec85cae82f0100328723fd3e779488053466",
+  "license": "mit",
+  "changed_paths": [
+   "schema.go"
+  ],
+  "source_files": [
+   "schema.go"
+  ],
+  "review_files": 36,
+  "detected": [
+   "firestore",
+   "go",
+   "graphql",
+   "grpc",
+   "object-storage",
+   "rest"
+  ]
+ },
+ {
+  "repo": "ironcalc/IronCalc",
+  "number": 896,
+  "rank": 0,
+  "title": "FIX: few frontend ux and performance improvements",
+  "body": "I was writing a nix derivation for IronCalc as part of [Nix@NGI team](https://nixos.org/community/teams/ngi/) effort. wip nixpkgs pr - https://github.com/NixOS/nixpkgs/pull/500348\r\n\r\nDuring which I encountered these issues.\r\n\r\n- 500 error when model is not found in the db instead of 404\r\n- init_db.sql is not idempotent\r\n- model doesn't load from the url when lang is set to `en-GB` in the UI. due to `en-GB` being handled specially in `getShortLocaleCode`\r\n- ~~one of the tests was failing due to incorrect error message~~",
+  "base_commit": "6b4f588be04b4f1b35746a583e838c57061e0bac",
+  "merge_commit": "8461ff71347ab19145cd7ad50ef829181ba765c2",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "webapp/IronCalc/src/components/Worksheet/usePointer.ts",
+   "webapp/app.ironcalc.com/frontend/src/App.tsx"
+  ],
+  "source_files": [
+   "webapp/IronCalc/src/components/Worksheet/usePointer.ts",
+   "webapp/app.ironcalc.com/frontend/src/App.tsx"
+  ],
+  "review_files": 267,
+  "detected": [
+   "docker",
+   "graphql",
+   "neo4j",
+   "node",
+   "python",
+   "rabbitmq",
+   "rest",
+   "rust",
+   "serverless",
+   "sqlite",
+   "task-queue"
+  ]
+ },
+ {
+  "repo": "RobinTail/express-zod-api",
+  "number": 3497,
+  "rank": 0,
+  "title": "fix(perf): Iterating `Set` through `::values()`",
+  "body": "Complements #3495 \r\n\r\nSet::values()::map() is stable in Node 22 without flags\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Performance**\n  * Improved set-iteration handling for shutdown-related workflows, reducing unnecessary array creation and improving memory efficiency.\n  * Added a benchmark to compare set iteration approaches and validate the faster pattern.\n* **Style**\n  * Updated linting guidance to discourage less efficient set-to-array mapping patterns in favor of direct iteration.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "base_commit": "453e6c54ff5d520b3e1bd5bea8e8e2ecaded4bf4",
+  "merge_commit": "efa34cedbfc4967622c5ac98eb33bbac909066e2",
+  "license": "mit",
+  "changed_paths": [
+   "eslint.config.js",
+   "express-zod-api/bench/set-iter.bench.ts",
+   "express-zod-api/src/graceful-shutdown.ts",
+   "express-zod-api/src/server-helpers.ts"
+  ],
+  "source_files": [
+   "eslint.config.js",
+   "express-zod-api/src/graceful-shutdown.ts",
+   "express-zod-api/src/server-helpers.ts"
+  ],
+  "review_files": 81,
+  "detected": [
+   "node",
+   "rest"
+  ],
+  "excluded": "detector routes no web framework with a datastore or cache"
+ },
+ {
+  "repo": "PokeAPI/pokeapi",
+  "number": 1688,
+  "rank": 0,
+  "title": "Fix N+1 query in evolution chain serializer",
+  "body": "## Problem\n\n`EvolutionChainDetailSerializer.build_chain_link_entry` recurses over the evolution tree and, for every non-root species, ran its own `PokemonEvolution.objects.filter(evolved_species=...)` query with ~13 `select_related` joins. A linear 3-stage chain fires 2 of these queries; Eevee's 9-species chain fires 8.\n\n## Fix\n\nFetch all `PokemonEvolution` rows for the whole chain in a single query (`filter(evolved_species__evolution_chain=obj)`), group them in memory by `evolved_species_id`, and look them up from that dict during the recursion instead of querying per node. The query only runs when some species in the chain evolves from another, so single-species chains still issue no evolution query at all. The pk ordering (already applied by `PokeApiManager`) is spelled out explicitly at the call site.\n\n## Performance impact\n\nMeasured against the full dataset (DB built from the CSVs, all 540 evolution chains serialized with the old and new code):\n- **Output:** byte-identical JSON for all 540 chains; OpenAPI schema unchanged.\n- **Queries:** 1106 \u2192 953 total (\u221214%). 134 chains need fewer queries (e.g. Eevee's 9-species chain: 9 \u2192 2), none need more.\n- The 65 queries for Milcery \u2192 Alcremie are **not** addressed here. They come from per-row lookups in `PokemonEvolutionSerializer` (`condition_expression` / `allowed_natures`), handled separately in #1690.\n- In production, cachalot + Redis serves repeated queries from cache, so this mainly helps cold-cache requests.\n\n## Test plan\n\n- `test_evolution_chain_api_query_count_does_not_scale_with_chain_size`: a 1-branch and a 6-branch chain issue the same number of queries (fails with `8 != 3` without the fix).\n- `test_evolution_chain_api_single_species_chain_skips_evolution_query`: a single-species chain issues no `PokemonEvolution` query.\n- `test_evolution_chain_api_evolution_details_order_with_many_rows_for_same_species`: `evolution_details` keeps creation order for a species with several evolution rows.\n- `manage.py test pokemon_v2` passes (66 tests); `ruff check`, `ruff format --check` and `ty` pass.",
+  "base_commit": "89289e314ae20a34e8159a34a5fe646e656d6149",
+  "merge_commit": "bc92d3b6029ef1abe9e7ad424c400b338f3c11fe",
+  "license": "bsd-3-clause",
+  "changed_paths": [
+   "pokemon_v2/serializers.py",
+   "pokemon_v2/tests.py"
+  ],
+  "source_files": [
+   "pokemon_v2/serializers.py",
+   "pokemon_v2/tests.py"
+  ],
+  "review_files": 19,
+  "detected": [
+   "couchbase",
+   "docker",
+   "go",
+   "graphql",
+   "kubernetes",
+   "node",
+   "postgres",
+   "python",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "Athou/commafeed",
+  "number": 2089,
+  "rank": 0,
+  "title": "Performance: Batch guid check on feed refresh",
+  "body": "Instead of querying the database once per entry to check if it already\r\nexists, fetch all existing guids for a feed in a single query upfront\r\nand filter new entries in memory before the per-entry loop.\r\n\r\nThe per-entry findExisting call inside addEntry is kept as a safety net\r\nfor concurrent inserts, but is now only reached for new entries.\r\n\r\nProfiling in real usage showed a ~50% reduction in guidHash queries,\r\nwith the check falling from the most expensive query to sixth in the ranking.",
+  "base_commit": "efc6c10ace78892f4bfbe9877fa12f3849aef94a",
+  "merge_commit": "ec35d846cf22c6ad573a7d7ace5584e1493523e9",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedEntryDAO.java",
+   "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java",
+   "commafeed-server/src/test/java/com/commafeed/integration/rest/LargeDatasetIT.java"
+  ],
+  "source_files": [
+   "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedEntryDAO.java",
+   "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java"
+  ],
+  "review_files": 244,
+  "detected": [
+   "docker",
+   "grpc",
+   "jvm",
+   "mysql",
+   "node",
+   "postgres",
+   "rest"
+  ]
+ },
+ {
+  "repo": "Paca-AI/paca",
+  "number": 463,
+  "rank": 0,
+  "title": "feat: implement infinite scroll for task columns and optimize loading\u2026",
+  "body": "## Summary\n\nRedesigns board view scrolling/pagination UX to fix the issues reported in #457, and converts task-column pagination to infinite scroll.\n\n- **Sticky column headers**: each column's header now sits outside its scroll area (structurally, not via CSS `sticky`), so it never scrolls out of view no matter how far down the column you scroll.\n- **Independent per-column scrolling**: columns now scroll vertically on their own, like Trello/Jira, instead of the whole board sharing one scroll container. The board container itself only scrolls horizontally.\n- **Fixed scroll jumping to the top on \"load more\"**: root cause was the whole board sharing a single scroll region \u2014 each column now keeps its own native scroll position, so loading more items in one column can no longer disturb the board's (or another column's) scroll position.\n- **Pinned \"Add task\" row**: like the header, it now sits outside the scrollable area at the bottom of the column, always reachable without scrolling.\n- **Infinite scroll pagination**: replaced the \"View more\" button with scroll-triggered loading (reusing the app's existing `createLoadMoreScrollHandler`, the same pattern used by the epic/team-member pickers). A small spinner row shows while a page is loading.\n- **Auto-load when the first page doesn't fill the column**: if a column's initial page (e.g. a small configured page size) doesn't produce enough content to make it scrollable, no `scroll` event would ever fire to trigger more loading. Columns now detect this and keep requesting more pages on their own until either the content fills the viewport or there's nothing left to load.\n\n## Notable fixes along the way\n\n- **Duplicate-fetch race**: scroll events fire far more often than a deliberate click, so a fast scroll gesture could call \"load more\" several times before React's loading-state update actually took effect, double-fetching the same page. `handleLoadMoreColumn` now guards re-entrancy with a `useRef` (synchronous) instead of relying solely on state.\n- **Periodic full-board \"reload\" flash during active scrolling**: each \"load more\" was also bumping the column's React Query key (via the tracked expanded page size), which caused an *additional*, redundant background refetch of the whole column in parallel with the actual \"next page\" fetch \u2014 every single time. Chained across a fast scroll session, these overlapping refetches could leave a column's data briefly `undefined`, tripping the loading-skeleton gate and flashing the whole board back to a loading state mid-scroll (on top of roughly doubling backend load). Fixed by excluding page size from the query key \u2014 a column's key now only changes on a genuine filter/sort/search change, while an actual refetch (websocket invalidation, window refocus, etc.) still naturally picks up the current expanded depth.\n\n## Notes\n\n- Scope is the default (no-swimlane) board layout, which is what #457 describes. The niche, opt-in swimlanes grouping mode is unchanged \u2014 it doesn't hav",
+  "base_commit": "980bfe8207460108c8da80c6e5beaedea16e1aae",
+  "merge_commit": "1a9d5faf6d6fcbddec5f801df879e8eceb0d7ad0",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "apps/web/src/components/projects/interactions/board-view.test.tsx",
+   "apps/web/src/components/projects/interactions/board-view.tsx",
+   "apps/web/src/components/projects/interactions/interaction-layout.tsx"
+  ],
+  "source_files": [
+   "apps/web/src/components/projects/interactions/board-view.tsx",
+   "apps/web/src/components/projects/interactions/interaction-layout.tsx"
+  ],
+  "review_files": 664,
+  "detected": [
+   "docker",
+   "go",
+   "grpc",
+   "kubernetes",
+   "mysql",
+   "node",
+   "object-storage",
+   "postgres",
+   "rabbitmq",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "sudorandom/fauxrpc",
+  "number": 89,
+  "rank": 0,
+  "title": "\u26a1 Optimize string heuristics with caching and grouped checks",
+  "body": "### \ud83d\udca1 What: The optimization implemented\nThis PR optimizes the `stringByHeuristics` function in `gen_strings.go` by implementing a caching mechanism and refactoring the heuristic matching logic. \n\nKey changes:\n- **Decision Caching:** Uses a `sync.Map` to cache the mapping from a `protoreflect.FieldDescriptor` to a `heuristicFunc`. This ensures that the field name is only lowercased and matched against heuristics once per field descriptor.\n- **Grouped Matching:** Reorganized the `switch` statement to group related matches (e.g., all name-related matches) together, reducing the number of `strings.Contains` calls for fields that don't match those groups.\n- **Bug Fix:** Fixed a reachability bug where the `fullname` heuristic was never reached because it was preceded by a generic `name` check.\n- **Allocation Reduction:** Moved the static list of status values to a package-level variable to avoid redundant slice allocations.\n\n### \ud83c\udfaf Why: The performance problem it solves\nPreviously, `stringByHeuristics` would perform `strings.ToLower` and a series of `strings.Contains` checks every time a fake string was generated for a field. In large messages or batch generation scenarios, this resulted in thousands of redundant allocations and string scans for the same set of field descriptors.\n\n### \ud83d\udcca Measured Improvement\nWhile environment limitations (network timeouts) prevented establishing a formal benchmark baseline in the sandbox, the optimization provides a guaranteed performance improvement by:\n1. Eliminating O(N) string lowercasing allocations after the first call per field.\n2. Reducing the number of string scans from a linear sequence of checks to a grouped decision tree.\n3. Fixing a logic bug that improves the quality of generated data for \"fullname\" fields.\n\n\n---\n*PR created automatically by Jules for task [8648723066123848736](https://jules.google.com/task/8648723066123848736) started by @sudorandom*",
+  "base_commit": "fb91f049540dc5281cb371168a708aa243264084",
+  "merge_commit": "713e8e72357ff5e91b3955c808f05b0073c4dafe",
+  "license": "mit",
+  "changed_paths": [
+   "gen_strings.go"
+  ],
+  "source_files": [
+   "gen_strings.go"
+  ],
+  "review_files": 68,
+  "detected": [
+   "docker",
+   "go",
+   "grpc",
+   "node"
+  ],
+  "excluded": "detector routes no web framework with a datastore or cache"
+ },
+ {
+  "repo": "sparckles/Robyn",
+  "number": 1351,
+  "rank": 0,
+  "title": "perf: avoid unnecessary response body clone in IntoPyObject",
+  "body": "## Summary\n- `Response::into_pyobject` used `String::from_utf8(self.description.clone())` which clones the entire body `Vec<u8>` just to check UTF-8 validity, then the resulting `String` gets copied again into a `PyString`.\n- Replace with `std::str::from_utf8(&self.description)` which validates in-place with zero copies. PyO3 copies the `&str` directly into the Python string \u2014 one copy total instead of three.\n\n## Test plan\n- [ ] All existing integration tests pass (every test that returns a response body validates content correctness)\n- [ ] Both UTF-8 and non-UTF-8 response bodies work correctly (text responses and binary/file responses)\n\nMade with [Cursor](https://cursor.com)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Optimized the conversion of response objects with improved UTF-8 string handling mechanisms. Changes reduce memory overhead by eliminating unnecessary intermediate allocations during normal operation while fully preserving existing error handling and fallback logic. External API and functionality remain unchanged.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "base_commit": "b587d096a309e8af4d8fc7ca609fe3429e0b1954",
+  "merge_commit": "9d18195f7085a1bf653a6391532c915f454dcabb",
+  "license": "bsd-2-clause",
+  "changed_paths": [
+   "src/types/response.rs"
+  ],
+  "source_files": [
+   "src/types/response.rs"
+  ],
+  "review_files": 86,
+  "detected": [
+   "docker",
+   "graphql",
+   "mongodb",
+   "node",
+   "postgres",
+   "python",
+   "rest",
+   "rust",
+   "serverless",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "dedoc/scramble",
+  "number": 1294,
+  "rank": 0,
+  "title": "Optimize self-out performance a bit more",
+  "body": "",
+  "base_commit": "2fda858fd839861a6ec31a04c5d10638bb57ed7a",
+  "merge_commit": "511e0605642d6395deb22107559403551ff8d1b2",
+  "license": "mit",
+  "changed_paths": [
+   "src/Infer/Services/ReferenceTypeResolver.php"
+  ],
+  "source_files": [
+   "src/Infer/Services/ReferenceTypeResolver.php"
+  ],
+  "review_files": 515,
+  "detected": [
+   "node",
+   "php",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "zenstackhq/zenstack",
+  "number": 2777,
+  "rank": 0,
+  "title": "perf(orm): reuse QueryNameMapper across derived executors and clients",
+  "body": "Addresses #2773. Opening this per @ymc9's invitation there (\"PR is also welcome if you have time\"), so the CONTRIBUTING \"discuss first\" step is already covered by that issue.\n\nFirst, a correction to my own issue: **the ~1s figure in #2773 does not apply to `dev`.** That changes what this PR is worth, so it belongs up front. Details under Benchmarks.\n\n## The defect\n\n`QueryNameMapper` is derived purely from the client's `$schema` and `$options`, but it is rebuilt for every derived executor *and* every derived client. Building it walks every model and field, plus an `O(models x relations)` pass on postgres.\n\nA `$transaction` pays that **twice per scope**, through two independent paths. Counted by instrumenting the constructor on `dev`, not inferred from timing:\n\n| | mappers constructed |\n| --- | --- |\n| outside a transaction | 0 |\n| inside `$transaction`, 1 query | **2** |\n| inside `$transaction`, 3 queries | **2** |\n\nPer scope, not per query. Stack capture identifies the two paths:\n\n```\npath 1:  new ZenStackQueryExecutor @ zenstack-query-executor.ts:96\n    <- ZenStackQueryExecutor.withConnectionProvider @ :813\n\npath 2:  new ZenStackQueryExecutor @ zenstack-query-executor.ts:96\n    <- new ClientImpl @ client-impl.ts:96\n       <- client-impl.ts:264  (interactiveTransaction)\n```\n\nWorth flagging because it caught me out: fixing only the executor derive sites addresses path 1 and leaves path 2, which halves the cost rather than removing it.\n\n## The change\n\n**1. Reuse the mapper across derived executors and clients.**\n\n`ZenStackQueryExecutor` takes an optional mapper and threads its own through all five derive sites (`withPlugin`, `withPlugins`, `withPluginAtFront`, `withoutPlugins`, `withConnectionProvider`). All five pass `this.client`, so the schema is identical by construction.\n\n`ClientImpl` passes the base client's mapper only when the derived client has the same `$schema` **and** the same `$options` by identity. That is deliberate: `$use`, `$unuse`, `$unuseAll` and `$setOptions` derive with a *new* options object, and the mapper's dialect comes from `getCrudDialect(schema, options)`, so those still build their own. Verified by counting constructions: `$transaction` and `$setAuth` build 0, `$use` builds 1.\n\n**2. Memoize the \"does this schema need a mapper\" check.**\n\nDeciding it walks every model and field, and it is asked on every executor construction. It is not short-circuited on non-postgres providers, so a SQLite or MySQL schema with no `@@map`/`@map` paid the full walk per derived executor. The answer is immutable per schema, so it moves next to the other structural lookups in `query-utils.ts` and reuses the per-schema `WeakMap` cache added in 805a6b81 (#2715). That also removes the duplicated `hasMapAttr` helper from the executor.\n\n## Why sharing one instance is safe\n\nThis is the part worth your scrutiny, since it is the obvious objection to reusing rather than rebuilding.\n\n`QueryNameMapper` extends `OperationNodeTransformer` and holds one pie",
+  "base_commit": "31d8612eefc7680a30e4a4ad7361b1729e94e31b",
+  "merge_commit": "797b5bc27bea5bfa70d088222c3f87b11923b99d",
+  "license": "mit",
+  "changed_paths": [
+   "packages/orm/src/client/client-impl.ts",
+   "packages/orm/src/client/executor/zenstack-query-executor.ts",
+   "packages/orm/src/client/query-utils.ts",
+   "tests/regression/test/issue-2773.test.ts"
+  ],
+  "source_files": [
+   "packages/orm/src/client/client-impl.ts",
+   "packages/orm/src/client/executor/zenstack-query-executor.ts",
+   "packages/orm/src/client/query-utils.ts"
+  ],
+  "review_files": 339,
+  "detected": [
+   "mongodb",
+   "mysql",
+   "node",
+   "postgres",
+   "redis",
+   "rest",
+   "serverless",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "aimeos/pagible",
+  "number": 123,
+  "rank": 0,
+  "title": "Improved DB read performance",
+  "body": "",
+  "base_commit": "2659c35d2b217672e67dbcec2d49a0c8d6918e00",
+  "merge_commit": "9b23ca08d8ca557907a8ce589f27359da6e4a271",
+  "license": "mit",
+  "changed_paths": [
+   "src/GraphQL/Query.php",
+   "src/Models/Page.php",
+   "src/Utils.php",
+   "tests/JsonapiTest.php"
+  ],
+  "source_files": [
+   "src/GraphQL/Query.php",
+   "src/Models/Page.php",
+   "src/Utils.php"
+  ],
+  "review_files": 448,
+  "detected": [
+   "graphql",
+   "mysql",
+   "node",
+   "php",
+   "postgres",
+   "rest",
+   "sqlite",
+   "sqlserver"
+  ]
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "number": 2641,
+  "rank": 0,
+  "title": "perf: validate storage constraints without DataFrame.eval",
+  "body": "## Description\n\n- [x] `validate_storage_constraints` and `validate_power_constraints` evaluate their checks with vectorised numpy comparisons instead of one `DataFrame.eval` per check. Same checks, order, rounding, NaN handling and violation messages. Per device: 25.5 ms to 3.3 ms (storage), 5.4 ms to 0.7 ms (power).\n- [x] The helpers `validate_constraint` and `sanitize_expression` are removed; nothing in production called them any more. Their code lives on as the reference implementation in the new test module.\n- [x] Tests: a seeded equivalence test over random constraint frames against the reference, plus explicit message, rounding, NaN and unsupported-inequality tests.\n- [x] Added changelog item in `documentation/changelog.rst`.\n\n## Look & Feel\n\nN/A\n\n## How to test\n\n`pytest flexmeasures/data/models/planning/tests/test_validate_constraints.py flexmeasures/data/models/planning/tests/test_storage.py`\n\n## Further Improvements\n\nNone.\n\n## Related Items\n\nFound while profiling the test suite (#1976).\n\n---\n\n#### Sign-off\n\n- [x] I agree to contribute to the project under Apache 2 License.\n- [x] To the best of my knowledge, the proposed patch is not based on code under GPL or other license that is incompatible with FlexMeasures\n",
+  "base_commit": "b04bf9f017be672dee9e59e792d5c90f78dfeaed",
+  "merge_commit": "e595aa894f2f785e63559890916e744188b3a9a0",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "documentation/changelog.rst",
+   "flexmeasures/data/models/planning/storage.py",
+   "flexmeasures/data/models/planning/tests/test_process.py",
+   "flexmeasures/data/models/planning/tests/test_solver.py",
+   "flexmeasures/data/models/planning/tests/test_solver_coverage.py",
+   "flexmeasures/data/models/planning/tests/test_validate_constraints.py"
+  ],
+  "source_files": [
+   "flexmeasures/data/models/planning/storage.py"
+  ],
+  "review_files": 221,
+  "detected": [
+   "docker",
+   "postgres",
+   "python",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "TwiN/gatus",
+  "number": 1541,
+  "rank": 0,
+  "title": "perf: Add PostgreSQL indexes for ~15x performance improvement",
+  "body": "## Summary\r\n\r\nThis PR adds missing database indexes to the PostgreSQL storage backend, delivering **up to 15x performance improvement** for deployments with large datasets.\r\n\r\n### Problem\r\nWhen running Gatus with PostgreSQL and storing large numbers of results (e.g., `maximum-number-of-results: 180000`), queries that fetch endpoint results and conditions become extremely slow due to missing indexes on foreign key columns. This causes high CPU usage and slow page loads.\r\n\r\n### Solution\r\nAdded two critical indexes to the PostgreSQL schema:\r\n- `idx_endpoint_result_conditions_endpoint_result_id` on `endpoint_result_conditions(endpoint_result_id)`\r\n- `idx_endpoint_results_endpoint_id` on `endpoint_results(endpoint_id)`\r\n\r\nBoth indexes are created using `CREATE INDEX CONCURRENTLY` to avoid locking tables during index creation on existing databases.\r\n\r\n### Performance Impact\r\n**15x performance improvement** observed in production deployment with the following configuration (on 2 cores 4 gb memory VM which runs 9 gatuses, 1 postgresql and 1 pgbouncer) Page load time went 15.2 seconds to 900 ms:\r\n```yaml\r\nstorage:\r\n  type: postgres\r\n  caching: true\r\n  path: postgres://gatus:gatus@pgbouncer:5432/mygatus?sslmode=disable\r\n  maximum-number-of-results: 180000\r\n  maximum-number-of-events: 200\r\n```  \r\n\r\n Closes: https://github.com/TwiN/gatus/issues/1545",
+  "base_commit": "c4900ced6c44f3e8a3473eb0237c7b81b2195b72",
+  "merge_commit": "c7f0b85ba1e70475955ae84dbcb5c0c42e03de91",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "storage/store/sql/specific_postgres.go"
+  ],
+  "source_files": [
+   "storage/store/sql/specific_postgres.go"
+  ],
+  "review_files": 134,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "go",
+   "grpc",
+   "kubernetes",
+   "node",
+   "postgres",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "graphile/crystal",
+  "number": 3101,
+  "rank": 0,
+  "title": "Optimize coalesce to eliminate looping for small sizes of dependencies",
+  "body": "",
+  "base_commit": "424c2dccef8cc43b8d480d6897b05c6667c42c8f",
+  "merge_commit": "f8ed12ea5a278df7c8024a42be55779a26604942",
+  "license": "mit",
+  "changed_paths": [
+   ".changeset/lovely-lizards-pull.md",
+   "grafast/grafast/src/steps/coalesce.ts"
+  ],
+  "source_files": [
+   "grafast/grafast/src/steps/coalesce.ts"
+  ],
+  "review_files": 553,
+  "detected": [
+   "graphql",
+   "kubernetes",
+   "mongodb",
+   "node",
+   "postgres",
+   "rest",
+   "serverless",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "blacksky-algorithms/rsky",
+  "number": 242,
+  "rank": 0,
+  "title": "perf(wintermute): log per-batch indexer timing at DEBUG",
+  "body": "The indexer emits a timing line and a delete-summary line once per batch. A sharded live drain woken by enqueue produces batches far faster than the fixed sleep it replaced, so at INFO these two lines dominate the journal and shorten how far back it reaches \u2014 which is what incident forensics depends on.\n\nBoth move to `DEBUG`. The timing line's `col_breakdown` is now built inside a `tracing::enabled!` check rather than before the macro, so the per-collection formatting and the join are skipped entirely when `DEBUG` is not recorded. A level change alone would still pay that cost on every batch, because the string is a separate statement the macro's level check never gates.\n\nNo behaviour outside logging changes, and the timing fields themselves are unchanged for anyone who turns `DEBUG` on.\n\n## Test plan\n\n- [ ] `cargo clippy -p rsky-wintermute --all-targets --no-deps -- -D warnings`\n- [ ] `cargo test -p rsky-wintermute` against a database with the appview schema\n- [ ] `cargo build --release -p rsky-wintermute`\n- [ ] With default `RUST_LOG`, the indexer emits no per-batch timing lines\n- [ ] With `RUST_LOG=rsky_wintermute::indexer=debug`, the timing and delete lines return unchanged\n- [ ] Indexing throughput and error rates unchanged",
+  "base_commit": "cca659d1086f37a0711d623a259e756ed7d7d611",
+  "merge_commit": "8ac8eed251250c0affab1ebde761a95ce8e8d426",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "Cargo.lock",
+   "rsky-wintermute/Cargo.toml",
+   "rsky-wintermute/src/indexer/mod.rs"
+  ],
+  "source_files": [
+   "rsky-wintermute/src/indexer/mod.rs"
+  ],
+  "review_files": 488,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "grpc",
+   "node",
+   "postgres",
+   "python",
+   "rest",
+   "rust",
+   "sqlite",
+   "task-queue"
+  ]
+ },
+ {
+  "repo": "hoangsonww/Claude-Code-Agent-Monitor",
+  "number": 332,
+  "rank": 0,
+  "title": "perf(db): index events.tool_name so the analytics panel stops scanning",
+  "body": "## Summary\n\nThe analytics tool-usage panel groups every row of `events` by `tool_name`, and\nno index covers that column, so it is a full table scan on every request \u2014 45.7s\non a 3.9M-row table here, with the single Node thread blocked for the duration.\nA partial index over the non-NULL tool names takes the same query to 0.25s.\n\n## Changes\n\n- `server/db.js`: `CREATE INDEX IF NOT EXISTS idx_events_tool_name ON events(tool_name) WHERE tool_name IS NOT NULL`,\n  in the existing schema block alongside the other `idx_events_*` indexes, with a\n  comment in the same style explaining what it buys.\n- `server/__tests__/events-tool-name-index.test.js`: asserts the index exists,\n  stays partial, and that the panel's query plan is a covering-index scan.\n\n### Measurement\n\nOn a 3,889,039-row `events` table:\n\n```\nSELECT tool_name, COUNT(*) FROM events\nWHERE tool_name IS NOT NULL GROUP BY tool_name ORDER BY count DESC LIMIT 20\n\nbefore : 45.75s\nafter  :  0.25s\n```\n\nPlan after the change:\n\n```\nSEARCH events USING COVERING INDEX idx_events_tool_name (tool_name>?)\n```\n\nOnly tool events carry a `tool_name` \u2014 156,959 of 3.9M rows on that install \u2014 so\nthe partial index stays a small fraction of the table. Building it on that table\ntook 15s, once, on the next start; `CREATE INDEX IF NOT EXISTS` means existing\ndatabases pick it up without a migration step.\n\nThis is the same class as the composite indexes added in #320 for the agent and\nsession \"last activity\" subqueries (issue #319), whose comments make the same\nargument: a scan of `events` on a synchronous connection stalls everything. That\nPR covered `(agent_id, created_at)` and `(session_id, created_at)`; the\ntool-usage grouping is the remaining unindexed full-table scan of `events` I\ncould find in the analytics path.\n\n## Type of Change\n\n- [ ] Bug fix (non-breaking change that fixes an issue)\n- [ ] New feature (non-breaking change that adds functionality)\n- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)\n- [ ] Refactor (no functional changes)\n- [ ] Documentation update\n- [x] Infrastructure / CI / DevOps\n- [ ] Dependency update\n\n## How to Test\n\n```bash\nnode --test server/__tests__/events-tool-name-index.test.js\n```\n\nBoth assertions fail on `master` (the index does not exist, and the plan is\n`SCAN events`) and pass on this branch. The test pins the query plan rather than\na timing, so it stays meaningful on a small CI database.\n\n## Checklist\n\n- [x] I have read the [contributing guidelines](https://github.com/hoangsonww/Claude-Code-Agent-Monitor/blob/master/.github/CONTRIBUTING.md)\n- [x] I have signed the [CLA](https://github.com/hoangsonww/Claude-Code-Agent-Monitor/blob/master/CLA.md)\n- [x] My code follows the project's coding standards\n- [x] I have added/updated tests that prove my fix or feature works\n- [ ] The full local gate passes (`npm run verify`) \u2014 see the note below\n- [x] Every source file I added or changed carries the authorship header (`npm run check:headers`)",
+  "base_commit": "36428cc67b91c335acbad4032faa58342833c052",
+  "merge_commit": "c3c0b2dd68b8018b4acec4789f84eee2ba8982b3",
+  "license": "mit",
+  "changed_paths": [
+   "server/__tests__/events-tool-name-index.test.js",
+   "server/db.js"
+  ],
+  "source_files": [
+   "server/db.js"
+  ],
+  "review_files": 234,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "grpc",
+   "kubernetes",
+   "node",
+   "rest",
+   "sqlite",
+   "terraform"
+  ]
+ },
+ {
+  "repo": "AlexStocks/getty",
+  "number": 147,
+  "rank": 0,
+  "title": "perf: skip the per-write debug log when debug is off (-7.5% on the tcp write path, -57% allocations)",
+  "body": "Found while building the benchmarks in #143 - the per-write debug record turned out to be the largest single cost in the write path.\n\n## The cost\n\n`gettyTCPConn.Send` logs every write:\n\n```go\nlog.Debugf(\"localAddr: %s, remoteAddr:%s, length:%d, err:%v\",\n\tt.conn.LocalAddr(), t.conn.RemoteAddr(), length, err)\n```\n\nThe `...any` arguments are boxed **at the call site**, so a record the configured level discards still costs one allocation - the `[]any` backing array - on every write. The same pattern sits on the udp send path, the udp receive path, and twice inside the udp package loop.\n\n## The fix\n\n`util.IsDebugEnabled()` reports the level configured through `SetLoggerLevel`, and those six per-operation records are now guarded by it:\n\n```go\nif log.IsDebugEnabled() {\n\tlog.Debugf(\"localAddr: %s, remoteAddr:%s, length:%d, err:%v\", ...)\n}\n```\n\n`IsDebugEnabled` is a package function rather than a method on the `Logger` interface on purpose: adding a method to that interface would break every implementation outside the module. It reports the level of the built-in logger, so a logger installed through `SetLogger` is opaque to it - that caveat is in the doc comment.\n\n## Measurements\n\nAgainst `upstream/master`, with the benchmarks from #143 (`-benchtime=1s -count=5`, Apple M1), on the 64-byte payload where the per-write cost dominates:\n\n```\n                            sec/op                  B/op\n  SessionWriteBytes/64  2.246us -> 2.078us  -7.48%  112 ->  48  -57%\n  SessionSend/64        2.236us -> 2.066us  -7.60%  112 ->  48  -57%\n  UDPSend/64            2.164us -> 2.105us  -2.73%  148 -> 100  -32%\n```\n\n(All three `p=0.008`, `n=5`; the B/op difference is exactly the one boxed `[]any` per call.)\n\nAnd under an external load generator - 100 connections of 6-byte messages against the standalone server from #143 - leaving debug logging on costs about **4x** on the echo path:\n\n```\n-log_level error:  362k-451k msg/s\n-log_level debug:   77k-100k msg/s      (2.28 million log lines in 15 seconds)\n```\n\n## Test\n\nThe regression test asserts the observable contract instead of an allocation count: with the level at `warn`, a recording logger installed through `SetLogger` must receive **no** debug records from `Send`. On master it fails with\n\n```\nSend built 1 debug records with debug disabled, want 0: the ...any arguments are boxed before the level is consulted, which cost one allocation per write\n```\n\n`go test ./transport -race`, `go test ./...`, `make check-fmt` and `make lint` are green.\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Performance**\n  * Reduced unnecessary debug-log formatting and processing when debug logging is disabled for TCP and UDP transport activity.\n\n* **Reliability**\n  * Improved logger configuration and replacement behavior when logging is accessed or changed concurrently.\n\n* **Tests**\n  * Added coverage confirming disabled debug logging avoids unnecessary operations and logger settings ",
+  "base_commit": "89da27f48683e641c51bc7661e10db4f081c68f8",
+  "merge_commit": "d9dfcfc9e39090ef6ecc94be7d1d05e1abc95081",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "Makefile",
+   "transport/connection.go",
+   "transport/connection_test.go",
+   "transport/session.go",
+   "util/logger.go",
+   "util/logger_test.go"
+  ],
+  "source_files": [
+   "transport/connection.go",
+   "transport/session.go",
+   "util/logger.go"
+  ],
+  "review_files": 12,
+  "detected": [
+   "cockroachdb",
+   "firestore",
+   "go",
+   "grpc",
+   "object-storage",
+   "rest"
+  ]
+ },
+ {
+  "repo": "open-telemetry/opentelemetry-js",
+  "number": 6514,
+  "rank": 0,
+  "title": "perf(sdk-trace-base): avoid Object.entries in Span.setAttributes",
+  "body": "<!--\r\nWe appreciate your contribution to the OpenTelemetry project! \ud83d\udc4b\ud83c\udf89\r\n\r\nBefore creating a pull request, please make sure:\r\n- Your PR is solving one problem\r\n- Please provide enough information so that others can review your pull request\r\n- You have read the guide for contributing\r\n  - See https://github.com/open-telemetry/opentelemetry-js/blob/main/CONTRIBUTING.md\r\n- You signed all your commits (otherwise we won't be able to merge the PR)\r\n  - See https://github.com/open-telemetry/community/blob/main/guides/contributor#sign-the-cla\r\n- You added unit tests for the new functionality\r\n- You mention in the PR description which issue it is addressing, e.g. \"Fixes #xxx\". This will auto-close\r\n  the issue that your PR fixes (if such)\r\n-->\r\n\r\n## Which problem is this PR solving?\r\n\r\nWhilst looking at the performance overhead of OTel, I noticed `setAttributes` in unusually heavy in comparison to `setAttribute`. Turns out, we're using Object.entries for the loop here, which is much heavier than a standard for-in loop. This change has been made several other times in this repo, such as in https://github.com/open-telemetry/opentelemetry-js/pull/5866 and https://github.com/open-telemetry/opentelemetry-js/pull/6287.\r\n\r\nPart of the flamegraph showing the `setAttributes` call has overhead in comparison to `setAttribute`:\r\n<img width=\"1038\" height=\"268\" alt=\"CleanShot 2026-03-21 at 10 54 31@2x\" src=\"https://github.com/user-attachments/assets/63267415-df17-4489-b773-ecc9b1fa12e1\" />\r\n\r\nMany instrumentations use `setAttributes`, including `http`, so we should see strong improvements across the board.\r\n\r\nBefore:\r\n```\r\ncreate spans (10 attributes) x 1,040,461 ops/sec \u00b11.81% (97 runs sampled)\r\ncreate spans (10 attributes w/ setAttributes) x 842,071 ops/sec \u00b11.78% (94 runs sampled)\r\n```\r\n\r\nAfter:\r\n```\r\ncreate spans (10 attributes) x 1,013,509 ops/sec \u00b11.60% (96 runs sampled)\r\ncreate spans (10 attributes w/ setAttributes) x 1,025,856 ops/sec \u00b11.42% (99 runs sampled)\r\n```\r\n\r\nYou can see span creation with `setAttributes` is now on par with the performance of the benchmark using 10x `setAttribute` thanks to the **22% performance improvement** \ud83d\ude80 \r\n\r\nrefs https://github.com/open-telemetry/opentelemetry-js/issues/6100\r\n\r\n## Short description of the changes\r\n\r\nReplace `Object.entries` with a for-in loop for better performance.\r\n\r\nAlso adds a benchmark test for span creation using `setAttributes`.\r\n\r\n## Type of change\r\n\r\nPlease delete options that are not relevant.\r\n\r\n- [ ] ~Bug fix (non-breaking change which fixes an issue)~\r\n- [ ] ~New feature (non-breaking change which adds functionality)~\r\n- [ ] ~Breaking change (fix or feature that would cause existing functionality to not work as expected)~\r\n- [ ] ~This change requires a documentation update~\r\n\r\n## How Has This Been Tested?\r\n\r\nTests still pass, and see benchmark results from above.\r\n\r\n## Checklist:\r\n\r\n- [x] Followed the style guidelines of this project\r\n- [ ] ~Unit tests have been added~\r\n- [ ] ~Documentation has been u",
+  "base_commit": "d56af69eebcb3aac9411d5fc6bde9290419e2f01",
+  "merge_commit": "e9831e735e984a51206ea4d19af29688f6b16fe4",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "CHANGELOG.md",
+   "packages/opentelemetry-sdk-trace-base/src/Span.ts",
+   "packages/opentelemetry-sdk-trace-base/test/browser/Span.bench.ts",
+   "packages/opentelemetry-sdk-trace-base/test/node/Span.bench.ts"
+  ],
+  "source_files": [
+   "packages/opentelemetry-sdk-trace-base/src/Span.ts"
+  ],
+  "review_files": null,
+  "detected": [],
+  "excluded": "base commit could not be fetched",
+  "fetch_error": "could not fetch open-telemetry/opentelemetry-js@d56af69eebcb3aac9411d5fc6bde9290419e2f01: error: The following untracked working tree files would be overwritten by checkout:\n\t.commitlintrc.yml\n\t.editorconfig\n\t.gitattributes\n\t.github/CODEOWNERS\n\t.github/ISSUE_TEMPLATE/bug_report.yaml\n\t.github/ISSUE_T"
+ },
+ {
+  "repo": "flippercloud/flipper",
+  "number": 1039,
+  "rank": 0,
+  "title": "perf: Avoid enumerating the feature set repeatedly for an API request",
+  "body": "AI Disclosure: Generated with Claude Code, Opus 5. Tested and reviewed by me for correctness.\r\n\r\n`GET /features?keys=` calls `feature_exists?` for each requested key, and each call does a full `flipper.features.map(&:key).include?(name)` \u2014 an adapter enumeration plus a `Feature` object per stored feature. The cost is the product of requested keys and stored features, and nothing bounds either.\r\n\r\nThe repeated-params form (`?keys=a&keys=b`) incurs twice the cost vs comma-separated keys: `requested_feature_names` checks each raw value for a literal comma before splitting, and `Features#get` then filters the results again.\r\n\r\n## Fix\r\n\r\nMemoize the key set on the action. Actions are instantiated per request (`Api::Action.run` is `new(flipper, request).run`), so the memo is request scoped and can't go stale between requests.\r\n\r\n`feature_exists?` was defined on both `Features` and `Feature`, so this moves it to the shared `Api::Action` base class rather than duplicating the memo.\r\n\r\n## Benchmarking\r\n\r\nBench'd with 100 saved features, 100 iterations each:\r\n\r\n| features | keys | shape | stack | before | after | speedup | enumerations |\r\n|---|---|---|---|---|---|---|---|\r\n| 100 | 10 | comma | bare | 0.35 ms | 0.09 ms | 3.9x | 10 -> 1 |\r\n| 100 | 10 | comma | memoizer | 0.27 ms | 0.09 ms | 3.0x | 1 -> 1 |\r\n| 100 | 10 | repeated | bare | 0.67 ms | 0.11 ms | 6.1x | 20 -> 1 |\r\n| 100 | 10 | repeated | memoizer | 0.50 ms | 0.11 ms | 4.5x | 1 -> 1 |\r\n| 100 | 50 | comma | bare | 1.64 ms | 0.19 ms | 8.6x | 50 -> 1 |\r\n| 100 | 50 | comma | memoizer | 1.26 ms | 0.19 ms | 6.6x | 1 -> 1 |\r\n| 100 | 50 | repeated | bare | 3.16 ms | 0.31 ms | 10.2x | 100 -> 1 |\r\n| 100 | 50 | repeated | memoizer | 2.37 ms | 0.28 ms | 8.5x | 1 -> 1 |\r\n| 100 | 100 | comma | bare | 3.26 ms | 0.39 ms | 8.4x | 100 -> 1 |\r\n| 100 | 100 | comma | memoizer | 2.45 ms | 0.32 ms | 7.7x | 1 -> 1 |\r\n| 100 | 100 | repeated | bare | 6.36 ms | 0.53 ms | 12.0x | 200 -> 1 |\r\n| 100 | 100 | repeated | memoizer | 4.80 ms | 0.48 ms | 10.0x | 1 -> 1 |\r\n\r\nAnd the difference is greater in the (much less likely) case of 1000 stored features w/ 1000 requested keys:\r\n\r\n| stack | shape | before | after |\r\n|---|---|---|---|\r\n| bare | comma-separated | 261 ms | 3.4 ms |\r\n| bare | repeated params | 527 ms | 5.0 ms |\r\n| + `Memoizer` | comma-separated | 200 ms | 2.9 ms |\r\n| + `Memoizer` | repeated params | 402 ms | 4.5 ms |\r\n\r\nAdapter enumerations for those requests go from 1000/2000 to 1.\r\n\r\n`Flipper::Middleware::Memoizer` already collapsed the adapter calls to one, but not the per-key object churn \u2014 hence the memoized rows still improving in runtime. There's no case where the memo costs more than the work it replaces.",
+  "base_commit": "06028e4923e92911fbead978620066a357c2577c",
+  "merge_commit": "f5990cb634c1ebf7c18421634b45ada03588c505",
+  "license": "mit",
+  "changed_paths": [
+   "lib/flipper/api/action.rb",
+   "lib/flipper/api/v1/actions/feature.rb",
+   "lib/flipper/api/v1/actions/features.rb",
+   "spec/flipper/api/v1/actions/features_spec.rb"
+  ],
+  "source_files": [
+   "lib/flipper/api/action.rb",
+   "lib/flipper/api/v1/actions/feature.rb",
+   "lib/flipper/api/v1/actions/features.rb"
+  ],
+  "review_files": 184,
+  "detected": [
+   "docker",
+   "memcached",
+   "mongodb",
+   "mysql",
+   "node",
+   "postgres",
+   "redis",
+   "rest",
+   "ruby",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "Javis603/token-monitor",
+  "number": 1021,
+  "rank": 0,
+  "title": "perf(renderer): reduce token digit-roll animation work",
+  "body": "Follow-up to #1014. Digit-roll updates currently create 49 keyframes per glyph and animate offscreen readings in compact lists. This reduces animation work while retaining the existing left-to-right timing, blur and rebound.\n\n- Adaptively retain points from the existing envelope within 0.002 per normalized channel, including both endpoints. The normal curve uses 27 keyframes; interrupted departures are sampled separately, with only the common initial sample indices cached.\n- In Roll mode, animate visible, changed breakdown readings and settle active readings when they scroll out of view. Offscreen values stay current without replaying an animation when scrolled back in.\n- For session lists above the existing 40-row layout budget, retain old values for every key and animate visible readings without row FLIP or bar animation. This also fixes missing number transitions in those lists; compact Count lists retain their existing policy.\n\nNo dependencies, font changes, animation-default changes or global Animation.effect overrides.\n\n### Validation\n\n- `npm run verify` on PR HEAD after the threshold fix: 6675 passed, 6 skipped, 0 failed; lint passed. Focused motion tests: 68 passed.\n- `git diff --check` passed.\n- Added 41\u219240 session-list regressions in Roll and Count: retained rows skip FLIP/bar transitions when previous geometry was not captured, while changed numbers continue animating. A measured zero bar scale still animates normally.\n- Native Electron visual/function checks cover live increases, both period directions, 999\u21921,000, equal trailing digits, interrupted reversal, Count switching, Reduce Motion, 350px headline fit and scrolling offscreen. Fixed-time captures retain the existing App font; interactive before/after review found no obvious visual difference, without claiming pixel identity.\n\n### Recorded performance evidence and limits\n\nTwo foreground native Electron rounds with 40 session rows measured original Roll \u2192 candidate:\n\n- Normal period switching: renderer-private peak 731.0 \u2192 291.5 MiB; synchronous render/click setup median 144.2 \u2192 50.7ms.\n- Normal increases: renderer-private peak 129.3 \u2192 110.8 MiB; setup 25.3 \u2192 17.5ms.\n- Synthetic 100ms period interruptions: peak 1166.9 \u2192 494.9 MiB; setup 192.6 \u2192 39.5ms; rAF callback-interval p95 209.2 \u2192 50.6ms. This is stress load, not the normal update frequency or measured presentation FPS.\n\nThe candidate fell to 160.0 MiB after the entire foreground stress sequence stopped for 10 seconds; same-version Count was 146.7 MiB. This is not a per-workload recovery measurement or a guarantee of GC timing. Roll remains more expensive than Count, especially for period changes; the 100-session batches did not show a consistent reduction in normal-switch memory peaks.\n\nThese are isolated renderer measurements with mock data and the real renderer/CSS/font, sampled roughly every 100ms, without the collector or the full native-glass/multi-window runtime. They measure macOS pre-compression private memory, not A",
+  "base_commit": "6d00083ef3cb0dda06f7788014e2a21f0f0e561b",
+  "merge_commit": "4ab624b45aea4c95cc5c0a1047f9a1673d1fa227",
+  "license": "mit",
+  "changed_paths": [
+   "src/electron/renderer/app.js",
+   "src/electron/renderer/breakdownRenderPolicy.js",
+   "src/electron/tokenNumberAnimation.js",
+   "tests/electron/breakdownNumberMotion.test.js",
+   "tests/electron/breakdownRenderPolicy.test.js",
+   "tests/electron/rendererMotion.test.js",
+   "tests/electron/tokenNumberAnimation.test.js"
+  ],
+  "source_files": [
+   "src/electron/renderer/app.js",
+   "src/electron/renderer/breakdownRenderPolicy.js",
+   "src/electron/tokenNumberAnimation.js"
+  ],
+  "review_files": 396,
+  "detected": [
+   "elasticsearch",
+   "node",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "schemathesis/schemathesis",
+  "number": 5638,
+  "rank": 0,
+  "title": "perf: Lower coverage phase memory on large `$ref`-heavy schemas",
+  "body": "",
+  "base_commit": "5415fd739ac0c58be4ad52b2f7b5fb48620ed529",
+  "merge_commit": "a66a7384829b5df1ce0789f8a6197840fea3ce65",
+  "license": "mit",
+  "changed_paths": [
+   "src/schemathesis/generation/_cache.py",
+   "src/schemathesis/generation/hypothesis/__init__.py",
+   "src/schemathesis/specs/openapi/_caches.py"
+  ],
+  "source_files": [
+   "src/schemathesis/generation/_cache.py",
+   "src/schemathesis/generation/hypothesis/__init__.py"
+  ],
+  "review_files": 306,
+  "detected": [
+   "docker",
+   "graphql",
+   "postgres",
+   "python",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "TNT-Likely/PanWatch",
+  "number": 125,
+  "rank": 0,
+  "title": "perf(frontend): \u89e3\u8026\u6301\u4ed3\u9875\u540e\u53f0\u52a0\u8f7d",
+  "body": "## \u80cc\u666f\n\u6301\u4ed3\u9875\u6b64\u524d\u628a\u6838\u5fc3\u6301\u4ed3\u3001\u884c\u60c5\u3001AI \u5efa\u8bae\u3001\u63d0\u9192\u548c K \u7ebf\u6458\u8981\u6df7\u5728\u540c\u4e00\u7ec4\u52a0\u8f7d\u6d41\u7a0b\u4e2d\uff0c\u6162\u63a5\u53e3\u4f1a\u5ef6\u8fdf\u9996\u5c4f\uff1b\u540c\u65f6\u5efa\u8bae\u67e5\u8be2\u4f20\u5165\u7684\u80a1\u7968\u952e\u987a\u5e8f\u4e0e\u540e\u7aef\u7ea6\u5b9a\u4e0d\u4e00\u81f4\uff0c\u5bfc\u81f4 AI \u5efa\u8bae\u65e0\u6cd5\u5339\u914d\uff1b\u80a1\u7968\u5173\u8054 Agent \u540d\u79f0\u4e5f\u9700\u8981\u5728\u5217\u8868\u67e5\u8be2\u65f6\u76f4\u63a5\u8fd4\u56de\u3002\n\n## \u53d8\u66f4\u5185\u5bb9\n- \u5c06\u6301\u4ed3\u9875\u52a0\u8f7d\u62c6\u4e3a\u6838\u5fc3\u3001\u884c\u60c5\u4f18\u5148\u3001\u540e\u53f0\u4e09\u4e2a\u9636\u6bb5\u3002\n- \u9996\u5c4f\u963b\u585e\u63a5\u53e3\u6536\u655b\u4e3a 3 \u4e2a\uff1a`/stocks`\u3001`/portfolio/summary?include_quotes=false`\u3001`/quotes/batch`\u3002\n- \u9996\u5c4f\u62ff\u5230\u884c\u60c5\u540e\u518d\u89e3\u9664\u6301\u4ed3\u9875\u52a0\u8f7d\u6001\uff0c\u907f\u514d\u5148\u5c55\u793a\u884c\u60c5\u7a7a\u767d\u7684\u9875\u9762\u3002\n- \u540e\u53f0\u5f02\u6b65\u52a0\u8f7d 4 \u4e2a\u63a5\u53e3\uff1a\u5e02\u573a\u72b6\u6001\u3001AI \u5efa\u8bae\u3001\u4ef7\u683c\u63d0\u9192\u3001`/api/klines/summary/batch`\uff0cK \u7ebf\u4e0d\u518d\u963b\u585e\u9996\u5c4f\u3002\n- \u4fee\u6b63 AI \u5efa\u8bae\u67e5\u8be2\u952e\u4e3a\u540e\u7aef\u7ea6\u5b9a\u7684 `market:symbol` \u683c\u5f0f\uff0c\u6062\u590d\u5efa\u8bae\u52a0\u8f7d\u3002\n- `/stocks` \u67e5\u8be2\u6279\u91cf\u8fd4\u56de\u5173\u8054 Agent \u5c55\u793a\u540d\uff0c\u5217\u8868\u65e0\u9700\u70b9\u51fb Agent \u540e\u624d\u663e\u793a\u540d\u79f0\u3002\n- \u589e\u52a0\u52a0\u8f7d\u7f16\u6392\u548c\u80a1\u7968\u952e\u683c\u5f0f\u6d4b\u8bd5\u3002\n\n## \u9a8c\u8bc1\n- `pnpm --dir frontend exec vitest run`\uff1a18 \u4e2a\u6d4b\u8bd5\u6587\u4ef6\u300143 \u4e2a\u6d4b\u8bd5\u901a\u8fc7\u3002\n- `pnpm --dir frontend run build`\uff1a\u901a\u8fc7\u3002\n- `.venv\\\\Scripts\\\\python.exe -m pytest tests/test_stock_agent_display_name.py tests/test_stock_link.py tests/test_stocks_quote_routing.py -q`\uff1a10 \u4e2a\u6d4b\u8bd5\u901a\u8fc7\u3002\n- `.venv\\\\Scripts\\\\python.exe -m pytest -q`\uff1a785 \u4e2a\u901a\u8fc7\u30011 \u4e2a\u8df3\u8fc7\u30011 \u4e2a\u65e2\u6709 SSE \u6d4b\u8bd5\u5076\u53d1\u5931\u8d25\uff1b\u5355\u72ec\u91cd\u8dd1\u8be5\u6d4b\u8bd5\u901a\u8fc7\u3002\n- `git diff --check`\uff1a\u901a\u8fc7\u3002\n\n## \u8fb9\u754c\u4e0e\u98ce\u9669\n- \u884c\u60c5\u63a5\u53e3\u5931\u8d25\u65f6\u4f1a\u5728\u8bf7\u6c42\u7ed3\u675f\u540e\u5c55\u793a\u9875\u9762\uff0c\u4f46\u884c\u60c5\u5b57\u6bb5\u4fdd\u6301\u7a7a\u503c\uff1b\u540e\u53f0\u63a5\u53e3\u5931\u8d25\u4e0d\u5f71\u54cd\u6301\u4ed3\u4e3b\u4f53\u5c55\u793a\u3002\n- Agent \u5c55\u793a\u540d\u4f7f\u7528\u5173\u8054\u914d\u7f6e\u7684 `display_name`\uff0c\u6ca1\u6709\u914d\u7f6e\u65f6\u56de\u9000\u5230 Agent \u540d\u79f0\u3002\n- React StrictMode \u5f00\u53d1\u6a21\u5f0f\u4e0b\u4ecd\u53ef\u80fd\u770b\u5230\u88ab\u53d6\u6d88\u7684\u521d\u59cb\u5316\u8bf7\u6c42\uff0c\u8fd9\u662f\u5f00\u53d1\u73af\u5883\u884c\u4e3a\u3002\n\n## \u540e\u7eed\u8ba1\u5212\n- \u5408\u5e76\u540e\u89c2\u5bdf Network \u9762\u677f\uff0c\u786e\u8ba4\u9996\u5c4f\u53ea\u7b49\u5f85 3 \u4e2a\u6838\u5fc3\u8bf7\u6c42\uff0cAI \u5efa\u8bae\u548c K \u7ebf\u5728\u540e\u53f0\u8865\u9f50\u3002",
+  "base_commit": "1a41652b06460ad7c2c7995c36c3e197c2496103",
+  "merge_commit": "89bdf3f61e2b3e635e1427b3c5112ac488a7f436",
+  "license": "mit",
+  "changed_paths": [
+   "frontend/src/lib/portfolio-page-data.ts",
+   "frontend/src/pages/Stocks.tsx",
+   "frontend/tests/portfolio/portfolio-page-data.test.ts",
+   "src/modules/market/api/stocks.py",
+   "tests/test_stock_agent_display_name.py"
+  ],
+  "source_files": [
+   "frontend/src/lib/portfolio-page-data.ts",
+   "frontend/src/pages/Stocks.tsx",
+   "src/modules/market/api/stocks.py"
+  ],
+  "review_files": 327,
+  "detected": [
+   "docker",
+   "node",
+   "python",
+   "rest",
+   "sqlite",
+   "task-queue"
+  ]
+ },
+ {
+  "repo": "EasyCorp/EasyAdminBundle",
+  "number": 7692,
+  "rank": 0,
+  "title": "Improve performance of some Twig Components",
+  "body": "This PR applies some small performance tweaks to the Twig components.\r\n\r\nProfiling a real backend showed that components are instantiated hundreds of times per page\r\n(e.g. one `<twig:ea:Icon>` per action per row on CRUD index pages), so any per-render work that can be cached or avoided pays off quickly.\r\n\r\nChanges made:\r\n\r\n* **`Icon`**: internal SVG icons (`internal:*`, `filetypes:*`) were validated\r\nwith a regex and read from disk with `file_get_contents()` on every render. They are now cached in a static property, so each distinct icon is read from disk only once per process (this also benefits worker-mode runtimes like FrankenPHP).\r\n* **`Flag`**: the country/file existence checks and the flag file path were computed 2-3 times per render; they are now memoized per instance. The raw SVG contents are cached statically per country code, so country columns that repeat the same flag across rows don't re-read the file.\r\n* **`Pagination` template**: constant-per-render values (`hasPreviousPage`, `hasNextPage`, `getCurrentPage`, `pageLinkCssClass`, `isRtl`) were called up to once per page number inside the page loop. They are now hoisted into template variables set once per render.\r\n\r\nAll changes are behavior-preserving; no template output changes.\r\n",
+  "base_commit": "5b644bb638d0417cd06a59ddbfbd4993cfd1f3f4",
+  "merge_commit": "cf313af8f065d4db203e3e6afe19dd34e8707ba7",
+  "license": "mit",
+  "changed_paths": [
+   "src/Twig/Component/Flag.php",
+   "src/Twig/Component/Icon.php",
+   "templates/components/Pagination.html.twig"
+  ],
+  "source_files": [
+   "src/Twig/Component/Flag.php",
+   "src/Twig/Component/Icon.php"
+  ],
+  "review_files": 374,
+  "detected": [
+   "elasticsearch",
+   "mysql",
+   "node",
+   "php",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "atlassian-api/atlassian-python-api",
+  "number": 1621,
+  "rank": 0,
+  "title": "[Jira]: Optimize internal `get_issue()` calls to fetch only necessary fields",
+  "body": "Some jira methods, such as `get_attachments_ids_from_issue()` uses `self.get_issue()` calls to retrieve issue data.\r\n\r\nHowever, it is being called without fields parameter, and returns issue data in full, which may cause network overhead.\r\n\r\nThis PR adds fields parameter to these calls to get only the necessary data for each request.",
+  "base_commit": "1e1e24a16e5499a2682697a0b0917916df1571aa",
+  "merge_commit": "5728cfaf37a3313aa9642b1fe4938bc97ee99fd5",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "atlassian/jira.py"
+  ],
+  "source_files": [
+   "atlassian/jira.py"
+  ],
+  "review_files": null,
+  "detected": [],
+  "excluded": "base commit could not be fetched",
+  "fetch_error": "could not fetch atlassian-api/atlassian-python-api@1e1e24a16e5499a2682697a0b0917916df1571aa: error: The following untracked working tree files would be overwritten by checkout:\n\t.codeboarding/Atlassian Platform & Marketplace Clients.md\n\t.codeboarding/Bamboo API Client.md\n\t.codeboarding/Bitbucket API"
+ },
+ {
+  "repo": "hyperf/hyperf",
+  "number": 7796,
+  "rank": 0,
+  "title": "Optimized race condition in StreamHandler when creating log directory under coroutine concurrency.",
+  "body": "",
+  "base_commit": "06f6c9f2631900d67a824b117184c9b78091a401",
+  "merge_commit": "15df77547ef04be2af66f89b956abe2e6337a5f0",
+  "license": "mit",
+  "changed_paths": [
+   "CHANGELOG-3.2.md",
+   "src/logger/src/Handler/StreamHandler.php",
+   "src/logger/tests/Handler/StreamHandlerTest.php"
+  ],
+  "source_files": [
+   "src/logger/src/Handler/StreamHandler.php"
+  ],
+  "review_files": 2058,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "go",
+   "graphql",
+   "grpc",
+   "influxdb",
+   "kafka",
+   "node",
+   "php",
+   "postgres",
+   "rabbitmq",
+   "redis",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "abydahana/aksara",
+  "number": 1125,
+  "rank": 0,
+  "title": "refactor: update report UI components, optimize controller parameters\u2026",
+  "body": "\u2026, and improve form accessibility\r\n\r\n---\r\n\r\n## Type of Change\r\n*(Replace `[ ]` with `[x]` for the applicable item)*\r\n- [ ] \ud83d\udc1b Bug fix (non-breaking change which fixes an issue)\r\n- [ ] \u2728 New feature (non-breaking change which adds functionality)\r\n- [x] \u267b\ufe0f Refactoring / Code cleanup (no logic/API breaking changes)\r\n- [ ] \ud83c\udf10 Translation / Localization update\r\n- [ ] \ud83d\udcdd Documentation update\r\n\r\n---\r\n\r\n## Mandatory Checklist\r\nBefore submitting this Pull Request, please ensure you have completed the following steps:\r\n*(Replace `[ ]` with `[x]` to confirm completed items)*\r\n\r\n- [x] **I have run `composer cs-fix` locally and confirmed that code formatting, view tags, and minified JS/CSS assets pass with 0 errors.**\r\n- [x] My code follows the coding standards and guidelines of Aksara.\r\n- [x] I have conducted a self-review of my changes.\r\n- [x] I have tested the changes locally to verify functionality.\r\n- [x] My changes generate no new warnings or errors.\r\n\r\n---\r\n\r\n## Screenshots / Proof (if applicable)\r\nIf your changes affect the UI or visual layout, please attach screenshots or GIFs showing the results.\r\n",
+  "base_commit": "9031aeae0825812f38a37f48c471dd57e3a773cc",
+  "merge_commit": "36070f5ecd1bcfc13801be0db479fca1d7a9076c",
+  "license": "mit",
+  "changed_paths": [
+   "aksara/Modules/Blogs/Views/pdf.php",
+   "aksara/Modules/Reports/Controllers/Reports.php",
+   "aksara/Modules/Reports/Views/index.php"
+  ],
+  "source_files": [
+   "aksara/Modules/Blogs/Views/pdf.php",
+   "aksara/Modules/Reports/Controllers/Reports.php",
+   "aksara/Modules/Reports/Views/index.php"
+  ],
+  "review_files": 873,
+  "detected": [
+   "node",
+   "php"
+  ],
+  "excluded": "detector routes no web framework with a datastore or cache"
+ },
+ {
+  "repo": "tinyhttp/tinyhttp",
+  "number": 485,
+  "rank": 0,
+  "title": "perf: optimize hot path performance in request handling",
+  "body": "- Pre-compile regex at middleware registration time instead of lazily on first request\r\n- Replace object spread with Object.assign for params merging to avoid allocations\r\n- Use arrow functions instead of .bind() for fresh/stale getters\r\n- Make stale property a lazy getter instead of eagerly evaluating\r\n- Remove duplicate host string indexOf check",
+  "base_commit": "f47d89c81f48f8e40c73df8eb1a3882d02f55ccd",
+  "merge_commit": "7221030dda02ed57ee61bbec540daecba858e129",
+  "license": "mit",
+  "changed_paths": [
+   ".changeset/great-donuts-sing.md",
+   "packages/app/package.json",
+   "packages/app/src/app.ts",
+   "packages/app/src/extend.ts",
+   "packages/router/package.json",
+   "packages/router/src/index.ts",
+   "pnpm-lock.yaml",
+   "tests/core/app.test.ts",
+   "tests/core/request.test.ts",
+   "tests/modules/router.test.ts"
+  ],
+  "source_files": [
+   "packages/app/src/app.ts",
+   "packages/app/src/extend.ts",
+   "packages/router/src/index.ts"
+  ],
+  "review_files": 49,
+  "detected": [
+   "docker",
+   "elasticsearch",
+   "firestore",
+   "graphql",
+   "mongodb",
+   "neo4j",
+   "node",
+   "postgres",
+   "rest",
+   "sqlite"
+  ]
+ },
+ {
+  "repo": "TNTcraftHIM/Piik",
+  "number": 360,
+  "rank": 0,
+  "title": "Optimize browser media experience",
+  "body": "## Summary\n- load only the current Host, Viewer, or Join route while preserving eager route prefetch\n- show the resolved codec directly in the locked live selector and align visual audio-rate controls\n- add exact committed Viewer quality cohorts by Peer depth and repair the quality-control browser gate against the current UI\n- record measured browser evidence and the next encoded-frame reuse gate without changing media settings or routing contracts\n\n## Verification\n- `npm run check` (50 files, 861 tests)\n- `npm run gate:access-privacy`\n- 3-Viewer 1080p30 Auto quality-control gate, including UI propagation, sender readback, stable PC identities, and render progress\n- 20-Viewer 720p30 VP8 topology/depth gate, including cap, route timing, and zero unresolved route samples\n- `./scripts/check-project-state.ps1`\n\n## Effects\nThe common client asset falls from 717.36 KB / 193.03 KB gzip to 454.53 KB / 123.71 KB gzip. Host and Viewer media behavior, endpoint capacity, quality profiles, codec policy, SFU representations, and signaling remain unchanged.\n\n## Remaining risk\nRoute chunks add ordinary first-route fetch boundaries. Current-route prefetch starts immediately, and browser gates retained authentication, media, quality-control, and topology behavior.",
+  "base_commit": "c0053be46358f2cb89e918b3ee081b1991f0a1dd",
+  "merge_commit": "67971d31aae8a27c3898f310ea3e93756e4bf298",
+  "license": "mit",
+  "changed_paths": [
+   "AGENTS.md",
+   "docs/research/realtime-quality-adaptation.md",
+   "docs/todo.md",
+   "scripts/peer-assisted-benchmark.ts",
+   "src/client/App.tsx",
+   "src/client/components/living/primitives.tsx",
+   "src/client/pages/HostPage.tsx",
+   "src/client/styles.css",
+   "tests/peer-assisted-benchmark.test.ts"
+  ],
+  "source_files": [
+   "src/client/App.tsx",
+   "src/client/components/living/primitives.tsx",
+   "src/client/pages/HostPage.tsx"
+  ],
+  "review_files": 110,
+  "detected": [
+   "go",
+   "grpc",
+   "node"
+  ],
+  "excluded": "detector routes no web framework with a datastore or cache"
+ },
+ {
+  "repo": "zeabur-oss/zeabur",
+  "number": 122,
+  "rank": 0,
+  "title": "perf(kube): read before asking discovery",
+  "body": "Closes #103. Part of #96.\n\n## Summary\n\n```diff\n list_objects / list_metadata / get_object\n-  serves(group_version)?          # discovery, every read\n-  if not served: return None\n   read\n+  on 403:            serves() \u2192 not served: None, else the refusal\n+  on 404 (get only): serves() \u2192 not served: None, else not found\n+  on 404 (list):     None\n```\n\nA read that succeeds is one round trip to kube-apiserver instead of two. Answers are the same as before. There is no cache, so every answer still comes from the person's own credential.\n\n## Evidence\n\n`zeaburctl ui` with 300 ms to kube-apiserver (`scripts/perf-latency.sh`, `kube-calls`, median of 5):\n\n| Request | Before | After |\n|---|---|---|\n| `/gaps` | 3956 ms (13 round trips) | 2449 ms (8) |\n| `/incidents` | 2766 ms | 2138 ms |\n| `/trace` | 3363 ms | 2453 ms |\n| `/rollout` | 1844 ms | 1533 ms |\n| `projects/{p}` | 1548 ms | 1227 ms |\n| `/namespace`, `/usage` | 616 ms | 309 ms |\n\nNew cluster test `a_refusal_is_told_from_an_api_that_is_not_installed` covers list and get for: permitted and not installed \u2192 `None`; refused and not installed \u2192 `None`; refused and installed \u2192 403; missing object \u2192 404. On k3s v1.36.5: 32 of 32 `binary(kubernetes)` tests pass.\n\n## Merge Danger\n\n**Door:** two-way\n\n**Blast Radius:** kube reads\n\nEvery generic read takes a different path when it fails. A wrong branch would show \"not installed\" as a refusal, or the other way round; the new test covers each one.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "base_commit": "376f334d4f8f4a303bbbb723ede273631e8e5000",
+  "merge_commit": "1acc9531f7f77be753de07aec6700b0acb16223b",
+  "license": "apache-2.0",
+  "changed_paths": [
+   "crates/zeabur-kube/src/memory.rs",
+   "crates/zeabur-kube/src/objects.rs",
+   "crates/zeabur-kube/src/wide.rs",
+   "crates/zeabur-kube/tests/kubernetes.rs"
+  ],
+  "source_files": [
+   "crates/zeabur-kube/src/memory.rs",
+   "crates/zeabur-kube/src/objects.rs",
+   "crates/zeabur-kube/src/wide.rs"
+  ],
+  "review_files": 704,
+  "detected": [
+   "clickhouse",
+   "docker",
+   "elasticsearch",
+   "grpc",
+   "influxdb",
+   "jvm",
+   "kafka",
+   "kubernetes",
+   "mongodb",
+   "mysql",
+   "node",
+   "object-storage",
+   "postgres",
+   "rabbitmq",
+   "redis",
+   "rest",
+   "rust",
+   "serverless",
+   "sqlite"
+  ]
+ }
+]

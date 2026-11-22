@@ -70,7 +70,7 @@ NON_SOURCE_PARTS = ("test", "tests", "__tests__", "spec", "specs", "testdata", "
                     "vendor", "node_modules", "third_party", "migrations", "migrate",
                     "generated", "gen", "mocks", "mock", ".github", "scripts")
 NON_SOURCE_NAME = re.compile(
-    r"(^test_|_test\.(go|py|rb|rs)$|\.(test|spec)\.[jt]sx?$|Tests?\.(java|kt|cs)$|_spec\.rb$|"
+    r"(^test_|^tests?\.py$|^conftest\.py$|_test\.(go|py|rb|rs)$|\.(test|spec)\.[jt]sx?$|Tests?\.(java|kt|cs)$|_spec\.rb$|"
     r"\.pb\.go$|_pb2\.py$|\.generated\.|\.min\.js$|\.d\.ts$)")
 
 DIFF_HEADER = re.compile(r"^diff --git a/(\S+) b/(\S+)$")

@@ -1,0 +1,81 @@
+diff --git a/src/controllers/notificationController.js b/src/controllers/notificationController.js
+index 5a799e38..cf772898 100644
+--- a/src/controllers/notificationController.js
++++ b/src/controllers/notificationController.js
+@@ -295,21 +295,22 @@ export const getUserNotifications = async (req, res) => {
+ 
+     const skip = (page - 1) * limit;
+ 
+-    const notifications = await Notification.find(query)
+-      .populate("sender", "name avatar")
+-      .populate("data.courseId", "title thumbnail")
+-      .populate("data.bookId", "title image")
+-      .sort({ createdAt: -1 })
+-      .skip(skip)
+-      .limit(limit)
+-      .lean();
+-
+-    const total = await Notification.countDocuments(query);
+-    const unreadCount = await Notification.countDocuments({
+-      recipient: userId,
+-      isRead: false,
+-      isDeleted: false,
+-    });
++    const [notifications, total, unreadCount] = await Promise.all([
++      Notification.find(query)
++        .populate("sender", "name avatar")
++        .populate("data.courseId", "title thumbnail")
++        .populate("data.bookId", "title image")
++        .sort({ createdAt: -1 })
++        .skip(skip)
++        .limit(limit)
++        .lean(),
++      Notification.countDocuments(query),
++      Notification.countDocuments({
++        recipient: userId,
++        isRead: false,
++        isDeleted: false,
++      }),
++    ]);
+ 
+     res.status(200).json({
+       success: true,
+diff --git a/src/services/badge.service.js b/src/services/badge.service.js
+index ea90cd63..8b3a038c 100644
+--- a/src/services/badge.service.js
++++ b/src/services/badge.service.js
+@@ -20,7 +20,9 @@ export class BadgeService {
+     const completedProgresses = await CourseProgress.find({
+       user: userId,
+       $or: [{ percentComplete: 100 }, { completedAt: { $ne: null } }],
+-    }).populate("course", "category");
++    })
++      .populate("course", "category")
++      .lean();
+ 
+     const completedCount = completedProgresses.length;
+ 
+@@ -33,7 +35,12 @@ export class BadgeService {
+     }
+ 
+     const maxCategoryCount = Math.max(0, ...Object.values(categoryCounts));
+-    const badges = await Badge.find();
++    const [badges, ownedBadges] = await Promise.all([
++      Badge.find().lean(),
++      // One batched lookup instead of a findOne() per eligible badge.
++      UserBadge.find({ user: userId }).select("badge").lean(),
++    ]);
++    const ownedBadgeIds = new Set(ownedBadges.map((ub) => String(ub.badge)));
+     const newlyAwarded = [];
+ 
+     for (const badge of badges) {
+@@ -46,8 +53,7 @@ export class BadgeService {
+       }
+ 
+       if (isEligible) {
+-        const existing = await UserBadge.findOne({ user: userId, badge: badge._id });
+-        if (!existing) {
++        if (!ownedBadgeIds.has(String(badge._id))) {
+           try {
+             const userBadge = await UserBadge.create({
+               user: userId,

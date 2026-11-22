@@ -1,0 +1,528 @@
+diff --git a/backend/internal/project/compose_file_memo_test.go b/backend/internal/project/compose_file_memo_test.go
+new file mode 100644
+index 0000000000..d4596575b3
+--- /dev/null
++++ b/backend/internal/project/compose_file_memo_test.go
+@@ -0,0 +1,109 @@
++package project
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestComposeFileInternal(t *testing.T) {
++	t.Parallel()
++
++	const resolved = "/projects/app/compose.yaml"
++	transient := errors.New("transient")
++
++	type call struct {
++		wantPath  string
++		wantErr   error
++		wantCalls int
++	}
++
++	tests := []struct {
++		name      string
++		env       *projectMetadataEnvInternal
++		projectID string
++		// results is returned by resolve in order; the last entry repeats.
++		results []error
++		calls   []call
++	}{
++		{
++			name:      "caches success",
++			env:       &projectMetadataEnvInternal{},
++			projectID: "p1",
++			results:   []error{nil},
++			calls: []call{
++				{wantPath: resolved, wantCalls: 1},
++				{wantPath: resolved, wantCalls: 1},
++			},
++		},
++		{
++			name:      "retries after failure then caches success",
++			env:       &projectMetadataEnvInternal{},
++			projectID: "p1",
++			results:   []error{transient, nil},
++			calls: []call{
++				{wantErr: transient, wantCalls: 1},
++				{wantPath: resolved, wantCalls: 2},
++				{wantPath: resolved, wantCalls: 2},
++			},
++		},
++		{
++			name:      "repeated failures are never memoized",
++			env:       &projectMetadataEnvInternal{},
++			projectID: "p1",
++			results:   []error{transient},
++			calls: []call{
++				{wantErr: transient, wantCalls: 1},
++				{wantErr: transient, wantCalls: 2},
++			},
++		},
++		{
++			name:      "nil env resolves every call",
++			env:       nil,
++			projectID: "p1",
++			results:   []error{nil},
++			calls: []call{
++				{wantPath: resolved, wantCalls: 1},
++				{wantPath: resolved, wantCalls: 2},
++			},
++		},
++		{
++			name:      "empty project ID resolves every call",
++			env:       &projectMetadataEnvInternal{},
++			projectID: "",
++			results:   []error{nil},
++			calls: []call{
++				{wantPath: resolved, wantCalls: 1},
++				{wantPath: resolved, wantCalls: 2},
++			},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++
++			calls := 0
++			resolve := func() (string, error) {
++				calls++
++				err := tt.results[min(calls, len(tt.results))-1]
++				if err != nil {
++					return "", err
++				}
++				return resolved, nil
++			}
++
++			for i, want := range tt.calls {
++				path, err := tt.env.composeFileInternal(tt.projectID, resolve)
++				if !errors.Is(err, want.wantErr) {
++					t.Fatalf("call %d: err = %v, want %v", i+1, err, want.wantErr)
++				}
++				if path != want.wantPath {
++					t.Fatalf("call %d: path = %q, want %q", i+1, path, want.wantPath)
++				}
++				if calls != want.wantCalls {
++					t.Fatalf("call %d: resolve invoked %d times, want %d", i+1, calls, want.wantCalls)
++				}
++			}
++		})
++	}
++}
+diff --git a/backend/internal/project/project.go b/backend/internal/project/project.go
+index bddbd06e5f..fffad092af 100644
+--- a/backend/internal/project/project.go
++++ b/backend/internal/project/project.go
+@@ -195,14 +195,106 @@ func (s *ProjectService) CreateGitOpsManagedProject(ctx context.Context, sync *G
+ 	return nil
+ }
+ 
+-// projectMetadataEnvInternal carries the inputs ParseArcaneComposeMetadata needs
+-// beyond the project itself. Resolving them costs a settings clone and a stat
+-// syscall each, so list paths resolve once and reuse across every project.
++// projectMetadataEnvInternal carries the request-scoped inputs compose
++// resolution needs beyond the project itself. Resolving them costs a settings
++// clone, a stat syscall, and a gitops_syncs query each, so list paths resolve
++// once and reuse across metadata and update enrichment for every project.
+ const maxConcurrentComposeReads = 8
+ 
+ type projectMetadataEnvInternal struct {
+ 	projectsDirectory string
+ 	autoInjectEnv     bool
++	// settings is the snapshot shared by compose loads; nil resolves lazily.
++	settings *settings.Settings
++	// gitOpsComposePaths maps the listed projects' GitOps sync IDs to their
++	// configured compose paths. nil means the paths were not preloaded and are
++	// queried per project; a missing key in a preloaded map means no sync row.
++	gitOpsComposePaths map[string]string
++
++	// composeFiles memoizes successfully resolved compose files by project ID.
++	// Failures are not stored so a later phase in the same request retries
++	// resolution instead of replaying an error that may have been transient.
++	composeFilesMu sync.Mutex
++	composeFiles   map[string]string
++}
++
++// newProjectMetadataEnvInternal resolves the shared inputs once and preloads
++// the GitOps compose paths of every listed project in a single query.
++func (s *ProjectService) newProjectMetadataEnvInternal(ctx context.Context, projectsList []Project) *projectMetadataEnvInternal {
++	projectsDirectory, err := s.GetProjectsDirectory(ctx)
++	if err != nil {
++		slog.WarnContext(ctx, "failed to resolve projects directory for compose selection", "error", err)
++	}
++	env := &projectMetadataEnvInternal{
++		projectsDirectory: projectsDirectory,
++		autoInjectEnv:     s.settingsService.GetBoolSetting(ctx, "autoInjectEnv", false),
++		settings:          s.settingsService.GetSettingsOrDefaults(ctx),
++		composeFiles:      make(map[string]string, len(projectsList)),
++	}
++
++	syncIDs := make([]string, 0, len(projectsList))
++	for _, proj := range projectsList {
++		if id := gitOpsSyncIDInternal(&proj); id != "" {
++			syncIDs = append(syncIDs, id)
++		}
++	}
++	if len(syncIDs) == 0 {
++		return env
++	}
++	var syncRecords []GitOpsSync
++	if err := s.db.WithContext(ctx).Select("id", "compose_path").Where("id IN ?", syncIDs).Find(&syncRecords).Error; err != nil {
++		// Leave the map nil so each project falls back to its own lookup and
++		// surfaces the failure the same way it did before batching.
++		slog.WarnContext(ctx, "failed to batch resolve GitOps compose paths", "error", err)
++		return env
++	}
++	env.gitOpsComposePaths = make(map[string]string, len(syncRecords))
++	for _, record := range syncRecords {
++		env.gitOpsComposePaths[record.ID] = record.ComposePath
++	}
++	return env
++}
++
++func gitOpsSyncIDInternal(proj *Project) string {
++	if proj == nil || proj.GitOpsManagedBy == nil {
++		return ""
++	}
++	return strings.TrimSpace(*proj.GitOpsManagedBy)
++}
++
++// composeFileInternal memoizes a project's resolved compose file for the
++// request so metadata and update enrichment share one resolution. Only
++// successful resolutions are cached: a failure (for example a transient
++// filesystem or GitOps lookup error) is returned as-is and the next caller
++// resolves again, matching the per-phase retry of the unmemoized flow.
++//
++// The mutex is deliberately not held across resolve: it does filesystem and
++// database work, and holding the lock would serialize the concurrent
++// per-project workers. Callers run one worker per project within a phase and
++// phases run back to back, so the same project is not resolved concurrently;
++// if it ever were, both workers would compute the same path and the duplicate
++// work is harmless.
++func (env *projectMetadataEnvInternal) composeFileInternal(projectID string, resolve func() (string, error)) (string, error) {
++	if env == nil || projectID == "" {
++		return resolve()
++	}
++	env.composeFilesMu.Lock()
++	cached, ok := env.composeFiles[projectID]
++	env.composeFilesMu.Unlock()
++	if ok {
++		return cached, nil
++	}
++	path, err := resolve()
++	if err != nil {
++		return "", err
++	}
++	env.composeFilesMu.Lock()
++	if env.composeFiles == nil {
++		env.composeFiles = make(map[string]string)
++	}
++	env.composeFiles[projectID] = path
++	env.composeFilesMu.Unlock()
++	return path, nil
+ }
+ 
+ type registryCredentialsProviderInternal func(context.Context) ([]containerregistry.Credential, error)
+@@ -551,12 +643,26 @@ func (s *ProjectService) rebuildComposeNameCacheInternal(ctx context.Context) er
+ // (.env.global first, the project's .env on top) wins, then a GitOps sync's
+ // configured compose path, then standard detection.
+ func (s *ProjectService) ResolveProjectComposeFile(ctx context.Context, proj *Project) (string, error) {
++	return s.resolveProjectComposeFileInternal(ctx, proj, nil)
++}
++
++// resolveProjectComposeFileInternal is ResolveProjectComposeFile with the
++// request-scoped inputs supplied by env; a nil env resolves them per call.
++func (s *ProjectService) resolveProjectComposeFileInternal(ctx context.Context, proj *Project, env *projectMetadataEnvInternal) (string, error) {
+ 	if proj == nil {
+ 		return "", errors.New("project is nil")
+ 	}
++	return env.composeFileInternal(proj.ID, func() (string, error) {
++		return s.resolveProjectComposeFileUncachedInternal(ctx, proj, env)
++	})
++}
+ 
++func (s *ProjectService) resolveProjectComposeFileUncachedInternal(ctx context.Context, proj *Project, env *projectMetadataEnvInternal) (string, error) {
+ 	projectsDirectory := ""
+-	if s.settingsService != nil {
++	switch {
++	case env != nil:
++		projectsDirectory = env.projectsDirectory
++	case s.settingsService != nil:
+ 		var dirErr error
+ 		projectsDirectory, dirErr = s.GetProjectsDirectory(ctx)
+ 		if dirErr != nil {
+@@ -571,13 +677,13 @@ func (s *ProjectService) ResolveProjectComposeFile(ctx context.Context, proj *Pr
+ 		return files[0], nil
+ 	}
+ 
+-	if proj.GitOpsManagedBy != nil && strings.TrimSpace(*proj.GitOpsManagedBy) != "" {
+-		var syncRecord GitOpsSync
+-		if err := s.db.WithContext(ctx).
+-			Select("compose_path").
+-			Where("id = ?", *proj.GitOpsManagedBy).
+-			First(&syncRecord).Error; err == nil {
+-			composeFileName := strings.TrimSpace(filepath.Base(syncRecord.ComposePath))
++	if syncID := gitOpsSyncIDInternal(proj); syncID != "" {
++		composePath, found, err := s.gitOpsComposePathInternal(ctx, syncID, env)
++		if err != nil {
++			return "", errors.WrapIff(err, "failed to resolve GitOps compose path for project %s", proj.ID)
++		}
++		if found {
++			composeFileName := strings.TrimSpace(filepath.Base(composePath))
+ 			if composeFileName != "" && composeFileName != "." {
+ 				candidate := filepath.Join(proj.Path, composeFileName)
+ 				// os.Stat rather than acfs: proj.Path may be an imported project
+@@ -591,8 +697,6 @@ func (s *ProjectService) ResolveProjectComposeFile(ctx context.Context, proj *Pr
+ 					return "", errors.WrapIff(statErr, "failed to inspect GitOps compose file %s", candidate)
+ 				}
+ 			}
+-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+-			return "", errors.WrapIff(err, "failed to resolve GitOps compose path for project %s", proj.ID)
+ 		}
+ 	}
+ 
+@@ -607,6 +711,25 @@ func (s *ProjectService) ResolveProjectComposeFile(ctx context.Context, proj *Pr
+ 	return composeFile, nil
+ }
+ 
++// gitOpsComposePathInternal returns the configured compose path of a GitOps
++// sync, served from the preloaded request map when one is available.
++func (s *ProjectService) gitOpsComposePathInternal(ctx context.Context, syncID string, env *projectMetadataEnvInternal) (string, bool, error) {
++	if env != nil && env.gitOpsComposePaths != nil {
++		composePath, found := env.gitOpsComposePaths[syncID]
++		return composePath, found, nil
++	}
++	var syncRecord GitOpsSync
++	err := s.db.WithContext(ctx).Select("compose_path").Where("id = ?", syncID).First(&syncRecord).Error
++	switch {
++	case err == nil:
++		return syncRecord.ComposePath, true, nil
++	case errors.Is(err, gorm.ErrRecordNotFound):
++		return "", false, nil
++	default:
++		return "", false, err
++	}
++}
++
+ func (s *ProjectService) loadComposeProjectForProjectInternal(ctx context.Context, proj *Project, services ...string) (*composetypes.Project, string, error) {
+ 	composeFileFullPath, err := s.ResolveProjectComposeFile(ctx, proj)
+ 	if err != nil {
+@@ -626,14 +749,18 @@ func (s *ProjectService) loadComposeProjectForProjectInternal(ctx context.Contex
+ 	return composeProject, composeFileFullPath, nil
+ }
+ 
+-func (s *ProjectService) getCachedComposeProjectInternal(ctx context.Context, proj *Project, cfg *settings.Settings) (*composetypes.Project, error) {
++func (s *ProjectService) getCachedComposeProjectInternal(ctx context.Context, proj *Project, env *projectMetadataEnvInternal) (*composetypes.Project, error) {
+ 	if proj == nil {
+ 		return nil, errors.New("project is nil")
+ 	}
++	var cfg *settings.Settings
++	if env != nil {
++		cfg = env.settings
++	}
+ 	if cfg == nil {
+ 		cfg = s.settingsService.GetSettingsOrDefaults(ctx)
+ 	}
+-	composePath, err := s.ResolveProjectComposeFile(ctx, proj)
++	composePath, err := s.resolveProjectComposeFileInternal(ctx, proj, env)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+diff --git a/backend/internal/project/project_details.go b/backend/internal/project/project_details.go
+index ebf0223229..35a925149f 100644
+--- a/backend/internal/project/project_details.go
++++ b/backend/internal/project/project_details.go
+@@ -4,8 +4,6 @@ import (
+ 	"github.com/getarcaneapp/arcane/backend/v2/internal/imageupdate"
+ 	"github.com/moby/moby/api/types/container"
+ 
+-	"github.com/getarcaneapp/arcane/backend/v2/internal/settings"
+-
+ 	"bufio"
+ 	"context"
+ 	"io"
+@@ -506,10 +504,14 @@ func (s *ProjectService) enrichProjectsWithUpdateInfoInternal(
+ 	projectsList []Project,
+ 	details []project.Details,
+ 	includeHidden bool,
++	env *projectMetadataEnvInternal,
+ ) {
+ 	if len(projectsList) == 0 || len(details) == 0 {
+ 		return
+ 	}
++	if env == nil {
++		env = s.newProjectMetadataEnvInternal(ctx, projectsList)
++	}
+ 
+ 	var hiddenServicesByProjectID, hiddenRefsByProjectID map[string]map[string]bool
+ 	if !includeHidden {
+@@ -520,7 +522,6 @@ func (s *ProjectService) enrichProjectsWithUpdateInfoInternal(
+ 	allImageRefs := make([]string, 0)
+ 	servicesByProjectID := make(map[string][]composetypes.ServiceConfig, len(projectsList))
+ 	projectIDs := make([]string, 0, len(projectsList))
+-	cfg := s.settingsService.GetSettingsOrDefaults(ctx)
+ 
+ 	type imageRefsResult struct {
+ 		projectID string
+@@ -546,7 +547,7 @@ func (s *ProjectService) enrichProjectsWithUpdateInfoInternal(
+ 			}
+ 			defer func() { <-sem }()
+ 
+-			refs, services := s.resolveProjectUpdateServicesInternal(ctx, proj, cfg, includeHidden, hiddenServicesByProjectID[proj.ID], hiddenRefsByProjectID[proj.ID])
++			refs, services := s.resolveProjectUpdateServicesInternal(ctx, proj, env, includeHidden, hiddenServicesByProjectID[proj.ID], hiddenRefsByProjectID[proj.ID])
+ 			resultsCh <- imageRefsResult{projectID: proj.ID, refs: refs, services: services}
+ 		}(proj)
+ 	}
+@@ -585,8 +586,8 @@ func (s *ProjectService) enrichProjectsWithUpdateInfoInternal(
+ 	}
+ }
+ 
+-func (s *ProjectService) resolveProjectUpdateServicesInternal(ctx context.Context, proj Project, cfg *settings.Settings, includeHidden bool, hiddenRuntimeServices, hiddenRuntimeRefs map[string]bool) ([]string, []composetypes.ServiceConfig) {
+-	composeProject, err := s.getCachedComposeProjectInternal(ctx, &proj, cfg)
++func (s *ProjectService) resolveProjectUpdateServicesInternal(ctx context.Context, proj Project, env *projectMetadataEnvInternal, includeHidden bool, hiddenRuntimeServices, hiddenRuntimeRefs map[string]bool) ([]string, []composetypes.ServiceConfig) {
++	composeProject, err := s.getCachedComposeProjectInternal(ctx, &proj, env)
+ 	if err != nil {
+ 		slog.WarnContext(ctx, "failed to resolve project services for update summary", "projectID", proj.ID, "projectName", proj.Name, "error", err)
+ 		refs := projects.ParseImageRefsJSON(proj.ImageRefsJSON)
+@@ -745,8 +746,8 @@ func mergeProjectContainerUpdateInfoInternal(base map[string]*imagetypes.UpdateI
+ 	return result
+ }
+ 
+-func (s *ProjectService) getProjectImageRefsFromComposeInternal(ctx context.Context, proj Project, cfg *settings.Settings) ([]string, []string, error) {
+-	composeProject, err := s.getCachedComposeProjectInternal(ctx, &proj, cfg)
++func (s *ProjectService) getProjectImageRefsFromComposeInternal(ctx context.Context, proj Project, env *projectMetadataEnvInternal) ([]string, []string, error) {
++	composeProject, err := s.getCachedComposeProjectInternal(ctx, &proj, env)
+ 	if err != nil {
+ 		return nil, nil, errors.WrapIf(err, "load compose project")
+ 	}
+diff --git a/backend/internal/project/project_listing.go b/backend/internal/project/project_listing.go
+index 2b9e3ee7fb..d32e628977 100644
+--- a/backend/internal/project/project_listing.go
++++ b/backend/internal/project/project_listing.go
+@@ -287,11 +287,12 @@ func (s *ProjectService) ListProjects(ctx context.Context, params pagination.Que
+ 		"count", len(projectsArray))
+ 
+ 	// Fetch live status concurrently for all projects
+-	result := s.fetchProjectStatusConcurrently(ctx, projectsArray)
++	env := s.newProjectMetadataEnvInternal(ctx, projectsArray)
++	result := s.fetchProjectStatusConcurrently(ctx, projectsArray, env)
+ 	if err := s.enrichProjectsWithTagsInternal(ctx, result); err != nil {
+ 		return nil, pagination.Response{}, err
+ 	}
+-	s.enrichProjectsWithUpdateInfoInternal(ctx, projectsArray, result, true)
++	s.enrichProjectsWithUpdateInfoInternal(ctx, projectsArray, result, true, env)
+ 
+ 	slog.DebugContext(ctx, "Completed ListProjects request",
+ 		"result_count", len(result))
+@@ -378,11 +379,12 @@ func (s *ProjectService) filterProjectsWithDerivedFiltersInternal(
+ 		return pagination.FilterResult[project.Details]{}, errors.WrapIf(err, "failed to list projects")
+ 	}
+ 
+-	items := s.fetchProjectStatusConcurrently(ctx, projectsArray)
++	env := s.newProjectMetadataEnvInternal(ctx, projectsArray)
++	items := s.fetchProjectStatusConcurrently(ctx, projectsArray, env)
+ 	if err := s.enrichProjectsWithTagsInternal(ctx, items); err != nil {
+ 		return pagination.FilterResult[project.Details]{}, err
+ 	}
+-	s.enrichProjectsWithUpdateInfoInternal(ctx, projectsArray, items, true)
++	s.enrichProjectsWithUpdateInfoInternal(ctx, projectsArray, items, true, env)
+ 	items = s.appendDiscoveredComposeProjectUpdatesInternal(ctx, params, projectsArray, items)
+ 
+ 	return s.buildProjectDerivedPaginationConfigInternal().SearchOrderAndPaginate(items, withoutProjectDBFiltersInternal(params)), nil
+@@ -861,7 +863,7 @@ func (s *ProjectService) CountProjectsWithPendingUpdates(ctx context.Context, al
+ 			details[i].RuntimeServices = append(details[i].RuntimeServices, project.RuntimeService{Name: dockerutil.ComposeServiceLabel(c.Labels), ContainerID: c.ID, Image: c.Image, ContainerLabels: c.Labels})
+ 		}
+ 	}
+-	s.enrichProjectsWithUpdateInfoInternal(ctx, activeProjects, details, false)
++	s.enrichProjectsWithUpdateInfoInternal(ctx, activeProjects, details, false, nil)
+ 
+ 	count := 0
+ 	for i := range details {
+@@ -910,19 +912,12 @@ func (s *ProjectService) countDiscoveredComposeProjectUpdatesInternal(ctx contex
+ }
+ 
+ // fetchProjectStatusConcurrently fetches live Docker status for multiple projects in parallel
+-// Optimized to use a single Docker API call instead of N calls + N file reads
+-func (s *ProjectService) fetchProjectStatusConcurrently(ctx context.Context, projectsList []Project) []project.Details {
+-	projectsDir, err := s.GetProjectsDirectory(ctx)
+-	if err != nil {
+-		slog.WarnContext(ctx, "failed to resolve projects directory for relative project paths", "error", err)
+-	}
+-
+-	// Resolved once for the whole list: ProjectMetadata would
+-	// otherwise re-stat the projects directory and re-clone settings per project.
+-	metaEnv := &projectMetadataEnvInternal{
+-		projectsDirectory: projectsDir,
+-		autoInjectEnv:     s.settingsService.GetBoolSetting(ctx, "autoInjectEnv", false),
+-	}
++// Optimized to use a single Docker API call instead of N calls + N file reads.
++// metaEnv is resolved once for the whole list: ProjectMetadata would otherwise
++// re-stat the projects directory, re-clone settings, and re-query GitOps
++// compose paths per project.
++func (s *ProjectService) fetchProjectStatusConcurrently(ctx context.Context, projectsList []Project, metaEnv *projectMetadataEnvInternal) []project.Details {
++	projectsDir := metaEnv.projectsDirectory
+ 
+ 	// 1. Fetch all compose containers in one go
+ 	containers, err := s.listGlobalComposeContainersInternal(ctx)
+@@ -1080,22 +1075,14 @@ func (s *ProjectService) mapProjectToDto(ctx context.Context, projectsDir string
+ func (s *ProjectService) ProjectMetadata(ctx context.Context, p Project, env *projectMetadataEnvInternal) projects.ArcaneComposeMetadata {
+ 	empty := projects.ArcaneComposeMetadata{ServiceIconSets: map[string]projects.IconSet{}}
+ 
+-	composeFile, err := s.ResolveProjectComposeFile(ctx, &p)
++	if env == nil {
++		env = s.newProjectMetadataEnvInternal(ctx, []Project{p})
++	}
++	composeFile, err := s.resolveProjectComposeFileInternal(ctx, &p, env)
+ 	if err != nil {
+ 		return empty
+ 	}
+ 
+-	if env == nil {
+-		projectsDirectory, projectsDirErr := s.GetProjectsDirectory(ctx)
+-		if projectsDirErr != nil {
+-			slog.WarnContext(ctx, "failed to resolve projects directory for Arcane compose metadata", "path", composeFile, "error", projectsDirErr)
+-		}
+-		env = &projectMetadataEnvInternal{
+-			projectsDirectory: projectsDirectory,
+-			autoInjectEnv:     s.settingsService.GetBoolSetting(ctx, "autoInjectEnv", false),
+-		}
+-	}
+-
+ 	fingerprint := fmt.Sprintf("%q|%q|%t", composeFile, env.projectsDirectory, env.autoInjectEnv)
+ 	if s.metaCache != nil && p.ID != "" {
+ 		if cached, ok := s.metaCache.Get(p.ID, fingerprint); ok {
+diff --git a/backend/internal/project/service_test.go b/backend/internal/project/service_test.go
+index 54dc9a0716..f17b691b29 100644
+--- a/backend/internal/project/service_test.go
++++ b/backend/internal/project/service_test.go
+@@ -7631,7 +7631,7 @@ func TestStoppedProjectTagPolicyNeverInheritsSharedDigestCheck(t *testing.T) {
+ 	require.Equal(t, "unknown", detail.UpdateInfo.Status)
+ 	require.Nil(t, detail.UpdateInfo.ServiceUpdates["app"].UpdateInfo)
+ 	list := []projecttypes.Details{{ID: projectRecord.ID}}
+-	service.enrichProjectsWithUpdateInfoInternal(t.Context(), []Project{*projectRecord}, list, true)
++	service.enrichProjectsWithUpdateInfoInternal(t.Context(), []Project{*projectRecord}, list, true, nil)
+ 	require.Equal(t, "unknown", list[0].UpdateInfo.Status)
+ 	require.Nil(t, list[0].UpdateInfo.ServiceUpdates["app"].UpdateInfo)
+ 	target := "3.2.0"
+@@ -7641,7 +7641,7 @@ func TestStoppedProjectTagPolicyNeverInheritsSharedDigestCheck(t *testing.T) {
+ 	require.NoError(t, err)
+ 	require.Equal(t, "has_update", detail.UpdateInfo.Status)
+ 	require.Equal(t, target, detail.UpdateInfo.ServiceUpdates["app"].UpdateInfo.LatestVersion)
+-	service.enrichProjectsWithUpdateInfoInternal(t.Context(), []Project{*projectRecord}, list, true)
++	service.enrichProjectsWithUpdateInfoInternal(t.Context(), []Project{*projectRecord}, list, true, nil)
+ 	require.Equal(t, "has_update", list[0].UpdateInfo.Status)
+ 	count, err := service.CountProjectsWithPendingUpdates(t.Context(), []container.Summary{})
+ 	require.NoError(t, err)
+@@ -7689,7 +7689,7 @@ func TestConfiguredProjectUsesScheduledRuntimeChecks(t *testing.T) {
+ 			service.enrichProjectUpdateInfoInternal(ctx, &detail)
+ 			require.Equal(t, tt.wantUpdate, detail.UpdateInfo.HasUpdate)
+ 			list := []projecttypes.Details{{ID: proj.ID, RuntimeServices: runtime}}
+-			service.enrichProjectsWithUpdateInfoInternal(ctx, []Project{proj}, list, true)
++			service.enrichProjectsWithUpdateInfoInternal(ctx, []Project{proj}, list, true, nil)
+ 			require.Equal(t, tt.wantUpdate, list[0].UpdateInfo.HasUpdate)
+ 			for _, info := range []*projecttypes.UpdateInfo{detail.UpdateInfo, list[0].UpdateInfo} {
+ 				if tt.wantUpdate {

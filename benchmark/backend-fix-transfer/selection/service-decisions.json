@@ -1,0 +1,162 @@
+[
+ {
+  "repo": "MoeShinX/relay-panel",
+  "service": true,
+  "reason": "Self-hosted Axum API panel with Docker Compose deploy storing data in SQLite/PostgreSQL and serving a web UI plus node WebSocket/HTTP."
+ },
+ {
+  "repo": "mkdocstrings/griffe",
+  "service": false,
+  "reason": "Python library/CLI for extracting API signatures and checking breaking changes, installed via pip."
+ },
+ {
+  "repo": "tibiadata/tibiadata-api-go",
+  "service": true,
+  "reason": "Go API server deployed via Docker/Helm that handles HTTP requests, but README excerpt shows no datastore, only a deployable server, so it is borderline; it is run/self-hosted as an API service."
+ },
+ {
+  "repo": "skyhook-io/radar",
+  "service": false,
+  "reason": "Local-first Kubernetes UI shipped as a single CLI/kubectl plugin/desktop binary with no datastore of its own."
+ },
+ {
+  "repo": "Deen-Bridge/dnb-backend",
+  "service": true,
+  "reason": "Express REST API backend using MongoDB and Redis, with Dockerfile, k8s and a live deployed API."
+ },
+ {
+  "repo": "getarcaneapp/arcane",
+  "service": true,
+  "reason": "Self-hosted Docker management web app with Go backend, frontend and Docker deployment, though the excerpt is sparse; the backend/ and docker/ listing indicates a server app."
+ },
+ {
+  "repo": "nvawntien/astracode",
+  "service": true,
+  "reason": "Self-hosted online judge of Go microservices using PostgreSQL, Redis, Kafka and MinIO deployed via Docker Compose."
+ },
+ {
+  "repo": "Mag1cFall/AIStudio2API",
+  "service": false,
+  "reason": "Ambiguous: a local proxy exposing OpenAI-compatible endpoints on 127.0.0.1 with a launcher GUI, run as a personal tool with no described datastore."
+ },
+ {
+  "repo": "artilleryio/artillery",
+  "service": false,
+  "reason": "Load-testing CLI/toolkit published as npm packages."
+ },
+ {
+  "repo": "danielgtaylor/huma",
+  "service": false,
+  "reason": "Go micro framework/library for building HTTP APIs, not a deployable application."
+ },
+ {
+  "repo": "ironcalc/IronCalc",
+  "service": false,
+  "reason": "Spreadsheet engine library and tools with a browser webapp; the README presents it as a Rust engine, not a server with a datastore."
+ },
+ {
+  "repo": "PokeAPI/pokeapi",
+  "service": true,
+  "reason": "Django RESTful API server with database, gunicorn, docker-compose and Kubernetes deployment."
+ },
+ {
+  "repo": "Athou/commafeed",
+  "service": true,
+  "reason": "Self-hosted RSS reader server (Quarkus) storing data in H2/PostgreSQL/MySQL/MariaDB, run via Docker."
+ },
+ {
+  "repo": "Paca-AI/paca",
+  "service": true,
+  "reason": "Self-hosted project management platform with services/ backend and deploy/ configs (Helm chart on Artifact Hub)."
+ },
+ {
+  "repo": "sparckles/Robyn",
+  "service": false,
+  "reason": "README describes it as a web framework installed via pip, not a deployable application."
+ },
+ {
+  "repo": "dedoc/scramble",
+  "service": false,
+  "reason": "A Composer package that generates Laravel API docs, so it is a library/developer tool."
+ },
+ {
+  "repo": "zenstackhq/zenstack",
+  "service": false,
+  "reason": "README calls it a TypeScript database toolkit/ORM installed via npm, so it is a library."
+ },
+ {
+  "repo": "aimeos/pagible",
+  "service": false,
+  "reason": "Ambiguous: it is a CMS but is installed as a Composer package into an existing Laravel app rather than deployed as its own server, so it is treated as a package."
+ },
+ {
+  "repo": "FlexMeasures/flexmeasures",
+  "service": true,
+  "reason": "A self-hosted energy management backend with API/UI, Dockerfile, docker-compose and wsgi.py that stores time series data in a database."
+ },
+ {
+  "repo": "TwiN/gatus",
+  "service": true,
+  "reason": "A self-hosted health-monitoring dashboard server with a Docker quick start, a storage/ module and a web UI."
+ },
+ {
+  "repo": "graphile/crystal",
+  "service": false,
+  "reason": "A monorepo of GraphQL libraries (Grafast, PostGraphile, graphile-build) rather than a single deployable service."
+ },
+ {
+  "repo": "blacksky-algorithms/rsky",
+  "service": false,
+  "reason": "Ambiguous: the README calls itself a library and lists general-purpose crates first, though it also contains server components such as rsky-pds and rsky-relay."
+ },
+ {
+  "repo": "hoangsonww/Claude-Code-Agent-Monitor",
+  "service": true,
+  "reason": "A Node/Express server with SQLite, WebSocket and a React UI, with a Dockerfile and docker-compose for deployment."
+ },
+ {
+  "repo": "AlexStocks/getty",
+  "service": false,
+  "reason": "README describes it as an asynchronous network I/O library for Go."
+ },
+ {
+  "repo": "flippercloud/flipper",
+  "service": false,
+  "reason": "A Ruby gem for feature flags that you add to your app's Gemfile, so it is a library."
+ },
+ {
+  "repo": "Javis603/token-monitor",
+  "service": false,
+  "reason": "README describes it as a desktop widget for Windows, macOS and Linux."
+ },
+ {
+  "repo": "schemathesis/schemathesis",
+  "service": false,
+  "reason": "An API testing tool run from the CLI (uvx schemathesis run), not a service."
+ },
+ {
+  "repo": "TNT-Likely/PanWatch",
+  "service": true,
+  "reason": "A self-hosted AI stock assistant with a server.py backend, Docker quick start on port 8000, a persistent data volume and login."
+ },
+ {
+  "repo": "EasyCorp/EasyAdminBundle",
+  "service": false,
+  "reason": "A Symfony bundle installed via composer into an existing app, so it is a library."
+ },
+ {
+  "repo": "hyperf/hyperf",
+  "service": false,
+  "reason": "README describes it as a PHP coroutine framework with reusable components."
+ },
+ {
+  "repo": "tinyhttp/tinyhttp",
+  "service": false,
+  "reason": "README describes it as a web framework replacing Express, installed from npm."
+ },
+ {
+  "repo": "zeabur-oss/zeabur",
+  "service": false,
+  "reason": "Ambiguous: it is a self-hosted platform, but the README says it keeps no state of its own (no database, no custom resources), so it does not store data in a datastore."
+ }
+]

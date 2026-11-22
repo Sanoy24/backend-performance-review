@@ -1,0 +1,277 @@
+{
+  "model": "claude-sonnet-5-5",
+  "harness": "benchmark/backend_fix_transfer.py",
+  "harness_commit_collected": "8b0b23b",
+  "pool": {
+    "file": "selection/pool.json",
+    "sha256": "758ec061bb9188d5c8060b7167248bc43bb2a8f8f94d89467905fd3cc1f1819b",
+    "size": 1065,
+    "topics": [
+      "self-hosted",
+      "backend",
+      "api",
+      "rest-api",
+      "saas",
+      "microservice"
+    ]
+  },
+  "snapshots": {
+    "0": {
+      "offset": 0,
+      "repositories": 150,
+      "pull_requests": 139,
+      "pool_sha256": "042fbfcdb304b4bbd8b9972f719adc7cc9338408a53d179d15fb367225840dfc",
+      "errors": [
+        "zelloptt/zello-channel-api"
+      ]
+    },
+    "150": {
+      "offset": 150,
+      "repositories": 150,
+      "pull_requests": 250,
+      "pool_sha256": "042fbfcdb304b4bbd8b9972f719adc7cc9338408a53d179d15fb367225840dfc",
+      "errors": []
+    }
+  },
+  "exclusions": [
+    "antonosmond/github-signature-verifier",
+    "astropy/astropy",
+    "dask/dask",
+    "fastapi/full-stack-fastapi-template",
+    "gothinkster/aspnetcore-realworld-example-app",
+    "gothinkster/golang-gin-realworld-example-app",
+    "gothinkster/node-express-realworld-example-app",
+    "gothinkster/rails-realworld-example-app",
+    "gothinkster/spring-boot-realworld-example-app",
+    "launchbadge/realworld-axum-sqlx",
+    "matplotlib/matplotlib",
+    "numpy/numpy",
+    "pandas-dev/pandas",
+    "pydata/xarray",
+    "scikit-learn/scikit-learn",
+    "scipy/scipy",
+    "slytomcat/URLshortener",
+    "sympy/sympy"
+  ],
+  "prompts": {
+    "treatment": {
+      "file": "treatment-prompt.txt",
+      "sha256": "76d4b5dc9a7e503b155f2f0175f3fe73d8f38dbe5fa1dedcc6e6501b52b268f8"
+    },
+    "control": {
+      "file": "control-prompt.txt",
+      "sha256": "f1c8cba9e6434a9c1d3f37cfc679bea935db8b184f1aee4437e71c99acf8dcfc"
+    }
+  },
+  "scoring": "python benchmark/backend_fix_transfer.py score --patch tasks/<id>.patch --review <review.json> --window 20",
+  "cases": [
+    {
+      "id": "relay-panel-43",
+      "repo": "MoeShinX/relay-panel",
+      "pr": 43,
+      "url": "https://github.com/MoeShinX/relay-panel/pull/43",
+      "title": "perf(node/udp): shard session map + throttle tracker touch",
+      "license": "apache-2.0",
+      "base_commit": "bf12e5d8bb5abf64c1320f478ebbc019529ffc3d",
+      "merge_commit": "38d45c2ce79417e97f36e11f263629328b99ec3a",
+      "rank_in_repo": 0,
+      "source_files": [
+        "crates/node/src/forwarder/udp.rs",
+        "crates/node/src/reporter.rs"
+      ],
+      "patch_sha256": "be238da2ef72125c8aa0f1f97931bab41fb50b6ef5bbc267b9e89ecd778477e4",
+      "symptom": "UDP traffic relayed through the node gets slow and uses high CPU when many clients send packets at the same time, with throughput degrading as client count grows.",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "tibiadata-api-go-630",
+      "repo": "tibiadata/tibiadata-api-go",
+      "pr": 630,
+      "url": "https://github.com/tibiadata/tibiadata-api-go/pull/630",
+      "title": "perf: use cimap to case insensitively look into maps with 0 allocations",
+      "license": "mit",
+      "base_commit": "d2df2d68d6e507b509884aa617bbd65cac1a9e9d",
+      "merge_commit": "3471da9b08aed016f6b2436336d67f6a6ceed164",
+      "rank_in_repo": 0,
+      "source_files": [
+        "src/validation/highscore.go",
+        "src/validation/tibia.go",
+        "src/validation/validation.go"
+      ],
+      "patch_sha256": "3c5b8a7d93000f79f08a59368d514e1867394cdb6f6d0f51d5c055905b26acf5",
+      "symptom": "API requests that look up names regardless of letter case use more CPU and memory than expected and respond slowly, especially when the underlying lists are large.",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "dnb-backend-508",
+      "repo": "Deen-Bridge/dnb-backend",
+      "pr": 508,
+      "url": "https://github.com/Deen-Bridge/dnb-backend/pull/508",
+      "title": "perf: remove N+1 populate patterns in list endpoints",
+      "license": "mit",
+      "base_commit": "18c3a43b085a19fbef85935501937827726eb2d6",
+      "merge_commit": "f6d5230bfa06849d0e956267e02f4c06299a9ed6",
+      "rank_in_repo": 0,
+      "source_files": [
+        "src/controllers/notificationController.js",
+        "src/services/badge.service.js"
+      ],
+      "patch_sha256": "964c4e5c18bb887081351b9785c762ef9a2b82e9c561d1629a4994f156aa5468",
+      "symptom": "Awarding badges and loading the notifications list feel slow and put heavy load on the database, especially for users with many badges and notifications.",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "arcane-4106",
+      "repo": "getarcaneapp/arcane",
+      "pr": 4106,
+      "url": "https://github.com/getarcaneapp/arcane/pull/4106",
+      "title": "perf(project): resolve GitOps compose paths once per list request",
+      "license": "bsd-3-clause",
+      "base_commit": "423cd549b74271f8a4b3992cf04e5920d6a06dc5",
+      "merge_commit": "f5d6f37dba1c9cab72271d6e9d183cbe1f7fd79e",
+      "rank_in_repo": 0,
+      "source_files": [
+        "backend/internal/project/project.go",
+        "backend/internal/project/project_details.go",
+        "backend/internal/project/project_listing.go"
+      ],
+      "patch_sha256": "da3c12e0f2c9efea3baa4953fd2e0e4c4119d173e8ee870e8c2e05131d520fbf",
+      "symptom": "The project list page loads slowly and hammers the database when many projects are managed from Git, with load time growing with the number of projects.",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "astracode-42",
+      "repo": "nvawntien/astracode",
+      "pr": 42,
+      "url": "https://github.com/nvawntien/astracode/pull/42",
+      "title": "perf(judge): batch official testcase execution",
+      "license": "mit",
+      "base_commit": "11d49aeeaa7eb97dc3e6cae22622b87c1af2724a",
+      "merge_commit": "5e422bd6a6501186e45c37d90a86d1b5bf3f143b",
+      "rank_in_repo": 1,
+      "source_files": [
+        "workers/judge/internal/adapter/outbound/execute/go_judge_client.go"
+      ],
+      "patch_sha256": "4885d3419e7f74ad8851318b27090b39c56ea1cc0c406f1bcb51f44097d18ba6",
+      "symptom": "Judging a submission against the official test cases takes a long time, especially when a problem has many test cases to run.",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "pokeapi-1688",
+      "repo": "PokeAPI/pokeapi",
+      "pr": 1688,
+      "url": "https://github.com/PokeAPI/pokeapi/pull/1688",
+      "title": "Fix N+1 query in evolution chain serializer",
+      "license": "bsd-3-clause",
+      "base_commit": "89289e314ae20a34e8159a34a5fe646e656d6149",
+      "merge_commit": "bc92d3b6029ef1abe9e7ad424c400b338f3c11fe",
+      "rank_in_repo": 0,
+      "source_files": [
+        "pokemon_v2/serializers.py",
+        "pokemon_v2/tests.py"
+      ],
+      "patch_sha256": "362b2423b33dc6656c054f7d5e5b3fa31e1c7a133eb25dc05ee1ce148bbcc521",
+      "symptom": "Requesting an evolution chain from the API is slow and causes many database queries, especially for chains with many branching species such as Eevee.",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "commafeed-2089",
+      "repo": "Athou/commafeed",
+      "pr": 2089,
+      "url": "https://github.com/Athou/commafeed/pull/2089",
+      "title": "Performance: Batch guid check on feed refresh",
+      "license": "apache-2.0",
+      "base_commit": "efc6c10ace78892f4bfbe9877fa12f3849aef94a",
+      "merge_commit": "ec35d846cf22c6ad573a7d7ace5584e1493523e9",
+      "rank_in_repo": 0,
+      "source_files": [
+        "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedEntryDAO.java",
+        "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java"
+      ],
+      "patch_sha256": "a02b7e10a944361f6acce916d36fab18421db45f3aaf4e75d9c8c9af932f9ce9",
+      "symptom": "Refreshing feeds puts heavy load on the database and takes a long time, especially for feeds with many entries or when many feeds refresh.",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "flexmeasures-2641",
+      "repo": "FlexMeasures/flexmeasures",
+      "pr": 2641,
+      "url": "https://github.com/FlexMeasures/flexmeasures/pull/2641",
+      "title": "perf: validate storage constraints without DataFrame.eval",
+      "license": "apache-2.0",
+      "base_commit": "b04bf9f017be672dee9e59e792d5c90f78dfeaed",
+      "merge_commit": "e595aa894f2f785e63559890916e744188b3a9a0",
+      "rank_in_repo": 0,
+      "source_files": [
+        "flexmeasures/data/models/planning/storage.py"
+      ],
+      "patch_sha256": "ccc74c94d5ad5b736a9e8e08de90667339df3e1c4b54dd5a903e06921dcde225",
+      "symptom": "Computing a storage or power schedule spends a surprisingly long time checking device constraints, and it gets slower as the number of devices grows.",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "gatus-1541",
+      "repo": "TwiN/gatus",
+      "pr": 1541,
+      "url": "https://github.com/TwiN/gatus/pull/1541",
+      "title": "perf: Add PostgreSQL indexes for ~15x performance improvement",
+      "license": "apache-2.0",
+      "base_commit": "c4900ced6c44f3e8a3473eb0237c7b81b2195b72",
+      "merge_commit": "c7f0b85ba1e70475955ae84dbcb5c0c42e03de91",
+      "rank_in_repo": 0,
+      "source_files": [
+        "storage/store/sql/specific_postgres.go"
+      ],
+      "patch_sha256": "4bf9b865a9fe70d5097d978e1e96854af84f12e1c0058a8be7c6eab500cc6c3c",
+      "symptom": "The status dashboard page takes many seconds to load and the database server shows high CPU when many past results are stored for each endpoint.",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "claude-code-agent-monitor-332",
+      "repo": "hoangsonww/Claude-Code-Agent-Monitor",
+      "pr": 332,
+      "url": "https://github.com/hoangsonww/Claude-Code-Agent-Monitor/pull/332",
+      "title": "perf(db): index events.tool_name so the analytics panel stops scanning",
+      "license": "mit",
+      "base_commit": "36428cc67b91c335acbad4032faa58342833c052",
+      "merge_commit": "c3c0b2dd68b8018b4acec4789f84eee2ba8982b3",
+      "rank_in_repo": 0,
+      "source_files": [
+        "server/db.js"
+      ],
+      "patch_sha256": "5062ce5cc2616345311f893b13e0e13930c035ae1dc525f82b4a6a35fad33c17",
+      "symptom": "Opening the analytics tool-usage panel takes tens of seconds and freezes the whole server while it loads, when the activity history table is very large.",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    }
+  ]
+}
