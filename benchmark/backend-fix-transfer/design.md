@@ -282,3 +282,34 @@ The SWE-fficiency test found the same pattern outside backends.
 
 The symptom pointed both arms at the slow operation. A review with no symptom, the skill's normal
 setting, was not tested. Neither was more than one run per case, nor any other model.
+
+### Follow-up: why the treatment declined `tibiadata-api-go-630`
+
+This was added after the results, and is descriptive only.
+
+**What the old code did.** The patch removes linear loops that compare a name with
+`strings.EqualFold` against each entry's endpoint, name and plural or formula. In their place it
+adds case-insensitive maps (`cimap`) built once at startup.
+
+**What the treatment concluded.** It recorded the creature and spell scans under
+`considered_not_reported` and gave three reasons:
+
+- `EqualFold` folds in place without allocating;
+- the lists are static and in memory;
+- the scan precedes a network fetch that dominates the request.
+
+It also gave a condition to revisit: "a benchmark or profile shows the scan in the top CPU
+samples". The patch confirms the first reason, because the removed code does not allocate. The
+treatment's reasoning was not a factual error. It was a materiality judgement, made by the
+skill's rule against recommending changes it cannot connect to a measured or derivable cost.
+
+**What this says about the case.** The fix check judged the PR a server-side performance fix
+from its title and description. The symptom line ("more CPU and memory than expected", "regardless
+of letter case") was written from that same text. Neither shows that the scan was what made
+requests slow. The maintainer replaced an O(n) scan with an O(1) map, which is a sound change.
+Whether it was the operators' bottleneck is not known. So this case scores where a review looks,
+as designed, and the miss is better read as disagreement over materiality than as a missed
+defect.
+
+No change to the skill is made on this evidence. A single case cannot separate a restraint rule
+working as intended from one that is too strict.
