@@ -1,0 +1,175 @@
+{
+  "model": "claude-sonnet-5-5",
+  "cases_from": "../backend-fix-transfer/manifest.json",
+  "prompts": {
+    "treatment": {
+      "file": "treatment-prompt.txt",
+      "sha256": "7d43a7721955be4ee6960a128c3e86d5bfc22091658f871241026687f94e2067"
+    },
+    "control": {
+      "file": "control-prompt.txt",
+      "sha256": "e42f90023cc88e8106aea2a1227c15ef445d4bb80ff4f5714d178c27147d01ae"
+    }
+  },
+  "scoring": "python benchmark/backend_fix_transfer.py score --patch <case patch> --review <review.json> --window 20",
+  "cases": [
+    {
+      "id": "relay-panel-43",
+      "repo": "MoeShinX/relay-panel",
+      "pr": 43,
+      "base_commit": "bf12e5d8bb5abf64c1320f478ebbc019529ffc3d",
+      "source_files": [
+        "crates/node/src/forwarder/udp.rs",
+        "crates/node/src/reporter.rs"
+      ],
+      "patch_sha256": "be238da2ef72125c8aa0f1f97931bab41fb50b6ef5bbc267b9e89ecd778477e4",
+      "patch": "../backend-fix-transfer/tasks/relay-panel-43.patch",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "tibiadata-api-go-630",
+      "repo": "tibiadata/tibiadata-api-go",
+      "pr": 630,
+      "base_commit": "d2df2d68d6e507b509884aa617bbd65cac1a9e9d",
+      "source_files": [
+        "src/validation/highscore.go",
+        "src/validation/tibia.go",
+        "src/validation/validation.go"
+      ],
+      "patch_sha256": "3c5b8a7d93000f79f08a59368d514e1867394cdb6f6d0f51d5c055905b26acf5",
+      "patch": "../backend-fix-transfer/tasks/tibiadata-api-go-630.patch",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "dnb-backend-508",
+      "repo": "Deen-Bridge/dnb-backend",
+      "pr": 508,
+      "base_commit": "18c3a43b085a19fbef85935501937827726eb2d6",
+      "source_files": [
+        "src/controllers/notificationController.js",
+        "src/services/badge.service.js"
+      ],
+      "patch_sha256": "964c4e5c18bb887081351b9785c762ef9a2b82e9c561d1629a4994f156aa5468",
+      "patch": "../backend-fix-transfer/tasks/dnb-backend-508.patch",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "arcane-4106",
+      "repo": "getarcaneapp/arcane",
+      "pr": 4106,
+      "base_commit": "423cd549b74271f8a4b3992cf04e5920d6a06dc5",
+      "source_files": [
+        "backend/internal/project/project.go",
+        "backend/internal/project/project_details.go",
+        "backend/internal/project/project_listing.go"
+      ],
+      "patch_sha256": "da3c12e0f2c9efea3baa4953fd2e0e4c4119d173e8ee870e8c2e05131d520fbf",
+      "patch": "../backend-fix-transfer/tasks/arcane-4106.patch",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "astracode-42",
+      "repo": "nvawntien/astracode",
+      "pr": 42,
+      "base_commit": "11d49aeeaa7eb97dc3e6cae22622b87c1af2724a",
+      "source_files": [
+        "workers/judge/internal/adapter/outbound/execute/go_judge_client.go"
+      ],
+      "patch_sha256": "4885d3419e7f74ad8851318b27090b39c56ea1cc0c406f1bcb51f44097d18ba6",
+      "patch": "../backend-fix-transfer/tasks/astracode-42.patch",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "pokeapi-1688",
+      "repo": "PokeAPI/pokeapi",
+      "pr": 1688,
+      "base_commit": "89289e314ae20a34e8159a34a5fe646e656d6149",
+      "source_files": [
+        "pokemon_v2/serializers.py",
+        "pokemon_v2/tests.py"
+      ],
+      "patch_sha256": "362b2423b33dc6656c054f7d5e5b3fa31e1c7a133eb25dc05ee1ce148bbcc521",
+      "patch": "../backend-fix-transfer/tasks/pokeapi-1688.patch",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "commafeed-2089",
+      "repo": "Athou/commafeed",
+      "pr": 2089,
+      "base_commit": "efc6c10ace78892f4bfbe9877fa12f3849aef94a",
+      "source_files": [
+        "commafeed-server/src/main/java/com/commafeed/backend/dao/FeedEntryDAO.java",
+        "commafeed-server/src/main/java/com/commafeed/backend/feed/FeedRefreshUpdater.java"
+      ],
+      "patch_sha256": "a02b7e10a944361f6acce916d36fab18421db45f3aaf4e75d9c8c9af932f9ce9",
+      "patch": "../backend-fix-transfer/tasks/commafeed-2089.patch",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "flexmeasures-2641",
+      "repo": "FlexMeasures/flexmeasures",
+      "pr": 2641,
+      "base_commit": "b04bf9f017be672dee9e59e792d5c90f78dfeaed",
+      "source_files": [
+        "flexmeasures/data/models/planning/storage.py"
+      ],
+      "patch_sha256": "ccc74c94d5ad5b736a9e8e08de90667339df3e1c4b54dd5a903e06921dcde225",
+      "patch": "../backend-fix-transfer/tasks/flexmeasures-2641.patch",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    },
+    {
+      "id": "gatus-1541",
+      "repo": "TwiN/gatus",
+      "pr": 1541,
+      "base_commit": "c4900ced6c44f3e8a3473eb0237c7b81b2195b72",
+      "source_files": [
+        "storage/store/sql/specific_postgres.go"
+      ],
+      "patch_sha256": "4bf9b865a9fe70d5097d978e1e96854af84f12e1c0058a8be7c6eab500cc6c3c",
+      "patch": "../backend-fix-transfer/tasks/gatus-1541.patch",
+      "arm_order": [
+        "treatment",
+        "control"
+      ]
+    },
+    {
+      "id": "claude-code-agent-monitor-332",
+      "repo": "hoangsonww/Claude-Code-Agent-Monitor",
+      "pr": 332,
+      "base_commit": "36428cc67b91c335acbad4032faa58342833c052",
+      "source_files": [
+        "server/db.js"
+      ],
+      "patch_sha256": "5062ce5cc2616345311f893b13e0e13930c035ae1dc525f82b4a6a35fad33c17",
+      "patch": "../backend-fix-transfer/tasks/claude-code-agent-monitor-332.patch",
+      "arm_order": [
+        "control",
+        "treatment"
+      ]
+    }
+  ]
+}
