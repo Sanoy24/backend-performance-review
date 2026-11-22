@@ -54,6 +54,18 @@ value and `[Unreleased]` accumulates.
   that names a changed file or a code identifier from a changed hunk. Scoring is the same
   file and hunk localization as the SWE-fficiency harness. No model is invoked.
 
+  Two checks were added after a first pool proved unfit, before any case was fixed or any
+  review run. The most-starred repositories per language were mostly libraries and tools: of
+  the first 200, four were deployable services. Title keywords also caught features and
+  frontend changes, such as a chart option and a service-worker image cap. The fixes:
+  - the pool now comes from service topics: `self-hosted`, `backend`, `api`, `rest-api`,
+    `saas` and `microservice`;
+  - two blind model checks gate each case. One reads only a repository's README and
+    top-level listing and asks whether it is a deployable service. The other reads only a
+    pull request's title, description and changed paths and asks whether it fixes a
+    server-side performance problem. The first pull request per repository that passes, in
+    hash order, becomes the case.
+
 ## [2.3.0] — 2026-11-14
 
 A minor release. `technology/dotnet.md` now says how to score a blocking call in ASP.NET Core
